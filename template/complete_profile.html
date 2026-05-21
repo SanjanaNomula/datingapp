@@ -776,7 +776,7 @@
 
                 <div id="verify-camera-ui" style="display: none;">
                     <div style="position: relative; width: 100%; max-width: 320px; margin: 0 auto; aspect-ratio: 3/4; border-radius: 16px; overflow: hidden; background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
-                        <video id="verify-video" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
+                        <video id="verify-video" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);"></video>
                         <canvas id="verify-canvas" style="display: none;"></canvas>
                         <div id="face-guide" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70%; height: 60%; border: 2px dashed rgba(255,255,255,0.5); border-radius: 50% 50% 45% 45%; pointer-events: none;"></div>
                         <div id="gesture-hint" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); color: white; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; display: flex; align-items: center; gap: 6px;">
@@ -1403,14 +1403,14 @@
                 if (livenessState === LIVENESS_STATE.LOOK_LEFT) {
                     statusEl.innerText = 'Good! Now turn your head LEFT ⬅️';
                     statusEl.style.color = '#3b82f6';
-                    if (ratio < 0.7) { // Very loose threshold for fast UX
+                    if (ratio > 1.4) { // Very loose threshold for fast UX
                         livenessState = LIVENESS_STATE.LOOK_RIGHT;
                     }
                 }
                 else if (livenessState === LIVENESS_STATE.LOOK_RIGHT) {
                     statusEl.innerText = 'Great! Now turn your head RIGHT ➡️';
                     statusEl.style.color = '#3b82f6';
-                    if (ratio > 1.4) { // Very loose threshold for fast UX
+                    if (ratio < 0.7) { // Very loose threshold for fast UX
                         livenessState = LIVENESS_STATE.LOOK_FRONT;
                     }
                 }

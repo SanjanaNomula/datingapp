@@ -78,6 +78,9 @@ class Profile(models.Model):
     def get_profile_pic_url(self):
         # Ensure we are dealing with a string before checking for URL prefix
         if isinstance(self.profile_pic, str) and (self.profile_pic.startswith('http://') or self.profile_pic.startswith('https://')):
+            if 'res.cloudinary.com' in self.profile_pic:
+                # Apply transformations for profile pictures: f_auto,q_auto,w_400
+                return self.profile_pic.replace('/upload/', '/upload/f_auto,q_auto,w_400/')
             return self.profile_pic
         # Fallback to a nice avatar placeholder if the URL is broken, relative, or a temporary file object
         name_param = self.name.replace(" ", "+") if self.name else "User"
@@ -182,6 +185,9 @@ class ProfileImage(models.Model):
     def get_image_url(self):
         # Ensure we are dealing with a string before checking for URL prefix
         if isinstance(self.image, str) and (self.image.startswith('http://') or self.image.startswith('https://')):
+            if 'res.cloudinary.com' in self.image:
+                # Apply transformations for gallery images: f_auto,q_auto,w_800
+                return self.image.replace('/upload/', '/upload/f_auto,q_auto,w_800/')
             return self.image
         # Fallback for old/broken/temporary gallery images
         return "https://placehold.co/600x600/6366f1/ffffff?text=Image+Not+Found"

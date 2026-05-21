@@ -52,7 +52,7 @@
         background: #000;
         box-shadow: 0 10px 30px rgba(0,0,0,0.2);
     }
-    #verify-video { width: 100%; height: 100%; object-fit: cover; }
+    #verify-video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
     #face-guide {
         position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
         width: 70%; height: 60%; border: 2px dashed rgba(255,255,255,0.5);
@@ -253,12 +253,12 @@
                 if (livenessState === LIVENESS_STATE.LOOK_LEFT) {
                     statusEl.innerText = 'Good! Now turn your head LEFT ⬅️';
                     statusEl.style.color = '#3b82f6';
-                    if (ratio < 0.7) livenessState = LIVENESS_STATE.LOOK_RIGHT;
+                    if (ratio > 1.4) livenessState = LIVENESS_STATE.LOOK_RIGHT;
                 }
                 else if (livenessState === LIVENESS_STATE.LOOK_RIGHT) {
                     statusEl.innerText = 'Great! Now turn your head RIGHT ➡️';
                     statusEl.style.color = '#3b82f6';
-                    if (ratio > 1.4) livenessState = LIVENESS_STATE.LOOK_FRONT;
+                    if (ratio < 0.7) livenessState = LIVENESS_STATE.LOOK_FRONT;
                 }
                 else if (livenessState === LIVENESS_STATE.LOOK_FRONT) {
                     statusEl.innerText = 'Excellent! Look FRONT to capture 📷';
