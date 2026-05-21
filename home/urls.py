@@ -48,6 +48,7 @@ urlpatterns = [
     path("confessions/<int:confession_id>/comment/", views.add_comment, name="add_comment"),
     path("confessions/<int:confession_id>/like/", views.like_confession, name="like_confession"),
     path("master/dashboard/", views.admin_dashboard, name="admin_dashboard"),
+    path("master/dashboard/allusers", views.admin_all_users, name="admin_all_users"),
     path("master/action/", views.admin_action, name="admin_action"),
     path("master/user/<int:user_id>/", views.admin_view_user, name="admin_view_user"),
     path("master/profile/edit/<int:user_id>/", views.admin_edit_user_profile, name="admin_edit_user_profile"),

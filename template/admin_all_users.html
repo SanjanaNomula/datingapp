@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<style>
+    .admin-container {
+        padding: 30px 16px;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    .page-title {
+        font-size: 24px;
+        font-weight: 800;
+        color: var(--text-main);
+        margin-bottom: 24px;
+        text-align: center;
+        background: linear-gradient(135deg, var(--primary), #f43f5e);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .users-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 16px;
+    }
+    .user-box {
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: var(--shadow-sm);
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .user-box:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+        border-color: var(--primary);
+    }
+    .user-name {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text-main);
+        word-break: break-word;
+    }
+    .user-detail {
+        font-size: 13px;
+        color: var(--text-muted);
+        font-weight: 500;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: var(--text-muted);
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="admin-container">
+    <h2 class="page-title">All Registered Users</h2>
+    
+    <div class="users-grid">
+        {% for profile in profiles %}
+            <div class="user-box">
+                <div class="user-name">{{ profile.name|default:"No Name" }}</div>
+                <div class="user-detail"><i class="fas fa-university" style="margin-right: 6px; width: 14px;"></i>{{ profile.campus|default:"No Campus" }}</div>
+                <div class="user-detail"><i class="fas fa-birthday-cake" style="margin-right: 6px; width: 14px;"></i>{{ profile.age|default:"N/A" }} Yrs</div>
+            </div>
+        {% empty %}
+            <div class="empty-state">No users registered yet.</div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

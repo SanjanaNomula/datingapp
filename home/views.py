@@ -1699,6 +1699,13 @@ def admin_dashboard(request):
     })
 
 @login_required
+def admin_all_users(request):
+    if not is_admin_check(request.user):
+        return HttpResponse("Not authorized", status=403)
+    profiles = Profile.objects.all().order_by('name')
+    return render(request, 'admin_all_users.html', {'profiles': profiles})
+
+@login_required
 def admin_action(request):
     if not is_admin_check(request.user):
         return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
