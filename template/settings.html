@@ -115,7 +115,6 @@
                     <p id="notif-status" style="margin: 4px 0 0; font-size: 13px; color: var(--text-muted);">Checking status...</p>
                 </div>
             </div>
-            <button onclick="testPush()" class="install-btn" style="background: var(--primary); color: white;">Test</button>
         </div>
     </div>
 
@@ -256,27 +255,7 @@
         if (confirmed) document.getElementById('logout-form').submit();
     }
 
-    async function testPush() {
-        const btn = event.currentTarget;
-        const originalText = btn.innerText;
-        btn.disabled = true;
-        btn.innerText = "Sending...";
-        
-        try {
-            const response = await fetch('/api/test-push/', { method: 'POST' });
-            const data = await response.json();
-            if (data.success) {
-                customAlert("Test push sent! Check your notification center. If you don't see it, ensure your browser/system permits notifications.", "Notification Sent");
-            } else {
-                throw new Error(data.error || "Failed to send test push");
-            }
-        } catch (err) {
-            customAlert("Error: " + err.message, "Push Failed");
-        } finally {
-            btn.disabled = false;
-            btn.innerText = originalText;
-        }
-    }
+
 
     function forceAskPushPermission() {
         if (window.showCustomNotificationPrompt) {

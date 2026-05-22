@@ -711,11 +711,10 @@ def send_match_request(request, receiver_id):
                 })
                 # Send Push Notification
                 try:
-                    sender_name = request.user.profile.name if hasattr(request.user, 'profile') else request.user.username
                     send_push_to_user(
                         receiver,
                         title="New Connection Request ⚡",
-                        body=f"{sender_name} wants to connect with you!",
+                        body="You have received a request from someone",
                         url="/connections/"
                     )
                 except Exception as e:
@@ -747,11 +746,10 @@ def accept_match(request, req_id):
     
     # Send Push Notification to the sender of the request
     try:
-        receiver_name = request.user.profile.name if hasattr(request.user, 'profile') else request.user.username
         send_push_to_user(
             req.sender,
             title="Connection Accepted! 🎉",
-            body=f"{receiver_name} accepted your connection request. Start chatting now!",
+            body="Someone has accepted your request",
             url=f"/chat/{request.user.id}/"
         )
     except Exception as e:
@@ -902,11 +900,10 @@ def chat_view(request, partner_id):
 
             # Send Push Notification
             try:
-                sender_name = request.user.profile.name if hasattr(request.user, 'profile') else request.user.username
                 send_push_to_user(
                     partner, 
-                    title=f"New message from {sender_name}", 
-                    body=text[:100] + ("..." if len(text) > 100 else ""),
+                    title="New Message 💬", 
+                    body="Someone sent you a message",
                     url=f"/chat/{request.user.id}/"
                 )
             except Exception as e:
