@@ -24,10 +24,16 @@
     }
     .install-btn:active { transform: scale(0.95); }
 
+    /* Override base container so header sits flush at top */
+    .container {
+        padding: 0 !important;
+        margin-top: 0 !important;
+        padding-bottom: 90px !important;
+    }
     /* Settings page header */
     .s-topbar {
         position: sticky;
-        top: -20px;
+        top: 0;
         z-index: 900;
         background: #ffffff;
         padding: 18px 20px;
@@ -70,7 +76,7 @@
 {% endblock %}
 
 {% block body %}
-<div class="settings-container" style="max-width: 500px; margin: -20px auto 0; padding: 0 0 20px;">
+<div class="settings-container">
     <!-- Settings Header -->
     <div class="s-topbar">
         <a href="{% url 'edit_profile' %}" class="s-back-btn" title="Back">
