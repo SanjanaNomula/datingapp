@@ -1612,23 +1612,13 @@
         }
 
         // BACKGROUND PROCESSING
-        // Blur Check (Lower threshold to accommodate budget phone cameras)
-        const blurCheck = checkBlurriness(canvas, 15);
-        if (blurCheck.isBlurry) {
-            return handleFailure('Photo was blurry!');
-        }
-
-        // High accuracy detection for verification image using SSD Mobilenet on the static captured canvas
-        const fullDetection = await faceapi.detectSingleFace(canvas, new faceapi.SsdMobilenetv1Options()).withFaceLandmarks().withFaceDescriptor().withAgeAndGender();
+        // High accuracy detection for verification image using SSD Mobilenet
+        // Lowered minConfidence to 0.4 for budget cameras. Removed blur check (fails on built-in beauty filters).
+        // Removed AI gender check as it is often inaccurate on lower resolution captures.
+        const fullDetection = await faceapi.detectSingleFace(canvas, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.4 })).withFaceLandmarks().withFaceDescriptor();
         
         if (!fullDetection) {
-            return handleFailure('Face not clear.');
-        }
-
-        const selectedGender = document.getElementById('id_gender').value;
-        const detectedGender = fullDetection.gender;
-        if (selectedGender !== 'other' && selectedGender !== detectedGender) {
-            return handleFailure(`Gender mismatch! Form says ${selectedGender}, but camera sees ${detectedGender}.`);
+            return handleFailure('Face not detected properly. Please ensure good lighting.');
         }
 
         verificationDescriptor = fullDetection.descriptor;
