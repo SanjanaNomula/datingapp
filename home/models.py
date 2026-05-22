@@ -80,9 +80,23 @@ class Profile(models.Model):
 
     @property
     def campus_display(self):
-        if self.campus == 'Ramapuram':
-            return 'RMP Campus'
-        return self.campus
+        campus_map = {
+            'Kattankulathur (KTR)': 'KTR',
+            'Ramapuram (RMP)': 'RMP',
+            'Ramapuram': 'RMP',
+            'Vadapalani (VDP)': 'VDP',
+            'Vadapalani': 'VDP',
+            'Eswari (ESW)': 'ESW',
+            'Delhi NCR': 'NCR',
+            'NCR Modinagar': 'NCR',
+            'Tiruchirappalli (TCY)': 'TCY',
+            'Tiruchirappalli': 'TCY',
+            'Amaravati (AMT)': 'AMT',
+            'SRM AP': 'AMT',
+            'Sikkim (SKM)': 'SKM',
+            'Sonepat (SPT)': 'SPT',
+        }
+        return campus_map.get(self.campus, self.campus)
 
     @property
     def get_profile_pic_url(self):

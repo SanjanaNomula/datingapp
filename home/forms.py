@@ -24,11 +24,14 @@ YEAR_CHOICES = [('', 'Select Year')] + [(y, str(y)) for y in range(1, 6)]
 CAMPUS_CHOICES = [
     ('', 'Select Campus'),
     ('Kattankulathur (KTR)', 'Kattankulathur (KTR)'),
-    ('Ramapuram', 'RMP Campus'),
-    ('Vadapalani', 'Vadapalani'),
-    ('NCR Modinagar', 'NCR Modinagar'),
-    ('Tiruchirappalli', 'Tiruchirappalli'),
-    ('SRM AP', 'SRM AP'),
+    ('Ramapuram (RMP)', 'Ramapuram (RMP)'),
+    ('Vadapalani (VDP)', 'Vadapalani (VDP)'),
+    ('Eswari (ESW)', 'Eswari (ESW)'),
+    ('Delhi NCR', 'Delhi NCR'),
+    ('Tiruchirappalli (TCY)', 'Tiruchirappalli (TCY)'),
+    ('Amaravati (AMT)', 'Amaravati (AMT)'),
+    ('Sikkim (SKM)', 'Sikkim (SKM)'),
+    ('Sonepat (SPT)', 'Sonepat (SPT)'),
 ]
 COURSE_CHOICES = [
     ('', 'Select Course'),
@@ -40,8 +43,11 @@ COURSE_CHOICES = [
     ('MCA', 'MCA'),
     ('B.Sc', 'B.Sc'),
     ('M.Sc', 'M.Sc'),
+    ('B.Com', 'B.Com'),
     ('BA', 'BA'),
     ('MA', 'MA'),
+    ('B.Arch', 'B.Arch'),
+    ('Medical', 'Medical'),
     ('Ph.D', 'Ph.D'),
     ('Other', 'Other'),
 ]

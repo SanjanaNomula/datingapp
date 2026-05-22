@@ -90,29 +90,45 @@
 
     /* ── Ultra Modern Filter Bar ── */
     .filter-bar {
-        margin-bottom: 24px;
+        margin-bottom: 20px;
         animation: fadeIn 0.8s ease-out;
     }
     .filter-bar form {
         display: flex;
-        gap: 10px;
+        gap: 8px;
         width: 100%;
     }
     @keyframes fadeIn {
         from { opacity: 0; }
         to { opacity: 1; }
     }
-    .filter-bar .app-select {
+    .filter-bar .filter-select {
         flex: 1;
-        margin-bottom: 0;
         min-width: 0;
-    }
-    .filter-bar .app-select-trigger {
+        padding: 10px 32px 10px 14px;
+        border-radius: 12px;
+        border: 1.5px solid rgba(37, 99, 235, 0.15);
         background: #fff;
         font-size: 13px;
-        font-weight: 700;
-        color: var(--text-dark);
-        box-shadow: 0 8px 15px rgba(37, 99, 235, 0.04);
+        font-weight: 600;
+        color: #1e3a8a;
+        cursor: pointer;
+        appearance: none;
+        -webkit-appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.06);
+        transition: all 0.2s ease;
+        outline: none;
+    }
+    .filter-bar .filter-select:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    .filter-bar .filter-select option {
+        font-weight: 500;
+        padding: 8px;
     }
 
     /* FAB Centered/Bounded Container */
@@ -507,6 +523,12 @@
                 <option value="KTR" {% if current_campus == 'KTR' %}selected{% endif %}>KTR</option>
                 <option value="RMP" {% if current_campus == 'RMP' %}selected{% endif %}>RMP</option>
                 <option value="VDP" {% if current_campus == 'VDP' %}selected{% endif %}>VDP</option>
+                <option value="ESW" {% if current_campus == 'ESW' %}selected{% endif %}>ESW</option>
+                <option value="NCR" {% if current_campus == 'NCR' %}selected{% endif %}>NCR</option>
+                <option value="TCY" {% if current_campus == 'TCY' %}selected{% endif %}>TCY</option>
+                <option value="AMT" {% if current_campus == 'AMT' %}selected{% endif %}>AMT</option>
+                <option value="SKM" {% if current_campus == 'SKM' %}selected{% endif %}>SKM</option>
+                <option value="SPT" {% if current_campus == 'SPT' %}selected{% endif %}>SPT</option>
             </select>
         </form>
     </div>
@@ -626,6 +648,12 @@
                     <option value="KTR">SRM KTR</option>
                     <option value="RMP">SRM Ramapuram</option>
                     <option value="VDP">SRM Vadapalani</option>
+                    <option value="ESW">SRM Eswari</option>
+                    <option value="NCR">SRM Delhi NCR</option>
+                    <option value="TCY">SRM Tiruchirappalli</option>
+                    <option value="AMT">SRM Amaravati</option>
+                    <option value="SKM">SRM Sikkim</option>
+                    <option value="SPT">SRM Sonepat</option>
                 </select>
             </div>
             
