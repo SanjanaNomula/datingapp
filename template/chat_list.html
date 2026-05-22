@@ -55,35 +55,48 @@
     .chats-header {
         position: sticky;
         top: 0;
-        padding: 25px 20px;
+        padding: 16px 20px;
         background: rgba(255, 255, 255, 0.85);
         backdrop-filter: blur(25px);
         -webkit-backdrop-filter: blur(25px);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+        border-bottom: 1px solid rgba(37, 99, 235, 0.08);
         z-index: 1000;
         box-shadow: 0 10px 30px rgba(37, 99, 235, 0.04);
-    }
-    .chats-header a {
-        text-decoration: none;
-        color: var(--text-muted);
-        font-size: 14px;
-        display: inline-flex;
+        display: flex;
         align-items: center;
-        gap: 8px;
-        margin-bottom: 12px;
-        font-weight: 700;
-        transition: 0.3s;
+        gap: 14px;
     }
-    .chats-header a:hover { color: var(--primary-blue); transform: translateX(-4px); }
+    .c-back-btn {
+        width: 36px;
+        height: 36px;
+        background: white;
+        border-radius: 12px;
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--primary-blue);
+        text-decoration: none;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.02);
+        transition: transform 0.2s, background 0.2s, color 0.2s;
+        flex-shrink: 0;
+    }
+    .c-back-btn:hover {
+        transform: scale(1.08);
+        background: #f8fbff;
+        color: var(--secondary-blue);
+    }
+    .c-back-btn:active {
+        transform: scale(0.96);
+    }
     
-    .chats-header h2 {
+    .c-header-title {
         margin: 0;
-        font-size: 28px;
+        font-size: 22px;
         font-weight: 900;
-        letter-spacing: -1.2px;
-        background: linear-gradient(135deg, #1e3a8a, #2563eb);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        letter-spacing: -0.8px;
+        color: var(--text-dark);
+        line-height: 1;
     }
 
     /* ── Scrollable Body ── */
@@ -217,15 +230,16 @@
     }
     .empty-state h3 { font-size: 22px; font-weight: 900; color: var(--text-dark); margin-bottom: 10px; }
 </style>
-</style>
 {% endblock %}
 
 {% block body %}
 <div class="chats-wrapper">
     <!-- Header -->
     <div class="chats-header">
-        <a href="{% url 'home' %}"><i class="fas fa-arrow-left"></i> Back to Match</a>
-        <h2>Recent Chats</h2>
+        <a href="{% url 'home' %}" class="c-back-btn" title="Back to Match">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <h2 class="c-header-title">Chats</h2>
     </div>
 
     <!-- Scrollable Body -->
@@ -246,7 +260,7 @@
                                     {{ chat.timestamp|date:"M d" }}
                                 {% endif %}
                             </span>
-                            <a href="{% url 'delete_chat' chat.partner.id %}" class="delete-btn" onclick="event.stopPropagation(); return confirm('Delete chat?')">
+                            <a href="{% url 'delete_chat' chat.partner.id %}" class="delete-btn" onclick="confirmDeleteChat(event, '{% url 'delete_chat' chat.partner.id %}')">
                                 <i class="fas fa-trash-alt"></i>
                             </a>
                         </div>
@@ -281,4 +295,15 @@
         {% endif %}
     </div>
 </div>
+
+<script>
+async function confirmDeleteChat(event, url) {
+    event.preventDefault();
+    event.stopPropagation();
+    const confirmed = await customConfirm("Are you sure you want to delete this chat and all its history permanently?", "Delete Chat", "Delete", "Cancel");
+    if (confirmed) {
+        window.location.href = url;
+    }
+}
+</script>
 {% endblock %}

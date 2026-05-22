@@ -621,10 +621,10 @@ async function handleAdminImageUpload(input) {
                 redraw();
             };
         } else {
-            alert("Upload error: " + data.message);
+            customAlert("Upload error: " + data.message, "Upload Error");
         }
     } catch(e) {
-        alert("Upload failed: " + e.message);
+        customAlert("Upload failed: " + e.message, "Upload Failed");
     }
 }
 
@@ -668,7 +668,7 @@ async function finalizePlacement() {
             redraw();
         }
     } catch(e) {
-        alert("Failed to place image: " + e.message);
+        customAlert("Failed to place image: " + e.message, "Placement Failed");
     }
 }
 

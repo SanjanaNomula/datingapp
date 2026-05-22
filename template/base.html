@@ -519,7 +519,10 @@
             });
         }
 
-
+        // Global alert override
+        window.alert = function(msg, title = "Notice") {
+            customAlert(msg, title);
+        };
 
         // Global PWA Manager
         window.deferredPrompt = null;

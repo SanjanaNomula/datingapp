@@ -212,10 +212,10 @@
     <div class="admin-card">
         <h3><i class="fas fa-paint-brush"></i> Wall Management</h3>
         <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 12px;">Reset the anonymous wall strokes.</p>
-        <form action="{% url 'admin_action' %}" method="POST" onsubmit="return confirm('Erase everything on the wall?')">
+        <form action="{% url 'admin_action' %}" method="POST" id="clearWallForm">
             {% csrf_token %}
             <input type="hidden" name="action" value="clear_wall">
-            <button type="submit" class="btn-danger">Erase All Scribbles</button>
+            <button type="button" class="btn-danger" onclick="confirmClearWall()">Erase All Scribbles</button>
         </form>
     </div>
 
@@ -577,5 +577,12 @@ function closeAdminConfirm() {
 document.getElementById('admin-confirm-overlay').addEventListener('click', function(e) {
     if (e.target === this) closeAdminConfirm();
 });
+
+async function confirmClearWall() {
+    const confirmed = await customConfirm("Are you sure you want to erase everything on the wall? This cannot be undone.", "Erase Wall", "Erase", "Cancel");
+    if (confirmed) {
+        document.getElementById('clearWallForm').submit();
+    }
+}
 </script>
 {% endblock %}
