@@ -1000,17 +1000,21 @@ spinBtn.onclick = async () => {
         }, 150);
     });
 
-    // ── Send Button Focus Lock (Anti-flicker) ──
+    // ── Send Button: Mobile Touch Fix ──
     const sendBtn = document.getElementById('sendBtn');
     if (sendBtn) {
-        const lockFocus = (e) => {
+        // mousedown: prevent focus loss on desktop (keeps keyboard open)
+        sendBtn.addEventListener('mousedown', (e) => {
+            e.preventDefault(); // safe on desktop — click still fires
+        });
+
+        // touchend: explicitly submit on mobile (touchstart+preventDefault blocks the tap→click chain)
+        sendBtn.addEventListener('touchend', (e) => {
+            e.preventDefault(); // stop ghost click
             if (messageInput.value.trim().length > 0) {
-                // Prevent focus shifting (which triggers blur & keyboard hiding/jumping)
-                e.preventDefault();
+                chatForm.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
             }
-        };
-        sendBtn.addEventListener('mousedown', lockFocus);
-        sendBtn.addEventListener('touchstart', lockFocus);
+        }, { passive: false });
     }
 
     // Auto scroll to bottom (GPU and paint optimized)

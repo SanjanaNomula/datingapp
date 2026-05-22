@@ -104,11 +104,11 @@
     height: calc(var(--ep-header) + env(safe-area-inset-top));
     padding: env(safe-area-inset-top) 8px 0;
     display: flex; align-items: center;
-    background: rgba(255,255,255,0.78);
+    background: rgba(255,255,255,0.92);
     backdrop-filter: blur(24px) saturate(1.5);
     -webkit-backdrop-filter: blur(24px) saturate(1.5);
     border-bottom: 1px solid var(--ep-line);
-    border-radius: 0 0 var(--ep-r-lg) var(--ep-r-lg);
+    border-radius: 0;
     z-index: 300;
   }
   .ep-topbar-btn {
@@ -218,7 +218,6 @@
   .ep-tabs-wrap {
     margin: 0;
     padding: 0;
-    position: sticky; top: 0; z-index: 100;
   }
   .ep-tabs {
     display: flex; gap: 0;
@@ -261,7 +260,7 @@
   }
 
   /* ─── Sections ─── */
-  .ep-panel { display: none; padding: 0 14px 16px; animation: ep-fade 0.3s var(--ep-ease) both; }
+  .ep-panel { display: none; padding: 0 0 80px; animation: ep-fade 0.3s var(--ep-ease) both; }
   .ep-panel.is-active { display: block; }
   @keyframes ep-fade {
     from { opacity: 0; transform: translateY(6px); }
@@ -270,16 +269,16 @@
 
   .ep-group {
     background: var(--ep-surface);
-    border-radius: var(--ep-r-lg);
-    box-shadow: var(--ep-shadow-sm);
-    border: 1px solid var(--ep-line);
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+    border-top: 1px solid var(--ep-line);
+    border-bottom: 1px solid var(--ep-line);
     overflow: visible;
-    margin-bottom: 14px;
+    margin-bottom: 24px;
   }
   .ep-panel .ep-group:first-child {
-    border-top: none;
-    border-top-left-radius: 0;
-    border-top-right-radius: 0;
+    border-top: 1px solid var(--ep-line);
   }
   .ep-group-head {
     padding: 14px 16px 10px;
@@ -620,6 +619,46 @@
   }
   .ep-save-btn:active { transform: scale(0.91); box-shadow: 0 3px 10px rgba(0,132,255,0.3); }
   .ep-save-btn.is-busy { opacity: 0.65; pointer-events: none; }
+
+  /* ─── Desktop: phone-in-center layout ─── */
+  @media (min-width: 600px) {
+    html, body {
+      background: #0f1117 !important;
+      overflow: hidden !important;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .container {
+      width: 430px !important;
+      max-width: 430px !important;
+      height: 100dvh !important;
+      margin: 0 auto !important;
+      padding: 0 !important;
+      position: relative;
+      border-left: 1px solid rgba(255,255,255,0.06);
+      border-right: 1px solid rgba(255,255,255,0.06);
+      box-shadow: 0 0 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
+    }
+
+    #ep-app {
+      width: 430px;
+    }
+
+    /* Bottom nav stays within the 430px column */
+    nav {
+      left: 50% !important;
+      transform: translateX(-50%) !important;
+      width: 430px !important;
+      border-radius: 0 !important;
+    }
+
+    /* FAB stays within the phone column */
+    .ep-savebar {
+      right: calc(50% - 430px/2 + 20px);
+    }
+  }
 
   /* Overlay & toast */
   .ep-overlay {
