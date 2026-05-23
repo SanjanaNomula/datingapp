@@ -368,6 +368,8 @@
                     .withFaceLandmarks();
                 
                 if (!detection) {
+                    window.livenessStartTime = null;
+                    window.fallbackStartTime = null;
                     if (Date.now() - lastFaceSeenTime > 2000) {
                         statusEl.innerText = '📷 Position your face in the oval';
                         statusEl.style.color = '#ef4444';
@@ -375,12 +377,39 @@
                     }
                 } else {
                     lastFaceSeenTime = Date.now();
+                    if (!window.livenessStartTime) {
+                        window.livenessStartTime = Date.now();
+                    }
 
-                    // Restore exact jaw-ratio liveness detection from yesterday's perfectly working code
                     const nose = detection.landmarks.getNose()[3];
                     const leftCheek = detection.landmarks.getJawOutline()[0];
                     const rightCheek = detection.landmarks.getJawOutline()[16];
                     
+                    const isLandmarksZero = !nose || !leftCheek || (nose.x === 0 && leftCheek.x === 0);
+                    const isStuck = (Date.now() - window.livenessStartTime > 7000);
+
+                    if (isLandmarksZero || isStuck) {
+                        if (!window.fallbackStartTime) {
+                            window.fallbackStartTime = Date.now();
+                        }
+                        const elapsed = Date.now() - window.fallbackStartTime;
+                        const remaining = Math.max(0, Math.ceil((3000 - elapsed) / 1000));
+                        
+                        if (remaining > 0) {
+                            statusEl.innerText = '📷 Auto-focus active. Hold still: ' + remaining + 's...';
+                            statusEl.style.color = '#3b82f6';
+                        } else {
+                            if (!verificationCaptured) {
+                                verificationCaptured = true;
+                                livenessState = LIVENESS_STATE.CAPTURED;
+                                statusEl.innerText = 'Capturing secure scan... 📷';
+                                statusEl.style.color = '#10b981';
+                                setTimeout(() => captureVerification(), 200);
+                            }
+                        }
+                        return;
+                    }
+
                     const distLeft = nose.x - leftCheek.x;
                     const distRight = rightCheek.x - nose.x;
                     
