@@ -388,24 +388,24 @@
                     const ratio = distLeft / (distRight || 1);
 
                     if (livenessState === LIVENESS_STATE.WAITING_FACE) {
-                        if (ratio > 0.6 && ratio < 1.6) {
+                        if (ratio > 0.45 && ratio < 2.2) {
                             livenessState = LIVENESS_STATE.WAITING_FOR_LEFT;
                         } else {
-                            statusEl.innerText = 'Look STRAIGHT to start.';
+                            statusEl.innerText = 'Look STRAIGHT to start. (Ratio: ' + ratio.toFixed(2) + ')';
                             statusEl.style.color = '#f59e0b';
                         }
                     }
                     else if (livenessState === LIVENESS_STATE.WAITING_FOR_LEFT) {
-                        statusEl.innerText = 'Good! Now turn your head LEFT ⬅️';
+                        statusEl.innerText = 'Good! Now turn your head LEFT ⬅️ (Ratio: ' + ratio.toFixed(2) + ')';
                         statusEl.style.color = '#3b82f6';
-                        if (ratio > 1.8) { // Require a distinct left turn
+                        if (ratio > 1.45 || ratio < 0.65) { // Require a distinct head turn (either direction, handles mirrored cameras perfectly!)
                             livenessState = LIVENESS_STATE.WAITING_FOR_STRAIGHT;
                         }
                     }
                     else if (livenessState === LIVENESS_STATE.WAITING_FOR_STRAIGHT) {
-                        statusEl.innerText = 'Excellent! Now look STRAIGHT 📷';
+                        statusEl.innerText = 'Excellent! Now look STRAIGHT 📷 (Ratio: ' + ratio.toFixed(2) + ')';
                         statusEl.style.color = '#10b981';
-                        if (ratio > 0.7 && ratio < 1.5) { // Require looking straight
+                        if (ratio > 0.5 && ratio < 2.0) { // Require looking straight
                             if (!verificationCaptured) {
                                 verificationCaptured = true;
                                 livenessState = LIVENESS_STATE.CAPTURED;
