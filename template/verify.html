@@ -492,34 +492,36 @@
             return false;
         }
 
-        // Models must be placed in /static/models/
-        const MODEL_URL = '/static/models/'; 
-        console.log("Loading AI models from:", MODEL_URL);
+        // We use the CDN first to prevent 404 console errors. 
+        // If you prefer hosting them yourself, place the models in /static/models/
+        const CDN_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+        const LOCAL_URL = '/static/models/'; 
 
         try {
+            console.log("Loading AI models from CDN...");
             await Promise.all([
-                faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-                faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-                faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-                faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL)
+                faceapi.nets.tinyFaceDetector.loadFromUri(CDN_URL),
+                faceapi.nets.faceLandmark68Net.loadFromUri(CDN_URL),
+                faceapi.nets.faceRecognitionNet.loadFromUri(CDN_URL),
+                faceapi.nets.ageGenderNet.loadFromUri(CDN_URL)
             ]);
             faceModelsLoaded = true;
-            console.log("AI Models loaded successfully.");
+            console.log("AI Models loaded successfully from CDN.");
             return true;
         } catch (err) {
-            console.error("AI Models failed to load:", err);
-            // Fallback to CDN if static models are missing
+            console.warn("CDN failed. Falling back to local /static/models/ directory...");
             try {
-                const CDN_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
                 await Promise.all([
-                    faceapi.nets.tinyFaceDetector.loadFromUri(CDN_URL),
-                    faceapi.nets.faceLandmark68Net.loadFromUri(CDN_URL),
-                    faceapi.nets.faceRecognitionNet.loadFromUri(CDN_URL),
-                    faceapi.nets.ageGenderNet.loadFromUri(CDN_URL)
+                    faceapi.nets.tinyFaceDetector.loadFromUri(LOCAL_URL),
+                    faceapi.nets.faceLandmark68Net.loadFromUri(LOCAL_URL),
+                    faceapi.nets.faceRecognitionNet.loadFromUri(LOCAL_URL),
+                    faceapi.nets.ageGenderNet.loadFromUri(LOCAL_URL)
                 ]);
                 faceModelsLoaded = true;
+                console.log("AI Models loaded successfully from local static folder.");
                 return true;
             } catch(e) {
+                console.error("AI Models failed to load completely:", e);
                 return false;
             }
         }
