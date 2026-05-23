@@ -491,6 +491,24 @@
     }
 
     async function loadFaceModelsOnce() {
+        if (typeof faceapi !== 'undefined' && faceapi.Box && !faceapi.Box.isPatched) {
+            const OriginalBox = faceapi.Box;
+            function PatchedBox(x, y, width, height, allowInvalid = false) {
+                let safeWidth = width;
+                let safeHeight = height;
+                if (!allowInvalid) {
+                    if (safeWidth < 0) safeWidth = Math.abs(safeWidth) || 0.001;
+                    if (safeHeight < 0) safeHeight = Math.abs(safeHeight) || 0.001;
+                }
+                return new OriginalBox(x, y, safeWidth, safeHeight, allowInvalid);
+            }
+            PatchedBox.prototype = OriginalBox.prototype;
+            Object.assign(PatchedBox, OriginalBox);
+            PatchedBox.isPatched = true;
+            faceapi.Box = PatchedBox;
+            console.log("Local patch applied to faceapi.Box constructor.");
+        }
+
         if (faceModelsLoaded) return true;
         if (typeof faceapi === 'undefined') {
             showToast("face-api library is not loaded. Check internet connection.");
@@ -742,12 +760,32 @@
                 return handleLivenessFailure("Rejected: Image is too blurry. Please scan under clear lighting.");
             }
 
-            // 4. HEAVY DETECTIONS AFTER CAPTURE
-            const allDetections = await faceapi
-                .detectAllFaces(img, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.4 }))
-                .withFaceLandmarks()
-                .withAgeAndGender()
-                .withFaceDescriptors();
+            // 4. HEAVY DETECTIONS AFTER CAPTURE WITH DETERMINISTIC CPU FALLBACK
+            let allDetections = [];
+            try {
+                allDetections = await faceapi
+                    .detectAllFaces(img, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.4 }))
+                    .withFaceLandmarks()
+                    .withAgeAndGender()
+                    .withFaceDescriptors();
+            } catch (detectorError) {
+                console.warn("First face-api detection attempt failed, retrying on CPU backend:", detectorError);
+                try {
+                    if (faceapi.tf) {
+                        await faceapi.tf.setBackend('cpu');
+                        await faceapi.tf.ready();
+                        console.log("TensorFlow.js backend switched to CPU successfully.");
+                    }
+                    allDetections = await faceapi
+                        .detectAllFaces(img, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.4 }))
+                        .withFaceLandmarks()
+                        .withAgeAndGender()
+                        .withFaceDescriptors();
+                } catch (fallbackError) {
+                    console.error("Biometric CPU fallback also failed:", fallbackError);
+                    throw new Error("Biometric extraction failed: " + fallbackError.message);
+                }
+            }
 
             console.log(`Total raw detections: ${allDetections.length}`);
             
@@ -760,29 +798,24 @@
                 console.log(`Detection check - Score: ${face.detection.score.toFixed(3)}, Width: ${box.width}, Height: ${box.height}, Area Ratio: ${areaRatio.toFixed(3)}`);
 
                 return (
-                    face.detection.score > 0.4 &&
-                    box.width > 60 &&
-                    box.height > 60 &&
-                    areaRatio > 0.04
+                    face.detection.score > 0.75 &&
+                    box.width >= 80 &&
+                    box.height >= 80 &&
+                    areaRatio >= 0.08
                 );
             });
 
             console.log(`Valid faces after filtering: ${validFaces.length}`);
 
             if (validFaces.length === 0) {
-                return handleLivenessFailure("Rejected: No clear, strong face detected in your capture.");
+                return handleLivenessFailure("Rejected: No clear, strong face detected. Keep camera close and steady.");
             }
             if (validFaces.length > 1) {
                 return handleLivenessFailure("Rejected: Multiple real faces detected. Please verify alone.");
             }
 
-            // Sort by highest confidence and select the best face
-            const faceMatch = validFaces.sort((a, b) => b.detection.score - a.detection.score)[0];
-            
-            const box = faceMatch.detection.box;
-            if (box.x < 0 || box.y < 0 || box.x + box.width > img.width || box.y + box.height > img.height) {
-                return handleLivenessFailure("Rejected: Face is too far outside the frame.");
-            }
+            // Select primary face
+            const faceMatch = validFaces[0];
             
             // Gender Check
             const userGender = "{{ profile.gender|default:''|escapejs }}";
@@ -957,11 +990,29 @@
             return false;
         }
 
-        try {
-            const pfpDetection = await faceapi
-                .detectSingleFace(pfpImgElement, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.4 }))
-                .withFaceLandmarks()
-                .withFaceDescriptor();
+            let pfpDetection = null;
+            try {
+                pfpDetection = await faceapi
+                    .detectSingleFace(pfpImgElement, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.4 }))
+                    .withFaceLandmarks()
+                    .withFaceDescriptor();
+            } catch (detectorError) {
+                console.warn("Profile photo face detection failed on GPU, retrying on CPU:", detectorError);
+                try {
+                    if (faceapi.tf) {
+                        await faceapi.tf.setBackend('cpu');
+                        await faceapi.tf.ready();
+                    }
+                    pfpDetection = await faceapi
+                        .detectSingleFace(pfpImgElement, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.4 }))
+                        .withFaceLandmarks()
+                        .withFaceDescriptor();
+                } catch (fallbackError) {
+                    console.error("Profile photo CPU fallback also failed:", fallbackError);
+                    showToast("Biometric analysis error on your profile picture.");
+                    return false;
+                }
+            }
 
             if (!pfpDetection) {
                 showToast("Rejected: No clear face detected in your uploaded profile picture.");

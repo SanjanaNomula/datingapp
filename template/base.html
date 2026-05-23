@@ -22,7 +22,27 @@
     <!-- AI & ML Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+    <script>
+        // Centralized robust patch to prevent negative coordinate crash in face-api.js
+        if (typeof faceapi !== 'undefined' && faceapi.Box) {
+            const OriginalBox = faceapi.Box;
+            function PatchedBox(x, y, width, height, allowInvalid = false) {
+                let safeWidth = width;
+                let safeHeight = height;
+                if (!allowInvalid) {
+                    if (safeWidth < 0) safeWidth = Math.abs(safeWidth) || 0.001;
+                    if (safeHeight < 0) safeHeight = Math.abs(safeHeight) || 0.001;
+                }
+                return new OriginalBox(x, y, safeWidth, safeHeight, allowInvalid);
+            }
+            PatchedBox.prototype = OriginalBox.prototype;
+            Object.assign(PatchedBox, OriginalBox);
+            faceapi.Box = PatchedBox;
+            console.log("Centralized patch applied to faceapi.Box constructor.");
+        }
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/nsfwjs@2.4.1/dist/nsfwjs.min.js"></script>
+
 
     
     <style>
