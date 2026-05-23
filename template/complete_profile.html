@@ -3,73 +3,67 @@
 {% block head %}
 <style>
     nav { display: none !important; }
-    .container { padding: 0 !important; margin-top: 0 !important; }
-    body { background: #f0f4ff; min-height: 100vh; }
+    body { background: #fff !important; margin: 0; }
+    .container {
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background: #fff !important;
+    }
 
-    .onboard-wrap {
+    .onboard-page {
         min-height: 100vh;
+        min-height: 100dvh;
         display: flex;
         flex-direction: column;
-        align-items: center;
         justify-content: center;
-        padding: 24px 16px;
-    }
-
-    .onboard-card {
-        background: #fff;
-        border-radius: 28px;
-        box-shadow: 0 8px 40px rgba(99,102,241,0.13);
-        padding: 36px 28px 32px;
-        width: 100%;
+        padding: 20px 24px;
+        padding-top: max(20px, env(safe-area-inset-top, 20px));
+        padding-bottom: max(20px, env(safe-area-inset-bottom, 20px));
+        box-sizing: border-box;
         max-width: 420px;
+        margin: 0 auto;
     }
 
-    .onboard-logo {
+    /* ── Header ── */
+    .onboard-header {
         text-align: center;
-        margin-bottom: 22px;
+        margin-bottom: 28px;
     }
-    .onboard-logo .logo-icon {
-        width: 64px;
-        height: 64px;
+    .onboard-header .logo-icon {
+        width: 52px; height: 52px;
         background: linear-gradient(135deg, #6366f1, #818cf8);
-        border-radius: 20px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 28px;
-        color: #fff;
-        margin-bottom: 14px;
-        box-shadow: 0 4px 18px rgba(99,102,241,0.3);
+        border-radius: 16px;
+        display: inline-flex; align-items: center; justify-content: center;
+        font-size: 22px; color: #fff;
+        margin-bottom: 12px;
+        box-shadow: 0 4px 16px rgba(99,102,241,0.25);
     }
-    .onboard-logo h2 {
-        font-size: 22px;
-        font-weight: 800;
-        color: #1e293b;
-        margin: 0 0 6px;
+    .onboard-header h2 {
+        font-size: 20px; font-weight: 800;
+        color: #0f172a; margin: 0 0 4px;
     }
-    .onboard-logo p {
-        font-size: 13px;
-        color: #94a3b8;
-        margin: 0;
+    .onboard-header p {
+        font-size: 13px; color: #94a3b8; margin: 0;
     }
 
+    /* ── Form ── */
     .form-group {
-        margin-bottom: 18px;
+        margin-bottom: 16px;
     }
     .form-group label {
         display: block;
-        font-size: 12px;
-        font-weight: 700;
+        font-size: 11px; font-weight: 700;
         color: #64748b;
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        margin-bottom: 7px;
+        margin-bottom: 6px;
     }
     .form-group .form-control {
         width: 100%;
-        padding: 12px 14px;
+        padding: 11px 14px;
         border: 1.5px solid #e2e8f0;
-        border-radius: 14px;
+        border-radius: 12px;
         font-size: 15px;
         color: #1e293b;
         background: #f8fafc;
@@ -81,7 +75,7 @@
     }
     .form-group .form-control:focus {
         border-color: #6366f1;
-        box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+        box-shadow: 0 0 0 3px rgba(99,102,241,0.10);
         background: #fff;
     }
     select.form-control {
@@ -94,165 +88,140 @@
     .form-row {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 14px;
+        gap: 12px;
     }
 
-    /* Age stepper */
+    /* ── Age Stepper ── */
     .age-stepper {
-        display: flex;
-        align-items: center;
+        display: flex; align-items: center;
         background: #f8fafc;
         border: 1.5px solid #e2e8f0;
-        border-radius: 14px;
+        border-radius: 12px;
         overflow: hidden;
         transition: border 0.2s, box-shadow 0.2s;
     }
     .age-stepper:focus-within {
         border-color: #6366f1;
-        box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+        box-shadow: 0 0 0 3px rgba(99,102,241,0.10);
     }
     .age-btn {
-        width: 44px;
-        height: 48px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: none;
-        border: none;
-        cursor: pointer;
-        color: #6366f1;
-        font-size: 16px;
-        transition: background 0.15s;
-        flex-shrink: 0;
+        width: 40px; height: 42px;
+        display: flex; align-items: center; justify-content: center;
+        background: none; border: none; cursor: pointer;
+        color: #6366f1; font-size: 14px;
+        transition: background 0.15s; flex-shrink: 0;
     }
-    .age-btn:hover { background: rgba(99,102,241,0.08); }
+    .age-btn:hover { background: rgba(99,102,241,0.06); }
+    .age-btn:active { background: rgba(99,102,241,0.12); }
     .age-display {
-        flex: 1;
-        text-align: center;
-        font-size: 17px;
-        font-weight: 700;
-        color: #1e293b;
+        flex: 1; text-align: center;
+        font-size: 15px; font-weight: 700; color: #1e293b;
     }
-    .age-display span { font-size: 12px; font-weight: 500; color: #94a3b8; margin-left: 2px; }
+    .age-display span { font-size: 11px; font-weight: 500; color: #94a3b8; margin-left: 2px; }
 
+    /* ── Submit ── */
     .btn-submit {
         width: 100%;
-        padding: 15px;
+        padding: 14px;
         background: linear-gradient(135deg, #6366f1, #818cf8);
-        color: #fff;
-        border: none;
-        border-radius: 16px;
-        font-size: 16px;
-        font-weight: 700;
+        color: #fff; border: none;
+        border-radius: 14px;
+        font-size: 15px; font-weight: 700;
         cursor: pointer;
-        margin-top: 8px;
-        box-shadow: 0 4px 18px rgba(99,102,241,0.3);
+        margin-top: 6px;
+        box-shadow: 0 4px 16px rgba(99,102,241,0.25);
         transition: transform 0.15s, box-shadow 0.15s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
+        display: flex; align-items: center; justify-content: center; gap: 8px;
     }
     .btn-submit:active { transform: scale(0.98); }
-    .btn-submit:hover { box-shadow: 0 6px 24px rgba(99,102,241,0.4); }
 
     .later-note {
         text-align: center;
-        font-size: 12px;
-        color: #94a3b8;
+        font-size: 11px; color: #94a3b8;
         margin-top: 14px;
     }
 
-    .error-msg {
-        color: #ef4444;
-        font-size: 11px;
-        margin-top: 4px;
-    }
+    .error-msg { color: #ef4444; font-size: 11px; margin-top: 4px; }
     .alert-error {
-        background: #ffe4e6;
-        border: 1px solid #fca5a5;
-        color: #b91c1c;
-        padding: 12px 14px;
-        border-radius: 12px;
-        font-size: 13px;
-        margin-bottom: 16px;
+        background: #fef2f2; border: 1px solid #fecaca;
+        color: #b91c1c; padding: 10px 12px;
+        border-radius: 10px; font-size: 12px;
+        margin-bottom: 14px;
     }
 </style>
 {% endblock %}
 
 {% block body %}
-<div class="onboard-wrap">
-    <div class="onboard-card">
+<div class="onboard-page">
 
-        <div class="onboard-logo">
-            <div class="logo-icon"><i class="fas fa-user-circle"></i></div>
-            <h2>Quick Setup</h2>
-            <p>Just a few basics to get you started</p>
-        </div>
-
-        {% if form.errors %}
-        <div class="alert-error">
-            <i class="fas fa-exclamation-circle"></i>
-            {% for field, errors in form.errors.items %}
-                {% for error in errors %}{{ error }} {% endfor %}
-            {% endfor %}
-        </div>
-        {% endif %}
-
-        <form method="POST" id="initForm">
-            {% csrf_token %}
-
-            <!-- Full Name -->
-            <div class="form-group">
-                <label>Full Name</label>
-                {{ form.name }}
-            </div>
-
-            <!-- Gender + Age -->
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Gender</label>
-                    {{ form.gender }}
-                </div>
-                <div class="form-group">
-                    <label>Age</label>
-                    <div class="age-stepper">
-                        <button type="button" class="age-btn" onclick="changeAge(-1)">
-                            <i class="fas fa-minus"></i>
-                        </button>
-                        <div class="age-display">
-                            <span id="age-val">18</span><span>yrs</span>
-                        </div>
-                        <button type="button" class="age-btn" onclick="changeAge(1)">
-                            <i class="fas fa-plus"></i>
-                        </button>
-                    </div>
-                    <input type="hidden" name="age" id="age-input" value="18">
-                </div>
-            </div>
-
-            <!-- Campus -->
-            <div class="form-group">
-                <label>Campus</label>
-                {{ form.campus }}
-            </div>
-
-            <!-- Native Place -->
-            <div class="form-group">
-                <label>Native Place</label>
-                {{ form.native_place }}
-            </div>
-
-            <button type="submit" class="btn-submit" id="submitBtn">
-                <i class="fas fa-arrow-right"></i> Continue
-            </button>
-        </form>
-
-        <p class="later-note">
-            <i class="fas fa-info-circle"></i> You can add more details later from your profile page
-        </p>
-
+    <div class="onboard-header">
+        <div class="logo-icon"><i class="fas fa-user-circle"></i></div>
+        <h2>Quick Setup</h2>
+        <p>Just a few basics to get you started</p>
     </div>
+
+    {% if form.errors %}
+    <div class="alert-error">
+        <i class="fas fa-exclamation-circle"></i>
+        {% for field, errors in form.errors.items %}
+            {% for error in errors %}{{ error }} {% endfor %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="POST" id="initForm">
+        {% csrf_token %}
+
+        <!-- Full Name -->
+        <div class="form-group">
+            <label>Full Name</label>
+            {{ form.name }}
+        </div>
+
+        <!-- Gender + Age -->
+        <div class="form-row">
+            <div class="form-group">
+                <label>Gender</label>
+                {{ form.gender }}
+            </div>
+            <div class="form-group">
+                <label>Age</label>
+                <div class="age-stepper">
+                    <button type="button" class="age-btn" onclick="changeAge(-1)">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                    <div class="age-display">
+                        <span id="age-val">18</span><span>yrs</span>
+                    </div>
+                    <button type="button" class="age-btn" onclick="changeAge(1)">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                <input type="hidden" name="age" id="age-input" value="18">
+            </div>
+        </div>
+
+        <!-- Campus -->
+        <div class="form-group">
+            <label>Campus</label>
+            {{ form.campus }}
+        </div>
+
+        <!-- Native Place -->
+        <div class="form-group">
+            <label>Native Place</label>
+            {{ form.native_place }}
+        </div>
+
+        <button type="submit" class="btn-submit" id="submitBtn">
+            <i class="fas fa-arrow-right"></i> Continue
+        </button>
+    </form>
+
+    <p class="later-note">
+        <i class="fas fa-info-circle"></i> You can add more details later from your profile page
+    </p>
+
 </div>
 
 <script>

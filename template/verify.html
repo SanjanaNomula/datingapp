@@ -6,205 +6,256 @@
 <style>
     /* Hide bottom nav during verification */
     nav { display: none !important; }
-    body { background: white !important; }
-    .container { padding-bottom: 20px !important; background: white !important; min-height: 100vh; }
+    body { background: #fff !important; margin: 0; }
+    .container {
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background: #fff !important;
+    }
 
-    .setup-wrap {
-        max-width: 440px;
+    .verify-page {
+        min-height: 100vh;
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 20px 24px;
+        padding-top: max(20px, env(safe-area-inset-top, 20px));
+        padding-bottom: max(20px, env(safe-area-inset-bottom, 20px));
+        box-sizing: border-box;
+        max-width: 420px;
         margin: 0 auto;
-        padding: 8px 10px;
-    }
-    .setup-card {
-        background: white;
-        padding: 20px 16px;
-        border-radius: 24px;
-        box-shadow: var(--shadow-lg);
-        border: 1px solid var(--border);
         text-align: center;
     }
-    .setup-icon {
-        width: 48px; height: 48px;
-        background: #eef2ff;
-        color: var(--primary);
-        border-radius: 14px;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 20px; margin: 0 auto 12px;
-    }
-    h2 { font-size: 18px; font-weight: 800; color: var(--text-main); margin-bottom: 6px; }
-    .setup-desc { color: var(--text-muted); font-size: 12px; line-height: 1.5; margin-bottom: 16px; }
 
-    /* Face Verification Section (Same as complete_profile.html) */
-    .face-section {
-        background: #f8fafc;
-        border: 2px dashed #cbd5e1;
-        border-radius: 20px;
-        padding: 16px 12px;
-        margin-bottom: 16px;
-        text-align: center;
-        transition: 0.3s;
+    /* ── Header ── */
+    .verify-header {
+        margin-bottom: 20px;
     }
-    
-    .camera-ui {
+    .verify-header .v-icon {
+        width: 48px; height: 48px;
+        background: linear-gradient(135deg, #6366f1, #818cf8);
+        border-radius: 14px;
+        display: inline-flex; align-items: center; justify-content: center;
+        font-size: 20px; color: #fff;
+        margin-bottom: 10px;
+        box-shadow: 0 4px 14px rgba(99,102,241,0.25);
+    }
+    .verify-header h2 {
+        font-size: 19px; font-weight: 800;
+        color: #0f172a; margin: 0 0 4px;
+    }
+    .verify-header p {
+        font-size: 12px; color: #94a3b8;
+        line-height: 1.5; margin: 0;
+    }
+
+    /* ── Verification section — flat, no nested card ── */
+    .face-scan-area {
+        background: #f8fafc;
+        border-radius: 16px;
+        padding: 20px 16px;
+        margin-bottom: 16px;
+        transition: all 0.3s;
+    }
+    .face-scan-area.verified {
+        background: #f0fdf4;
+    }
+    .face-scan-area.error {
+        background: #fef2f2;
+    }
+
+    /* Camera viewport */
+    .cam-viewport {
         position: relative;
         width: 100%;
-        max-width: 240px;
+        max-width: 220px;
         margin: 0 auto;
         aspect-ratio: 3/4;
-        border-radius: 20px;
+        border-radius: 16px;
         overflow: hidden;
-        background: #000;
+        background: #0f172a;
         box-shadow: 0 8px 24px rgba(0,0,0,0.15);
     }
     #verify-video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
     #face-guide {
         position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-        width: 70%; height: 60%; border: 2px dashed rgba(255,255,255,0.5);
+        width: 70%; height: 60%; border: 2px dashed rgba(255,255,255,0.45);
         border-radius: 50% 50% 45% 45%; pointer-events: none;
     }
     #gesture-hint {
-        position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-        background: rgba(0,0,0,0.6); color: white; padding: 6px 12px;
-        border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap;
-        display: flex; align-items: center; gap: 6px;
+        position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+        background: rgba(0,0,0,0.55); color: white; padding: 5px 10px;
+        border-radius: 20px; font-size: 10px; font-weight: 700; white-space: nowrap;
+        display: flex; align-items: center; gap: 5px;
     }
 
-    /* PFP Section */
-    .pfp-group {
-        opacity: 0.5; pointer-events: none; transition: 0.3s;
+    #verify-status {
+        font-size: 12px; font-weight: 700;
+        color: var(--primary);
+        margin-top: 12px; min-height: 18px;
+    }
+
+    /* State icon circles */
+    .state-icon {
+        width: 48px; height: 48px;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        margin: 0 auto 10px; font-size: 20px;
+    }
+    .state-icon.loading { background: #e0e7ff; color: #4f46e5; }
+    .state-icon.success { background: #dcfce7; color: #16a34a; }
+    .state-icon.error { background: #fee2e2; color: #ef4444; }
+
+    /* ── PFP Upload — flat ── */
+    .pfp-area {
+        opacity: 0.4; pointer-events: none;
+        transition: all 0.3s;
         margin-bottom: 16px;
+        text-align: left;
     }
-    .pfp-group.active { opacity: 1; pointer-events: auto; }
-    
-    .pfp-upload-circle {
-        width: 100px; height: 100px;
-        margin: 0 auto 12px;
-        position: relative;
+    .pfp-area.active { opacity: 1; pointer-events: auto; }
+    .pfp-area label {
+        display: block;
+        font-size: 11px; font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+    }
+    .pfp-drop {
+        background: #f8fafc;
+        border-radius: 14px;
+        padding: 18px;
+        text-align: center;
         cursor: pointer;
+        transition: all 0.2s;
     }
-    .pfp-preview {
-        width: 100%; height: 100%;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 3px solid white;
-        box-shadow: var(--shadow-md);
-        display: none;
-    }
-    .pfp-placeholder {
-        width: 100%; height: 100%;
-        background: #f1f5f9;
-        border: 2px dashed #cbd5e1;
-        border-radius: 50%;
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-        color: #94a3b8;
+    .pfp-drop:active { transform: scale(0.98); }
+
+    .pfp-preview-img {
+        display: none; width: 90px; height: 90px;
+        border-radius: 50%; object-fit: cover;
+        margin: 0 auto 10px;
+        border: 3px solid var(--primary);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     }
 
-    .btn-submit {
+    /* ── Submit ── */
+    .btn-verify-submit {
         width: 100%;
-        padding: 12px;
-        background: var(--primary);
-        color: white;
-        border: none;
-        border-radius: 12px;
-        font-size: 14px;
-        font-weight: 700;
+        padding: 14px;
+        background: linear-gradient(135deg, #6366f1, #818cf8);
+        color: #fff; border: none;
+        border-radius: 14px;
+        font-size: 15px; font-weight: 700;
         cursor: pointer;
-        transition: 0.2s;
-        box-shadow: var(--shadow-lg);
+        box-shadow: 0 4px 16px rgba(99,102,241,0.25);
+        transition: transform 0.15s, box-shadow 0.15s;
     }
-    .btn-submit:disabled { background: #cbd5e1; cursor: not-allowed; box-shadow: none; opacity: 0.7; }
-    
-    #verify-status { font-size: 13px; font-weight: 700; color: var(--primary); margin-top: 15px; min-height: 20px; }
+    .btn-verify-submit:active { transform: scale(0.98); }
+    .btn-verify-submit:disabled {
+        background: #cbd5e1; cursor: not-allowed;
+        box-shadow: none; opacity: 0.6;
+    }
+
+    .btn-small {
+        background: none; border: none;
+        color: var(--primary); font-size: 12px;
+        font-weight: 700; cursor: pointer;
+        padding: 6px 12px; border-radius: 10px;
+        transition: 0.2s;
+    }
+    .btn-small:active { opacity: 0.7; }
+    .btn-small.danger { color: #ef4444; }
 </style>
 {% endblock %}
 
 {% block body %}
-<div class="setup-wrap">
-    <div class="setup-card">
-        <div class="setup-icon"><i class="fas fa-shield-alt"></i></div>
+<div class="verify-page">
+
+    <div class="verify-header">
+        <div class="v-icon"><i class="fas fa-shield-alt"></i></div>
         <h2>Verify Identity</h2>
-        <p class="setup-desc">This verification is done to prevent fake accounts. Your verification image is kept completely private and is not visible to the public.</p>
-
-        <form id="reverifyForm" method="POST">
-            {% csrf_token %}
-            
-            <!-- Face Verification Section -->
-            <div id="face-verification-section" style="background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 20px; padding: 24px; margin-bottom: 24px; text-align: center; transition: 0.3s;">
-                <div id="verify-initial-ui">
-                    <i class="fas fa-shield-alt" style="font-size: 32px; color: var(--primary); margin-bottom: 12px; display: block;"></i>
-                    <h4 style="margin: 0 0 8px; font-size: 16px;">Identity Verification</h4>
-                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Quickly verify your identity to get a "Verified" badge and 2x more matches!</p>
-                    <p style="font-size: 11px; color: var(--primary); font-weight: 600; margin-bottom: 16px; background: rgba(99,102,241,0.05); padding: 8px; border-radius: 10px;">
-                        <i class="fas fa-user-shield"></i> Your verification photo is private and will not appear on your profile.
-                    </p>
-                    <button type="button" onclick="startVerification()" class="btn" style="background: var(--primary); color: white; border-radius: 12px; padding: 10px 20px; font-weight: 700; border: none; cursor: pointer;">
-                        Verify Identity
-                    </button>
-                </div>
-
-                <div id="verify-camera-ui" style="display: none;">
-                    <div style="position: relative; width: 100%; max-width: 320px; margin: 0 auto; aspect-ratio: 3/4; border-radius: 16px; overflow: hidden; background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
-                        <video id="verify-video" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);"></video>
-                        <canvas id="verify-canvas" style="display: none;"></canvas>
-                        <div id="face-guide" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70%; height: 60%; border: 2px dashed rgba(255,255,255,0.5); border-radius: 50% 50% 45% 45%; pointer-events: none;"></div>
-                        <div id="gesture-hint" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); color: white; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; display: flex; align-items: center; gap: 6px;">
-                            <i class="fas fa-sync-alt fa-spin"></i> Follow the prompts below
-                        </div>
-                    </div>
-                    <p id="verify-status" style="margin-top: 16px; font-size: 13px; font-weight: 700; color: var(--primary);"></p>
-                </div>
-
-                <div id="verify-loading-ui" style="display: none;">
-                    <div style="width: 60px; height: 60px; background: #e0e7ff; color: #4f46e5; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 24px;">
-                        <i class="fas fa-spinner fa-spin"></i>
-                    </div>
-                    <h4 style="margin: 0 0 4px; color: #4f46e5;">Verifying Photo...</h4>
-                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 0;">Analyzing your secure scan.</p>
-                </div>
-
-                <div id="verify-error-ui" style="display: none;">
-                    <div style="width: 60px; height: 60px; background: #fee2e2; color: #ef4444; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 24px;">
-                        <i class="fas fa-times-circle"></i>
-                    </div>
-                    <h4 style="margin: 0 0 4px; color: #ef4444;">Verification Failed</h4>
-                    <p id="verify-error-msg" style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">Error processing photo.</p>
-                    <button type="button" onclick="handleVerificationRetake()" class="btn" style="background: #ef4444; color: white; border-radius: 12px; padding: 8px 16px; font-weight: 600; border: none; cursor: pointer; font-size: 13px;">
-                        Retake Verification
-                    </button>
-                </div>
-
-                <div id="verify-success-ui" style="display: none;">
-                    <div style="width: 60px; height: 60px; background: #dcfce7; color: #16a34a; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 24px;">
-                        <i class="fas fa-check-circle"></i>
-                    </div>
-                    <h4 style="margin: 0 0 4px; color: #16a34a;">Identity Scanned!</h4>
-                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Verification image secured. Now upload your profile picture.</p>
-                    <button type="button" onclick="showRetakeConfirmationModal(handleVerificationRetake)" class="btn" style="background: transparent; color: #ef4444; border: 1px solid #fee2e2; border-radius: 12px; padding: 6px 12px; font-size: 11px; font-weight: 700; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 6px; margin-top: 4px;" onmouseover="this.style.backgroundColor='#fee2e2'" onmouseout="this.style.backgroundColor='transparent'">
-                        <i class="fas fa-redo-alt"></i> Retake Scan
-                    </button>
-                </div>
-
-                <input type="hidden" name="verification_image_data" id="verification-image-data">
-                <input type="hidden" name="verification_image_url" id="verification-image-url" value="{{ profile.verification_image|default:'' }}">
-                <input type="hidden" name="verification_status" id="verification-status-input" value="{{ profile.verification_status|default:'pending' }}">
-                <input type="hidden" name="profile_pic_url" id="profile-pic-url-input" value="{{ profile.profile_pic|default:'' }}">
-            </div>
-
-            <!-- Profile Picture Group -->
-            <div class="form-group" id="pfp-group" style="opacity: 0.5; pointer-events: none; transition: 0.3s; margin-bottom: 24px;">
-                <label for="id_profile_pic_file">Profile Picture <span style="color:#ef4444">*</span></label>
-                <div id="pfp-upload-area" style="border: 2px dashed var(--border); border-radius: 16px; padding: 20px; text-align: center; cursor: pointer; transition: 0.3s; background:#f8fafc;" onclick="document.getElementById('id_profile_pic_file').click()">
-                    <img id="pfp-preview" src="" alt="" style="display:none; width:120px; height:120px; border-radius:50%; object-fit:cover; margin:0 auto 12px; border: 3px solid var(--primary); box-shadow:0 4px 10px rgba(0,0,0,0.1);">
-                    <div id="pfp-placeholder">
-                        <i class="fas fa-camera" style="font-size:32px; color:var(--primary); margin-bottom:8px; display:block;"></i>
-                        <p style="margin:0; color:var(--text-main); font-weight:600; font-size:14px;">Upload your best photo</p>
-                    </div>
-                </div>
-                <input type="file" id="id_profile_pic_file" accept="image/*" style="display: none;">
-            </div>
-
-            <button type="submit" class="btn-submit" id="submit-btn" disabled>Complete Verification</button>
-        </form>
+        <p>Prevent fake accounts. Your verification image stays completely private.</p>
     </div>
+
+    <form id="reverifyForm" method="POST">
+        {% csrf_token %}
+
+        <!-- Face Verification Section — flat area, no nested card -->
+        <div id="face-verification-section" class="face-scan-area">
+
+            <div id="verify-initial-ui">
+                <div class="state-icon loading"><i class="fas fa-camera"></i></div>
+                <h4 style="margin: 0 0 4px; font-size: 14px; font-weight: 700; color: #0f172a;">Take a Quick Selfie</h4>
+                <p style="font-size: 11px; color: #94a3b8; margin: 0 0 4px;">Get a "Verified" badge and 2x more matches</p>
+                <p style="font-size: 10px; color: var(--primary); font-weight: 600; margin: 0 0 14px;">
+                    <i class="fas fa-lock" style="font-size: 9px;"></i> Photo is private & never shown publicly
+                </p>
+                <button type="button" onclick="startVerification()" style="background: linear-gradient(135deg, #6366f1, #818cf8); color: white; border-radius: 12px; padding: 10px 24px; font-weight: 700; font-size: 13px; border: none; cursor: pointer; box-shadow: 0 4px 14px rgba(99,102,241,0.25);">
+                    <i class="fas fa-camera"></i> Start Verification
+                </button>
+            </div>
+
+            <div id="verify-camera-ui" style="display: none;">
+                <div class="cam-viewport">
+                    <video id="verify-video" autoplay playsinline muted></video>
+                    <canvas id="verify-canvas" style="display: none;"></canvas>
+                    <div id="face-guide"></div>
+                    <div id="gesture-hint">
+                        <i class="fas fa-sync-alt fa-spin"></i> Follow the prompts
+                    </div>
+                </div>
+                <p id="verify-status"></p>
+            </div>
+
+            <div id="verify-loading-ui" style="display: none;">
+                <div class="state-icon loading"><i class="fas fa-spinner fa-spin"></i></div>
+                <h4 style="margin: 0 0 4px; font-size: 14px; font-weight: 700; color: #4f46e5;">Verifying Photo...</h4>
+                <p style="font-size: 11px; color: #94a3b8; margin: 0;">Analyzing your secure scan</p>
+            </div>
+
+            <div id="verify-error-ui" style="display: none;">
+                <div class="state-icon error"><i class="fas fa-times-circle"></i></div>
+                <h4 style="margin: 0 0 4px; font-size: 14px; font-weight: 700; color: #ef4444;">Verification Failed</h4>
+                <p id="verify-error-msg" style="font-size: 11px; color: #94a3b8; margin: 0 0 12px;">Error processing photo.</p>
+                <button type="button" onclick="handleVerificationRetake()" style="background: #ef4444; color: white; border-radius: 10px; padding: 8px 16px; font-weight: 600; border: none; cursor: pointer; font-size: 12px;">
+                    Retake
+                </button>
+            </div>
+
+            <div id="verify-success-ui" style="display: none;">
+                <div class="state-icon success"><i class="fas fa-check-circle"></i></div>
+                <h4 style="margin: 0 0 4px; font-size: 14px; font-weight: 700; color: #16a34a;">Identity Scanned!</h4>
+                <p style="font-size: 11px; color: #94a3b8; margin: 0 0 8px;">Now upload your profile picture below</p>
+                <button type="button" onclick="showRetakeConfirmationModal(handleVerificationRetake)" class="btn-small danger">
+                    <i class="fas fa-redo-alt"></i> Retake Scan
+                </button>
+            </div>
+
+            <input type="hidden" name="verification_image_data" id="verification-image-data">
+            <input type="hidden" name="verification_image_url" id="verification-image-url" value="{{ profile.verification_image|default:'' }}">
+            <input type="hidden" name="verification_status" id="verification-status-input" value="{{ profile.verification_status|default:'pending' }}">
+            <input type="hidden" name="profile_pic_url" id="profile-pic-url-input" value="{{ profile.profile_pic|default:'' }}">
+        </div>
+
+        <!-- Profile Picture — flat area -->
+        <div class="pfp-area" id="pfp-group">
+            <label for="id_profile_pic_file">Profile Picture <span style="color:#ef4444">*</span></label>
+            <div class="pfp-drop" id="pfp-upload-area" onclick="document.getElementById('id_profile_pic_file').click()">
+                <img id="pfp-preview" class="pfp-preview-img" src="" alt="">
+                <div id="pfp-placeholder">
+                    <i class="fas fa-image" style="font-size: 24px; color: var(--primary); margin-bottom: 6px; display: block;"></i>
+                    <p style="margin:0; color:#475569; font-weight:600; font-size:13px;">Tap to upload your best photo</p>
+                </div>
+            </div>
+            <input type="file" id="id_profile_pic_file" accept="image/*" style="display: none;">
+        </div>
+
+        <button type="submit" class="btn-verify-submit" id="submit-btn" disabled>Complete Verification</button>
+    </form>
 </div>
 
 <script>
@@ -461,7 +512,9 @@
         
         function handleFailure(msg) {
             document.getElementById('verification-status-input').value = 'rejected';
-            document.getElementById('face-verification-section').style.borderColor = '#ef4444';
+            const vfSection = document.getElementById('face-verification-section');
+            vfSection.classList.remove('verified');
+            vfSection.classList.add('error');
             cameraUI.style.display = 'none';
             loadingUI.style.display = 'none';
             successUI.style.display = 'none';
@@ -540,15 +593,14 @@
                 successUI.style.display = 'block';
                 
                 const vfSection = document.getElementById('face-verification-section');
-                vfSection.style.borderColor = '#16a34a';
-                vfSection.style.background = '#f0fdf4';
+                vfSection.classList.remove('error');
+                vfSection.classList.add('verified');
                 vfSection.style.cursor = 'pointer';
                 vfSection.title = 'Click to retake verification scan';
                 
                 // Enable PFP upload
                 const pfpGrp = document.getElementById('pfp-group');
-                pfpGrp.style.opacity = '1';
-                pfpGrp.style.pointerEvents = 'auto';
+                pfpGrp.classList.add('active');
             } else {
                 return handleFailure("Upload failed: " + data.message);
             }
@@ -755,8 +807,7 @@
         document.getElementById('profile-pic-url-input').value = '';
         
         const vfSection = document.getElementById('face-verification-section');
-        vfSection.style.borderColor = '#cbd5e1';
-        vfSection.style.background = '#f8fafc';
+        vfSection.classList.remove('verified', 'error');
         vfSection.style.cursor = '';
         vfSection.title = '';
         
@@ -774,8 +825,7 @@
         
         clearPfp();
         const pfpGrp = document.getElementById('pfp-group');
-        pfpGrp.style.opacity = '0.5';
-        pfpGrp.style.pointerEvents = 'none';
+        pfpGrp.classList.remove('active');
 
         const formData = new FormData();
         formData.append('verification_image_url', '');
@@ -877,16 +927,14 @@
             verificationCaptured = true;
             const vfSection = document.getElementById('face-verification-section');
             if (vfSection) {
-                vfSection.style.borderColor = '#16a34a';
-                vfSection.style.background = '#f0fdf4';
+                vfSection.classList.add('verified');
                 vfSection.style.cursor = 'pointer';
                 vfSection.title = 'Click to retake verification scan';
             }
             
             const pfpGrp = document.getElementById('pfp-group');
             if (pfpGrp) {
-                pfpGrp.style.opacity = '1';
-                pfpGrp.style.pointerEvents = 'auto';
+                pfpGrp.classList.add('active');
             }
             
             const camUI = document.getElementById('verify-camera-ui');
