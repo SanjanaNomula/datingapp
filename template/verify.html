@@ -2,6 +2,12 @@
 
 {% block head %}
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+    // Robust face-api.js loader if not already present
+    if (typeof faceapi === 'undefined') {
+        document.write('<script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"><\/script>');
+    }
+</script>
 <style>
     :root {
         --verify-bg: #0b0f19;
@@ -155,7 +161,7 @@
         border-radius: 50% 50% 45% 45%;
         pointer-events: none;
         border: 2px dashed rgba(255, 255, 255, 0.4);
-        box-shadow: 0 0 0 9999px rgba(11, 15, 25, 0.7); /* Frosted overlay */
+        box-shadow: 0 0 0 9999px rgba(11, 15, 25, 0.7); 
         transition: border-color 0.4s, box-shadow 0.4s;
     }
 
@@ -206,7 +212,7 @@
         transition: color 0.3s;
     }
 
-    /* Step 3: Verifying State Spinner */
+    /* Loading Spinner */
     .verify-spinner {
         position: relative;
         width: 80px;
@@ -234,7 +240,7 @@
         100% { transform: rotate(360deg); }
     }
 
-    /* Step 4: Success Screen Checkmark Animation */
+    /* Success Screen Checkmark Animation */
     .success-checkmark {
         width: 88px;
         height: 88px;
@@ -318,7 +324,7 @@
                 <i class="fas fa-shield-alt"></i>
             </div>
             <h2 class="verify-title">Face Verification</h2>
-            <p class="verify-desc">SRM Match requires a quick face scan to ensure a secure, fake-free community. Your verification image is kept entirely private and never shown to the public.</p>
+            <p class="verify-desc">SRM Match requires a quick face scan to ensure a secure, fake-free community. Your verification image is kept entirely private.</p>
             <button type="button" class="btn-verify" onclick="openCameraScreen()">
                 <i class="fas fa-camera"></i> Start Verification
             </button>
@@ -345,6 +351,10 @@
                 </p>
             </div>
         </div>
+        
+        <button type="button" onclick="stopCameraAndExit()" style="position:absolute; top:24px; left:20px; background:rgba(255,255,255,0.1); border:none; color:white; padding:8px 16px; border-radius:12px; font-weight:bold; cursor:pointer;">
+            <i class="fas fa-arrow-left"></i> Back
+        </button>
     </div>
 
     <!-- STEP 3: LOADING & BACKGROUND ANALYSIS -->
@@ -352,7 +362,7 @@
         <div class="verify-card" style="padding: 48px 24px;">
             <div class="verify-spinner"></div>
             <h2 class="verify-title" style="color: #818cf8;">Verifying Selfie...</h2>
-            <p class="verify-desc" id="loading-subtext" style="margin-bottom: 0;">Performing biometric and safety scans. Please hold on.</p>
+            <p class="verify-desc" id="loading-subtext" style="margin-bottom: 0;">Checking photo... Please hold on.</p>
         </div>
     </div>
 
@@ -425,7 +435,7 @@
 </div>
 
 <script>
-    // ───── CONFIG & CONSTANTS ─────
+    // Constants & States
     const STATE = {
         WAITING_FOR_STRAIGHT: 'WAITING_FOR_STRAIGHT',
         WAITING_FOR_LEFT: 'WAITING_FOR_LEFT',
@@ -438,14 +448,14 @@
     let verificationCaptured = false;
     let verificationBase64 = null;
     let verificationDescriptor = null;
-    let lastFaceSeen = Date.now();
-    let stateChangeTimer = null;
+    let isScanning = false;
+    let captureTimer = null;
+    let faceModelsLoaded = false;
     
     // Safety thresholds
     const STRAIGHT_MIN = 0.75;
     const STRAIGHT_MAX = 1.35;
     const TURN_THRESHOLD_LEFT = 1.6;
-    const TURN_THRESHOLD_RIGHT = 0.62;
 
     // Toast utility
     function showToast(msg) {
@@ -464,7 +474,6 @@
         });
         document.getElementById(stepId).classList.add('active');
         
-        // Custom background style logic
         const mainWrap = document.getElementById('verify-main-container');
         if (stepId === 'step-camera') {
             mainWrap.style.padding = '0';
@@ -475,7 +484,353 @@
         }
     }
 
-    // Image compression helper
+    async function loadFaceModelsOnce() {
+        if (faceModelsLoaded) return true;
+        
+        if (typeof faceapi === 'undefined') {
+            showToast("face-api library is not loaded. Check internet connection.");
+            return false;
+        }
+
+        // Models must be placed in /static/models/
+        const MODEL_URL = '/static/models/'; 
+        console.log("Loading AI models from:", MODEL_URL);
+
+        try {
+            await Promise.all([
+                faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+                faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+                faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+                faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL)
+            ]);
+            faceModelsLoaded = true;
+            console.log("AI Models loaded successfully.");
+            return true;
+        } catch (err) {
+            console.error("AI Models failed to load:", err);
+            // Fallback to CDN if static models are missing
+            try {
+                const CDN_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+                await Promise.all([
+                    faceapi.nets.tinyFaceDetector.loadFromUri(CDN_URL),
+                    faceapi.nets.faceLandmark68Net.loadFromUri(CDN_URL),
+                    faceapi.nets.faceRecognitionNet.loadFromUri(CDN_URL),
+                    faceapi.nets.ageGenderNet.loadFromUri(CDN_URL)
+                ]);
+                faceModelsLoaded = true;
+                return true;
+            } catch(e) {
+                return false;
+            }
+        }
+    }
+
+    function stopCameraAndExit() {
+        stopCamera();
+        isScanning = false;
+        switchStep('step-intro');
+    }
+
+    function stopCamera() {
+        if (verifyStream) {
+            verifyStream.getTracks().forEach(track => track.stop());
+            verifyStream = null;
+        }
+        const video = document.getElementById('verify-video');
+        if (video) {
+            video.srcObject = null;
+        }
+    }
+
+    // OPEN CAMERA FLOW
+    async function openCameraScreen() {
+        switchStep('step-camera');
+        
+        const video = document.getElementById('verify-video');
+        const promptMsg = document.getElementById('verify-prompt-msg');
+        const ring = document.getElementById('verify-scanning-ring');
+
+        ring.className = 'scanning-ring';
+        promptMsg.innerHTML = '<i class="fas fa-camera" style="color: #6366f1;"></i> Opening camera feed...';
+        promptMsg.style.color = '#fff';
+
+        // Reset tracking states
+        verificationCaptured = false;
+        verificationBase64 = null;
+        activeState = STATE.WAITING_FOR_STRAIGHT;
+        isScanning = true;
+        if (captureTimer) { clearTimeout(captureTimer); captureTimer = null; }
+
+        try {
+            verifyStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+            });
+            
+            video.muted = true;
+            video.playsInline = true;
+            video.srcObject = verifyStream;
+            try { await video.play(); } catch(e) {}
+
+            await new Promise((resolve) => {
+                if (video.readyState >= 2) { resolve(); return; }
+                video.addEventListener('canplay', resolve, { once: true });
+            });
+
+            promptMsg.innerHTML = '<i class="fas fa-spinner fa-spin" style="color: #818cf8;"></i> Loading secure scanner...';
+            
+            const modelsLoaded = await loadFaceModelsOnce();
+            if (!modelsLoaded) {
+                stopCamera();
+                isScanning = false;
+                showToast("Failed to initialize AI models. Try again.");
+                switchStep('step-intro');
+                return;
+            }
+
+            // Start loop
+            promptMsg.innerHTML = 'Look straight at camera';
+            ring.className = 'scanning-ring scanning';
+            requestAnimationFrame(() => scanLoop(video, promptMsg, ring));
+
+        } catch (err) {
+            console.error("Camera startup failed:", err);
+            showToast("Failed to access front camera. Please allow permissions.");
+            stopCamera();
+            switchStep('step-intro');
+        }
+    }
+
+    // STATE MACHINE LIVENESS SCAN
+    async function scanLoop(video, promptEl, ringEl) {
+        if (!isScanning || verificationCaptured || activeState === STATE.CAPTURED) return;
+
+        if (video.readyState >= 2 && typeof faceapi !== 'undefined' && faceModelsLoaded) {
+            try {
+                // Using tinyFaceDetector for live camera scanning (inputSize 224 for speed)
+                const detection = await faceapi
+                    .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224 }))
+                    .withFaceLandmarks();
+
+                if (!detection) {
+                    promptEl.innerHTML = 'Face not detected. Position your face in frame.';
+                    promptEl.style.color = '#ef4444';
+                    ringEl.className = 'scanning-ring scanning';
+                    activeState = STATE.WAITING_FOR_STRAIGHT;
+                    if (captureTimer) { clearTimeout(captureTimer); captureTimer = null; }
+                } else {
+                    const nose = detection.landmarks.getNose()[3];
+                    const leftCheek = detection.landmarks.getJawOutline()[0];
+                    const rightCheek = detection.landmarks.getJawOutline()[16];
+
+                    // Avoid WebGL zero landmark bug
+                    if (nose && leftCheek && nose.x !== 0 && leftCheek.x !== 0) {
+                        const distLeft = nose.x - leftCheek.x;
+                        const distRight = rightCheek.x - nose.x;
+                        const ratio = distLeft / (distRight || 1);
+
+                        const isStraight = ratio > STRAIGHT_MIN && ratio < STRAIGHT_MAX;
+                        const isTurnedLeft = ratio > TURN_THRESHOLD_LEFT;
+
+                        // FLOW LOGIC
+                        if (activeState === STATE.WAITING_FOR_STRAIGHT) {
+                            promptEl.innerHTML = 'Look straight';
+                            promptEl.style.color = '#fff';
+                            ringEl.className = 'scanning-ring scanning';
+
+                            if (isStraight) {
+                                activeState = STATE.WAITING_FOR_LEFT;
+                            }
+                        } 
+                        else if (activeState === STATE.WAITING_FOR_LEFT) {
+                            promptEl.innerHTML = 'Turn your head slightly to the left';
+                            promptEl.style.color = '#3b82f6';
+                            ringEl.className = 'scanning-ring turned';
+
+                            if (isTurnedLeft) {
+                                activeState = STATE.WAITING_FOR_RETURN;
+                            }
+                        } 
+                        else if (activeState === STATE.WAITING_FOR_RETURN) {
+                            promptEl.innerHTML = 'Look back at camera';
+                            promptEl.style.color = '#10b981';
+                            ringEl.className = 'scanning-ring success';
+
+                            if (isStraight) {
+                                if (!captureTimer) {
+                                    captureTimer = setTimeout(() => {
+                                        if (!verificationCaptured && isScanning) {
+                                            verificationCaptured = true;
+                                            activeState = STATE.CAPTURED;
+                                            promptEl.innerHTML = 'Capturing...';
+                                            triggerSelfieCapture();
+                                        }
+                                    }, 500); // 0.5s stability hold to capture
+                                }
+                            } else {
+                                if (captureTimer) { clearTimeout(captureTimer); captureTimer = null; }
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn("Pose estimation glitch:", err);
+            }
+        }
+
+        if (isScanning && !verificationCaptured && activeState !== STATE.CAPTURED) {
+            requestAnimationFrame(() => scanLoop(video, promptEl, ringEl));
+        }
+    }
+
+    // SELFIE CAPTURE & Biometric checks
+    async function triggerSelfieCapture() {
+        const video = document.getElementById('verify-video');
+        const canvas = document.getElementById('verify-canvas');
+        
+        // 1. INSTANT CAPTURE
+        const targetWidth = 400;
+        const targetHeight = video.videoWidth > 0 ? Math.floor(video.videoHeight * (targetWidth / video.videoWidth)) : 400;
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0, targetWidth, targetHeight);
+        verificationBase64 = canvas.toDataURL('image/jpeg', 0.85);
+
+        // 2. STOP CAMERA IMMEDIATELY
+        stopCamera();
+        isScanning = false;
+
+        // 3. SHOW VERIFY LOADING VIEW
+        switchStep('step-loading');
+        
+        try {
+            const img = new Image();
+            img.src = verificationBase64;
+            await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
+
+            // Blur check
+            const blurResult = checkBlurriness(canvas); 
+            if (blurResult.isBlurry) {
+                return handleLivenessFailure("Rejected: Image is too blurry. Please scan under clear lighting.");
+            }
+
+            // 4. HEAVY DETECTIONS AFTER CAPTURE
+            const allDetections = await faceapi
+                .detectAllFaces(img, new faceapi.TinyFaceDetectorOptions({ inputSize: 320 }))
+                .withFaceLandmarks()
+                .withAgeAndGender()
+                .withFaceDescriptors();
+
+            if (allDetections.length === 0) {
+                return handleLivenessFailure("Rejected: No clear face detected in your capture.");
+            }
+            if (allDetections.length > 1) {
+                return handleLivenessFailure("Rejected: Multiple faces detected. Please verify alone.");
+            }
+
+            const faceMatch = allDetections[0];
+            
+            // Check confidence and position
+            if (faceMatch.detection.score < 0.55) {
+                return handleLivenessFailure("Rejected: Face confidence is too low. Ensure proper lighting.");
+            }
+            
+            const box = faceMatch.detection.box;
+            if (box.x < 0 || box.y < 0 || box.x + box.width > img.width || box.y + box.height > img.height) {
+                return handleLivenessFailure("Rejected: Face is too far outside the frame.");
+            }
+            
+            // Gender Check
+            const userGender = "{{ profile.gender|default:''|escapejs }}";
+            if (userGender && userGender.toLowerCase() !== 'other' && faceMatch.gender && faceMatch.genderProbability > 0.6) {
+                if (faceMatch.gender.toLowerCase() !== userGender.toLowerCase()) {
+                    return handleLivenessFailure("Rejected: Gender detection mismatch. Photo does not match profile gender.");
+                }
+            }
+
+            // Store Descriptor & Base64
+            verificationDescriptor = faceMatch.descriptor;
+            document.getElementById('verification-image-data').value = verificationBase64;
+
+            // 5. Cloud Upload Backgrounding
+            const uploadRes = await fetch('/api/upload/base64/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+                body: JSON.stringify({ image: verificationBase64, path: 'verification' })
+            });
+            const uploadData = await uploadRes.json();
+            
+            if (uploadData.success) {
+                document.getElementById('verification-image-url').value = uploadData.url;
+                document.getElementById('verification-status-input').value = 'verified';
+                
+                // Show gorgeous success
+                switchStep('step-success');
+            } else {
+                return handleLivenessFailure("Rejected: Image secure transit failed (" + uploadData.message + ")");
+            }
+
+        } catch (e) {
+            console.error("Biometric extraction error:", e);
+            handleLivenessFailure("Rejected: Biometric extraction error. Please try again.");
+        }
+    }
+
+    function checkBlurriness(canvas) {
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+        if (width === 0 || height === 0) return { isBlurry: false, variance: 100 };
+        
+        const imageData = ctx.getImageData(0, 0, width, height);
+        const data = imageData.data;
+        
+        const grayscale = new Uint8Array(width * height);
+        for (let i = 0; i < data.length; i += 4) {
+            grayscale[i / 4] = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+        }
+        
+        let mean = 0;
+        const laplacian = new Int16Array(width * height);
+        for (let y = 1; y < height - 1; y++) {
+            for (let x = 1; x < width - 1; x++) {
+                const idx = y * width + x;
+                const val = grayscale[idx - width] * -1 +
+                            grayscale[idx - 1] * -1 +
+                            grayscale[idx] * 4 +
+                            grayscale[idx + 1] * -1 +
+                            grayscale[idx + width] * -1;
+                laplacian[idx] = val;
+                mean += val;
+            }
+        }
+        mean /= (width * height);
+        
+        let variance = 0;
+        for (let i = 0; i < laplacian.length; i++) {
+            variance += Math.pow(laplacian[i] - mean, 2);
+        }
+        variance /= (width * height);
+        
+        console.log("Blur variance:", variance);
+        // Realistic threshold for mobile cameras
+        return { isBlurry: variance < 30, variance };
+    }
+
+    function handleLivenessFailure(msg) {
+        stopCamera();
+        isScanning = false;
+        document.getElementById('verification-status-input').value = 'rejected';
+        document.getElementById('error-explain').innerText = msg;
+        switchStep('step-error');
+    }
+
+    function goToPfpStep() {
+        switchStep('step-pfp');
+    }
+
+    // PFP HANDLING & LOCAL COMPARISON
+    let pfpBase64 = null;
+    
     function compressImage(file, quality = 0.7, maxWidth = 800) {
         return new Promise((resolve, reject) => {
             const img = new Image();
@@ -501,295 +856,6 @@
         });
     }
 
-    // ───── OPEN CAMERA FLOW ─────
-    async function openCameraScreen() {
-        if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-            showToast("Camera requires an HTTPS connection.");
-            return;
-        }
-
-        switchStep('step-camera');
-        
-        const video = document.getElementById('verify-video');
-        const promptMsg = document.getElementById('verify-prompt-msg');
-        const ring = document.getElementById('verify-scanning-ring');
-
-        ring.className = 'scanning-ring';
-        promptMsg.innerHTML = '<i class="fas fa-camera" style="color: #6366f1;"></i> Opening camera feed...';
-        promptMsg.style.color = '#fff';
-
-        // Reset tracking states
-        verificationCaptured = false;
-        verificationBase64 = null;
-        activeState = STATE.WAITING_FOR_STRAIGHT;
-        window.livenessStartTime = Date.now();
-        window.fallbackStartTime = null;
-
-        try {
-            verifyStream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
-            });
-            
-            video.muted = true;
-            video.playsInline = true;
-            video.srcObject = verifyStream;
-            try { await video.play(); } catch(e) { console.warn('Autoplay blocked:', e); }
-
-            // Ensure video metadata and frames are actually streaming
-            await new Promise((resolve) => {
-                if (video.readyState >= 2) { resolve(); return; }
-                video.addEventListener('canplay', resolve, { once: true });
-                setTimeout(resolve, 3000); // 3s fallback
-            });
-
-            promptMsg.innerHTML = '<i class="fas fa-spinner fa-spin" style="color: #818cf8;"></i> Initializing secure scanner...';
-            await loadFaceModelsOnce();
-            
-            if (!faceModelsLoaded) {
-                showToast("Failed to initialize AI models. Try again.");
-                switchStep('step-intro');
-                return;
-            }
-
-            // Start standard tracking loop
-            promptMsg.innerHTML = '📷 Please look straight at the camera';
-            ring.className = 'scanning-ring scanning';
-            lastFaceSeen = Date.now();
-            requestAnimationFrame(() => trackPoseFrame(video, promptMsg, ring));
-
-        } catch (err) {
-            console.error("Camera startup failed:", err);
-            showToast("Failed to access front camera. Please allow permissions.");
-            switchStep('step-intro');
-        }
-    }
-
-    // ───── STATE MACHINE LIVENESS SCAN ─────
-    async function trackPoseFrame(video, promptEl, ringEl) {
-        if (activeState === STATE.CAPTURED || verificationCaptured) return;
-
-        if (video.readyState >= 2) {
-            try {
-                // Fast real-time landmark tracking
-                const detection = await faceapi
-                    .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224 }))
-                    .withFaceLandmarks();
-
-                if (!detection) {
-                    if (Date.now() - lastFaceSeen > 2000) {
-                        promptEl.innerHTML = '📷 Position your face inside the oval';
-                        promptEl.style.color = '#ef4444';
-                        ringEl.className = 'scanning-ring scanning';
-                        activeState = STATE.WAITING_FOR_STRAIGHT;
-                        window.livenessStartTime = Date.now();
-                        window.fallbackStartTime = null;
-                        if (stateChangeTimer) { clearTimeout(stateChangeTimer); stateChangeTimer = null; }
-                    }
-                } else {
-                    lastFaceSeen = Date.now();
-                    
-                    const nose = detection.landmarks.getNose()[3];
-                    const leftCheek = detection.landmarks.getJawOutline()[0];
-                    const rightCheek = detection.landmarks.getJawOutline()[16];
-
-                    // Check for WebGL zero landmark bug or stuck processing
-                    const isLandmarksZero = !nose || !leftCheek || (nose.x === 0 && leftCheek.x === 0);
-                    const isStuck = (Date.now() - window.livenessStartTime > 7000);
-
-                    if (isLandmarksZero || isStuck) {
-                        if (!window.fallbackStartTime) {
-                            window.fallbackStartTime = Date.now();
-                        }
-                        const elapsed = Date.now() - window.fallbackStartTime;
-                        const remaining = Math.max(0, Math.ceil((3000 - elapsed) / 1000));
-                        
-                        if (remaining > 0) {
-                            promptEl.innerHTML = '📷 Auto-focus active. Hold still: ' + remaining + 's...';
-                            promptEl.style.color = '#3b82f6';
-                            ringEl.className = 'scanning-ring turned';
-                        } else {
-                            if (!verificationCaptured) {
-                                verificationCaptured = true;
-                                activeState = STATE.CAPTURED;
-                                promptEl.innerHTML = 'Perfect! Capturing... 📷';
-                                promptEl.style.color = '#10b981';
-                                ringEl.className = 'scanning-ring success';
-                                setTimeout(() => triggerSelfieCapture(), 200);
-                            }
-                        }
-                        return;
-                    }
-
-                    // Yaw tracking via cheek ratio
-                    const distLeft = nose.x - leftCheek.x;
-                    const distRight = rightCheek.x - nose.x;
-                    const ratio = distLeft / (distRight || 1);
-
-                    const isStraight = ratio > STRAIGHT_MIN && ratio < STRAIGHT_MAX;
-                    const isTurned = ratio > TURN_THRESHOLD_LEFT || ratio < TURN_THRESHOLD_RIGHT;
-
-                    // STATE 1: WAITING_FOR_STRAIGHT
-                    if (activeState === STATE.WAITING_FOR_STRAIGHT) {
-                        promptEl.innerHTML = '📷 Align your face and look straight';
-                        promptEl.style.color = '#fff';
-                        ringEl.className = 'scanning-ring scanning';
-
-                        if (isStraight) {
-                            if (!stateChangeTimer) {
-                                stateChangeTimer = setTimeout(() => {
-                                    activeState = STATE.WAITING_FOR_LEFT;
-                                    stateChangeTimer = null;
-                                }, 500); // 0.5s stability hold
-                            }
-                        } else {
-                            if (stateChangeTimer) { clearTimeout(stateChangeTimer); stateChangeTimer = null; }
-                        }
-                    }
-                    // STATE 2: WAITING_FOR_LEFT
-                    else if (activeState === STATE.WAITING_FOR_LEFT) {
-                        promptEl.innerHTML = '👈 Turn your head slightly to the left';
-                        promptEl.style.color = '#3b82f6';
-                        ringEl.className = 'scanning-ring turned';
-
-                        if (isTurned) {
-                            activeState = STATE.WAITING_FOR_RETURN;
-                        }
-                    }
-                    // STATE 3: WAITING_FOR_RETURN
-                    else if (activeState === STATE.WAITING_FOR_RETURN) {
-                        promptEl.innerHTML = '📷 Perfect! Now look straight again';
-                        promptEl.style.color = '#10b981';
-                        ringEl.className = 'scanning-ring success';
-
-                        if (isStraight) {
-                            if (!stateChangeTimer) {
-                                stateChangeTimer = setTimeout(() => {
-                                    if (!verificationCaptured) {
-                                        verificationCaptured = true;
-                                        activeState = STATE.CAPTURED;
-                                        setTimeout(() => triggerSelfieCapture(), 200); // Instant capture
-                                    }
-                                    stateChangeTimer = null;
-                                }, 350); // Fast 350ms center confirmation capture!
-                            }
-                        } else {
-                            if (stateChangeTimer) { clearTimeout(stateChangeTimer); stateChangeTimer = null; }
-                        }
-                    }
-                }
-            } catch (err) {
-                console.warn("Pose estimation glitch:", err);
-            }
-        } else {
-            // Replay fallback if streaming breaks
-            if (Date.now() - lastFaceSeen > 4000) {
-                promptEl.innerHTML = '⏳ Initializing live feed...';
-                if (video.paused) video.play().catch(e => {});
-            }
-        }
-
-        if (!verificationCaptured && activeState !== STATE.CAPTURED) {
-            requestAnimationFrame(() => trackPoseFrame(video, promptEl, ringEl));
-        }
-    }
-
-    // ───── SELFIE CAPTURE & Biometric checks ─────
-    async function triggerSelfieCapture() {
-        const video = document.getElementById('verify-video');
-        const canvas = document.getElementById('verify-canvas');
-        
-        // 1. INSTANT CAPTURE DIMENSIONS
-        const targetWidth = 400;
-        const targetHeight = video.videoWidth > 0 ? Math.floor(video.videoHeight * (targetWidth / video.videoWidth)) : 400;
-        canvas.width = targetWidth;
-        canvas.height = targetHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0, targetWidth, targetHeight);
-        verificationBase64 = canvas.toDataURL('image/jpeg', 0.85);
-
-        // 2. INSTANTLY KILL CAMERA STREAM (No lag!)
-        if (verifyStream) {
-            verifyStream.getTracks().forEach(track => track.stop());
-            verifyStream = null;
-        }
-
-        // 3. SHOW VERIFY LOADING VIEW
-        switchStep('step-loading');
-        
-        try {
-            const img = new Image();
-            img.src = verificationBase64;
-            await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
-
-            // Laplacian Variance Blur check
-            const blurResult = checkBlurriness(canvas, 24); // Lenient 24 threshold
-            if (blurResult.isBlurry) {
-                return handleLivenessFailure("Photo is too blurry. Please scan under clear lighting.");
-            }
-
-            // 4. DETECT GENDER & BIOMETRICS (Off camera)
-            const allDetections = await faceapi
-                .detectAllFaces(img, new faceapi.TinyFaceDetectorOptions({ inputSize: 320 }))
-                .withFaceLandmarks()
-                .withAgeAndGender()
-                .withFaceDescriptors();
-
-            if (allDetections.length === 0) {
-                return handleLivenessFailure("No human face detected clearly in your capture.");
-            }
-            if (allDetections.length > 1) {
-                return handleLivenessFailure("Multiple faces detected. Please verify alone.");
-            }
-
-            const faceMatch = allDetections[0];
-            
-            // Gender Check (if configured)
-            const userGender = "{{ profile.gender }}";
-            if (userGender && userGender !== 'other' && faceMatch.gender) {
-                if (faceMatch.gender.toLowerCase() !== userGender.toLowerCase()) {
-                    return handleLivenessFailure("Gender mismatch: Photo gender doesn't match your profile selection.");
-                }
-            }
-
-            // Store Descriptor & Base64
-            verificationDescriptor = faceMatch.descriptor;
-            document.getElementById('verification-image-data').value = verificationBase64;
-
-            // 5. Cloud Upload Backgrounding
-            const uploadRes = await fetch('/api/upload/base64/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
-                body: JSON.stringify({ image: verificationBase64, path: 'verification' })
-            });
-            const uploadData = await uploadRes.json();
-            
-            if (uploadData.success) {
-                document.getElementById('verification-image-url').value = uploadData.url;
-                document.getElementById('verification-status-input').value = 'verified';
-                
-                // Show gorgeous success
-                switchStep('step-success');
-            } else {
-                return handleLivenessFailure("Image secure transit failed: " + uploadData.message);
-            }
-
-        } catch (e) {
-            console.error("Biometric extraction error:", e);
-            handleLivenessFailure("Biometric extraction error. Please scan in brighter lighting.");
-        }
-    }
-
-    function handleLivenessFailure(msg) {
-        document.getElementById('verification-status-input').value = 'rejected';
-        document.getElementById('error-explain').innerText = msg;
-        switchStep('step-error');
-    }
-
-    function goToPfpStep() {
-        switchStep('step-pfp');
-    }
-
-    // ───── PFP HANDLING & LOCAL COMPARISON ─────
-    let pfpBase64 = null;
     async function handlePfpSelect(input) {
         if (input.files && input.files[0]) {
             const uploadPlaceholder = document.getElementById('pfp-upload-placeholder');
@@ -803,7 +869,6 @@
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
 
             try {
-                // Compress PFP first
                 const compressedFile = await compressImage(input.files[0], 0.75, 800);
                 
                 const reader = new FileReader();
@@ -813,7 +878,6 @@
                     preview.style.display = 'block';
                     uploadPlaceholder.style.display = 'none';
 
-                    // Run Comparison
                     const tempImg = new Image();
                     tempImg.src = pfpBase64;
                     tempImg.onload = async () => {
@@ -826,7 +890,6 @@
                             submitBtn.innerHTML = 'Complete Setup <i class="fas fa-check-circle" style="margin-left: 6px;"></i>';
                         } else {
                             submitBtn.innerHTML = 'Complete Setup';
-                            // Reset preview
                             preview.src = '';
                             preview.style.display = 'none';
                             uploadPlaceholder.style.display = 'block';
@@ -857,16 +920,15 @@
                 .withFaceDescriptor();
 
             if (!pfpDetection) {
-                showToast("No face detected in your uploaded profile picture.");
+                showToast("Rejected: No clear face detected in your uploaded profile picture.");
                 return false;
             }
 
-            // Strict Euclidean Distance match
+            // Compare distances
             const distance = faceapi.euclideanDistance(verificationDescriptor, pfpDetection.descriptor);
-            const isMatch = distance < 0.6; // Industry standard 0.6 match threshold
+            const isMatch = distance < 0.6; 
 
             if (isMatch) {
-                // Upload PFP to cloud in background
                 const uploadRes = await fetch('/api/upload/base64/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
@@ -882,7 +944,7 @@
                     return false;
                 }
             } else {
-                showToast("Identity mismatch: Profile photo does not match verified selfie.");
+                showToast("Identity mismatch: Profile photo does not match verified selfie. Please upload a different photo.");
                 return false;
             }
         } catch (err) {
