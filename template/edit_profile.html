@@ -772,7 +772,7 @@
         <div class="ep-profile-actions">
           <a href="{% url 'view_profile' profile.id %}" class="ep-action ep-action--primary"><i class="fas fa-eye"></i> View</a>
           {% if not profile.is_face_verified %}
-          <a href="{% url 'reverify' %}" class="ep-action" style="background: linear-gradient(135deg, #10b981, #059669); color: white; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);"><i class="fas fa-user-check"></i> Verify</a>
+           <a href="{% url 'verify' %}" class="ep-action" style="background: linear-gradient(135deg, #10b981, #059669); color: white; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);"><i class="fas fa-user-check"></i> Verify</a>
           {% endif %}
           <a href="{% url 'settings' %}" class="ep-action ep-action--ghost"><i class="fas fa-cog"></i> Settings</a>
         </div>
@@ -1795,7 +1795,7 @@
 
           var code = data.error_code || '';
           var editUrl = "{% url 'edit_profile' %}";
-          var verifyUrl = "{% url 'reverify' %}";
+          var verifyUrl = "{% url 'verify' %}";
 
           var missingHtml = '';
           if (data.missing && data.missing.length) {

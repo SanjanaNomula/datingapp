@@ -206,7 +206,7 @@ def save_profile_progress(request):
     return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=405)
 
 @login_required
-def reverify(request):
+def verify(request):
     user = request.user
     profile = get_object_or_404(Profile, user=user)
 
@@ -236,7 +236,7 @@ def reverify(request):
         else:
             messages.error(request, "Both verification and profile picture are required.")
 
-    return render(request, 'reverify.html', {'profile': profile})
+    return render(request, 'verify.html', {'profile': profile})
 
 
 # ---------------- HOME HUB ----------------
@@ -1166,7 +1166,7 @@ def toggle_discoverable(request):
             if is_ajax:
                 return JsonResponse({'success': False, 'error_code': 'need_verification', 'error': msg})
             messages.error(request, msg)
-            return redirect('reverify')
+            return redirect('verify')
 
     profile.is_discoverable = not profile.is_discoverable
     profile.save()

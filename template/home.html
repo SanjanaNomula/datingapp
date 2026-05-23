@@ -455,7 +455,7 @@
                 </a>
                 {% endif %}
                 {% if not is_verified %}
-                <a href="{% url 'reverify' %}" class="btn-discover {% if not profile_complete %}secondary{% endif %}">
+                <a href="{% url 'verify' %}" class="btn-discover {% if not profile_complete %}secondary{% endif %}">
                     <i class="fas fa-user-check"></i>
                     <span>Verify Account</span>
                 </a>
@@ -549,7 +549,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     "Later"
                 ).then((confirmed) => {
                     if (confirmed) {
-                        window.location.href = "{% url 'reverify' %}";
+                        window.location.href = "{% url 'verify' %}";
                     }
                 });
             }
