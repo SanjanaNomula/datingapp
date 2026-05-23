@@ -503,7 +503,7 @@
         try {
             console.log("Loading AI verification models from CDN...");
             await Promise.all([
-                faceapi.nets.tinyFaceDetector.loadFromUri(CDN_URL),
+                faceapi.nets.ssdMobilenetv1.loadFromUri(CDN_URL),
                 faceapi.nets.faceLandmark68Net.loadFromUri(CDN_URL),
                 faceapi.nets.faceRecognitionNet.loadFromUri(CDN_URL),
                 faceapi.nets.ageGenderNet.loadFromUri(CDN_URL)
@@ -514,7 +514,7 @@
             console.warn("CDN failed. Falling back to local static directory...");
             try {
                 await Promise.all([
-                    faceapi.nets.tinyFaceDetector.loadFromUri(LOCAL_URL),
+                    faceapi.nets.ssdMobilenetv1.loadFromUri(LOCAL_URL),
                     faceapi.nets.faceLandmark68Net.loadFromUri(LOCAL_URL),
                     faceapi.nets.faceRecognitionNet.loadFromUri(LOCAL_URL),
                     faceapi.nets.ageGenderNet.loadFromUri(LOCAL_URL)
@@ -744,7 +744,7 @@
 
             // 4. HEAVY DETECTIONS AFTER CAPTURE
             const allDetections = await faceapi
-                .detectAllFaces(img, new faceapi.TinyFaceDetectorOptions({ inputSize: 320 }))
+                .detectAllFaces(img, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.7 }))
                 .withFaceLandmarks()
                 .withAgeAndGender()
                 .withFaceDescriptors();
@@ -959,7 +959,7 @@
 
         try {
             const pfpDetection = await faceapi
-                .detectSingleFace(pfpImgElement, new faceapi.TinyFaceDetectorOptions({ inputSize: 320 }))
+                .detectSingleFace(pfpImgElement, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.7 }))
                 .withFaceLandmarks()
                 .withFaceDescriptor();
 
