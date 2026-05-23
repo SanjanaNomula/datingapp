@@ -8,6 +8,10 @@
         document.write('<script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"><\/script>');
     }
 </script>
+<!-- MediaPipe FaceMesh for Live Tracking -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+
 <style>
     :root {
         --verify-bg: #0b0f19;
@@ -451,8 +455,10 @@
     let isScanning = false;
     let captureTimer = null;
     faceModelsLoaded = false;
+    let faceMeshInstance = null;
+    let isProcessingFrame = false;
     
-    // Safety thresholds
+    // Safety thresholds for MediaPipe
     const STRAIGHT_MIN = 0.75;
     const STRAIGHT_MAX = 1.35;
     const TURN_THRESHOLD_LEFT = 1.6;
@@ -486,19 +492,16 @@
 
     async function loadFaceModelsOnce() {
         if (faceModelsLoaded) return true;
-        
         if (typeof faceapi === 'undefined') {
             showToast("face-api library is not loaded. Check internet connection.");
             return false;
         }
 
-        // We use the CDN first to prevent 404 console errors. 
-        // If you prefer hosting them yourself, place the models in /static/models/
         const CDN_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
         const LOCAL_URL = '/static/models/'; 
 
         try {
-            console.log("Loading AI models from CDN...");
+            console.log("Loading AI verification models from CDN...");
             await Promise.all([
                 faceapi.nets.tinyFaceDetector.loadFromUri(CDN_URL),
                 faceapi.nets.faceLandmark68Net.loadFromUri(CDN_URL),
@@ -506,10 +509,9 @@
                 faceapi.nets.ageGenderNet.loadFromUri(CDN_URL)
             ]);
             faceModelsLoaded = true;
-            console.log("AI Models loaded successfully from CDN.");
             return true;
         } catch (err) {
-            console.warn("CDN failed. Falling back to local /static/models/ directory...");
+            console.warn("CDN failed. Falling back to local static directory...");
             try {
                 await Promise.all([
                     faceapi.nets.tinyFaceDetector.loadFromUri(LOCAL_URL),
@@ -518,7 +520,6 @@
                     faceapi.nets.ageGenderNet.loadFromUri(LOCAL_URL)
                 ]);
                 faceModelsLoaded = true;
-                console.log("AI Models loaded successfully from local static folder.");
                 return true;
             } catch(e) {
                 console.error("AI Models failed to load completely:", e);
@@ -529,11 +530,11 @@
 
     function stopCameraAndExit() {
         stopCamera();
-        isScanning = false;
         switchStep('step-intro');
     }
 
     function stopCamera() {
+        isScanning = false;
         if (verifyStream) {
             verifyStream.getTracks().forEach(track => track.stop());
             verifyStream = null;
@@ -542,9 +543,13 @@
         if (video) {
             video.srcObject = null;
         }
+        if (faceMeshInstance) {
+            faceMeshInstance.close();
+            faceMeshInstance = null;
+        }
     }
 
-    // OPEN CAMERA FLOW
+    // OPEN CAMERA FLOW (Using MediaPipe for Live Tracking)
     async function openCameraScreen() {
         switchStep('step-camera');
         
@@ -578,21 +583,30 @@
                 video.addEventListener('canplay', resolve, { once: true });
             });
 
-            promptMsg.innerHTML = '<i class="fas fa-spinner fa-spin" style="color: #818cf8;"></i> Loading secure scanner...';
-            
-            const modelsLoaded = await loadFaceModelsOnce();
-            if (!modelsLoaded) {
-                stopCamera();
-                isScanning = false;
-                showToast("Failed to initialize AI models. Try again.");
-                switchStep('step-intro');
-                return;
-            }
+            promptMsg.innerHTML = '<i class="fas fa-spinner fa-spin" style="color: #818cf8;"></i> Initializing fast tracker...';
 
-            // Start loop
+            // Initialize MediaPipe FaceMesh
+            faceMeshInstance = new FaceMesh({locateFile: (file) => {
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+            }});
+            faceMeshInstance.setOptions({
+                maxNumFaces: 1,
+                refineLandmarks: false,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
+            faceMeshInstance.onResults((results) => {
+                isProcessingFrame = false;
+                processMediaPipeResults(results, promptMsg, ring);
+            });
+
+            // Await initialization by sending a dummy frame
+            try { await faceMeshInstance.send({image: video}); } catch(e) {}
+
+            // Start highly-optimized animation loop
             promptMsg.innerHTML = 'Look straight at camera';
             ring.className = 'scanning-ring scanning';
-            requestAnimationFrame(() => scanLoop(video, promptMsg, ring));
+            requestAnimationFrame(() => mediaPipeLoop(video));
 
         } catch (err) {
             console.error("Camera startup failed:", err);
@@ -602,89 +616,95 @@
         }
     }
 
-    // STATE MACHINE LIVENESS SCAN
-    async function scanLoop(video, promptEl, ringEl) {
+    async function mediaPipeLoop(video) {
         if (!isScanning || verificationCaptured || activeState === STATE.CAPTURED) return;
 
-        if (video.readyState >= 2 && typeof faceapi !== 'undefined' && faceModelsLoaded) {
+        if (video.readyState >= 2 && faceMeshInstance && !isProcessingFrame) {
+            isProcessingFrame = true;
             try {
-                // Using tinyFaceDetector for live camera scanning (inputSize 224 for speed)
-                const detection = await faceapi
-                    .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224 }))
-                    .withFaceLandmarks();
-
-                if (!detection) {
-                    promptEl.innerHTML = 'Face not detected. Position your face in frame.';
-                    promptEl.style.color = '#ef4444';
-                    ringEl.className = 'scanning-ring scanning';
-                    activeState = STATE.WAITING_FOR_STRAIGHT;
-                    if (captureTimer) { clearTimeout(captureTimer); captureTimer = null; }
-                } else {
-                    const nose = detection.landmarks.getNose()[3];
-                    const leftCheek = detection.landmarks.getJawOutline()[0];
-                    const rightCheek = detection.landmarks.getJawOutline()[16];
-
-                    // Avoid WebGL zero landmark bug
-                    if (nose && leftCheek && nose.x !== 0 && leftCheek.x !== 0) {
-                        const distLeft = nose.x - leftCheek.x;
-                        const distRight = rightCheek.x - nose.x;
-                        const ratio = distLeft / (distRight || 1);
-
-                        const isStraight = ratio > STRAIGHT_MIN && ratio < STRAIGHT_MAX;
-                        const isTurnedLeft = ratio > TURN_THRESHOLD_LEFT;
-
-                        // FLOW LOGIC
-                        if (activeState === STATE.WAITING_FOR_STRAIGHT) {
-                            promptEl.innerHTML = 'Look straight';
-                            promptEl.style.color = '#fff';
-                            ringEl.className = 'scanning-ring scanning';
-
-                            if (isStraight) {
-                                activeState = STATE.WAITING_FOR_LEFT;
-                            }
-                        } 
-                        else if (activeState === STATE.WAITING_FOR_LEFT) {
-                            promptEl.innerHTML = 'Turn your head slightly to the left';
-                            promptEl.style.color = '#3b82f6';
-                            ringEl.className = 'scanning-ring turned';
-
-                            if (isTurnedLeft) {
-                                activeState = STATE.WAITING_FOR_RETURN;
-                            }
-                        } 
-                        else if (activeState === STATE.WAITING_FOR_RETURN) {
-                            promptEl.innerHTML = 'Look back at camera';
-                            promptEl.style.color = '#10b981';
-                            ringEl.className = 'scanning-ring success';
-
-                            if (isStraight) {
-                                if (!captureTimer) {
-                                    captureTimer = setTimeout(() => {
-                                        if (!verificationCaptured && isScanning) {
-                                            verificationCaptured = true;
-                                            activeState = STATE.CAPTURED;
-                                            promptEl.innerHTML = 'Capturing...';
-                                            triggerSelfieCapture();
-                                        }
-                                    }, 500); // 0.5s stability hold to capture
-                                }
-                            } else {
-                                if (captureTimer) { clearTimeout(captureTimer); captureTimer = null; }
-                            }
-                        }
-                    }
-                }
+                await faceMeshInstance.send({image: video});
             } catch (err) {
-                console.warn("Pose estimation glitch:", err);
+                isProcessingFrame = false;
             }
         }
-
-        if (isScanning && !verificationCaptured && activeState !== STATE.CAPTURED) {
-            requestAnimationFrame(() => scanLoop(video, promptEl, ringEl));
+        
+        if (isScanning && !verificationCaptured) {
+            requestAnimationFrame(() => mediaPipeLoop(video));
         }
     }
 
-    // SELFIE CAPTURE & Biometric checks
+    // STATE MACHINE LIVENESS SCAN
+    function processMediaPipeResults(results, promptEl, ringEl) {
+        if (!isScanning || verificationCaptured || activeState === STATE.CAPTURED) return;
+
+        if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
+            promptEl.innerHTML = 'Face not detected. Position your face in frame.';
+            promptEl.style.color = '#ef4444';
+            ringEl.className = 'scanning-ring scanning';
+            activeState = STATE.WAITING_FOR_STRAIGHT;
+            if (captureTimer) { clearTimeout(captureTimer); captureTimer = null; }
+            return;
+        }
+
+        const landmarks = results.multiFaceLandmarks[0];
+        
+        // MediaPipe indices: 1 = Nose tip, 234 = Left cheek edge, 454 = Right cheek edge
+        const nose = landmarks[1];
+        const leftCheek = landmarks[234];
+        const rightCheek = landmarks[454];
+
+        // Ensure landmarks exist
+        if (nose && leftCheek && rightCheek) {
+            const distLeft = nose.x - leftCheek.x;
+            const distRight = rightCheek.x - nose.x;
+            const ratio = distLeft / (distRight || 0.0001);
+
+            const isStraight = ratio > STRAIGHT_MIN && ratio < STRAIGHT_MAX;
+            const isTurnedLeft = ratio > TURN_THRESHOLD_LEFT;
+
+            // FLOW LOGIC
+            if (activeState === STATE.WAITING_FOR_STRAIGHT) {
+                promptEl.innerHTML = 'Look straight';
+                promptEl.style.color = '#fff';
+                ringEl.className = 'scanning-ring scanning';
+
+                if (isStraight) {
+                    activeState = STATE.WAITING_FOR_LEFT;
+                }
+            } 
+            else if (activeState === STATE.WAITING_FOR_LEFT) {
+                promptEl.innerHTML = 'Turn your head slightly to the left';
+                promptEl.style.color = '#3b82f6';
+                ringEl.className = 'scanning-ring turned';
+
+                if (isTurnedLeft) {
+                    activeState = STATE.WAITING_FOR_RETURN;
+                }
+            } 
+            else if (activeState === STATE.WAITING_FOR_RETURN) {
+                promptEl.innerHTML = 'Look back at camera';
+                promptEl.style.color = '#10b981';
+                ringEl.className = 'scanning-ring success';
+
+                if (isStraight) {
+                    if (!captureTimer) {
+                        captureTimer = setTimeout(() => {
+                            if (!verificationCaptured && isScanning) {
+                                verificationCaptured = true;
+                                activeState = STATE.CAPTURED;
+                                promptEl.innerHTML = 'Capturing...';
+                                triggerSelfieCapture();
+                            }
+                        }, 500); // 0.5s stability hold to capture
+                    }
+                } else {
+                    if (captureTimer) { clearTimeout(captureTimer); captureTimer = null; }
+                }
+            }
+        }
+    }
+
+    // SELFIE CAPTURE & face-api.js Background Analysis
     async function triggerSelfieCapture() {
         const video = document.getElementById('verify-video');
         const canvas = document.getElementById('verify-canvas');
@@ -699,12 +719,19 @@
 
         // 2. STOP CAMERA IMMEDIATELY
         stopCamera();
-        isScanning = false;
 
         // 3. SHOW VERIFY LOADING VIEW
         switchStep('step-loading');
         
         try {
+            // Load face-api.js models ONLY AFTER the camera is closed
+            document.getElementById('loading-subtext').innerText = "Loading Secure AI processing...";
+            const modelsLoaded = await loadFaceModelsOnce();
+            if (!modelsLoaded) {
+                return handleLivenessFailure("Rejected: Could not initialize AI backend.");
+            }
+            document.getElementById('loading-subtext').innerText = "Analyzing photo securely...";
+
             const img = new Image();
             img.src = verificationBase64;
             await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
@@ -820,7 +847,6 @@
 
     function handleLivenessFailure(msg) {
         stopCamera();
-        isScanning = false;
         document.getElementById('verification-status-input').value = 'rejected';
         document.getElementById('error-explain').innerText = msg;
         switchStep('step-error');
