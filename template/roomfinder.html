@@ -123,25 +123,37 @@ body > .container {
 .rf-search-wrap {
     flex: 1;
     position: relative;
+    height: 44px;
 }
+
 .rf-search-wrap .material-symbols-outlined {
     position: absolute;
     left: 14px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 19px;
+    top: 0;
+    width: 24px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    line-height: 1;
     color: var(--on-surface-variant, #94a3b8);
+    pointer-events: none;
 }
+
 .rf-search-wrap input {
     width: 100%;
-    padding: 11px 14px 11px 44px;
+    height: 44px;
+    padding: 0 14px 0 46px;
     border: 1px solid var(--surface-container, #e2e8f0);
     border-radius: 100px;
     background: var(--surface-container-lowest, #ffffff);
     font-size: 14px;
     font-family: 'Plus Jakarta Sans', sans-serif;
+    line-height: normal;
     outline: none;
     transition: border-color 0.3s;
+    box-sizing: border-box;
 }
 .rf-search-wrap input:focus {
     border-color: var(--primary, #2563eb);
