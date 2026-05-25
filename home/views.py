@@ -615,22 +615,24 @@ def calculate_intelligent_match(user_profile, cand_profile, user_ans_dict, cand_
 
 # ---------------- CHECK MATCH POPUP ----------------
 @login_required
-
 def check_match(request):
     user = request.user
     profile = getattr(user, 'profile', None)
     if profile is None:
-        return redirect('home')
+        return redirect('match_feed')
 
     # Exclude ANY users where a MatchRequest exists, UNLESS they only skipped us
     users_i_acted_on = list(MatchRequest.objects.filter(sender=user).values_list('receiver_id', flat=True))
     users_who_acted_on_me_excluding_skips = list(MatchRequest.objects.filter(receiver=user).exclude(status='skipped').values_list('sender_id', flat=True))
     interacted_user_ids = set(users_i_acted_on + users_who_acted_on_me_excluding_skips)
+    
+    blocked_user_ids = list(BlockedUser.objects.filter(blocker=user).values_list('blocked_id', flat=True)) + \
+                       list(BlockedUser.objects.filter(blocked=user).values_list('blocker_id', flat=True))
 
     # Check if we have a current match that hasn't been interacted with (prevents refresh bypass)
     current_match_id = request.session.get('current_match_id')
-    if current_match_id and current_match_id not in interacted_user_ids:
-        best_match = Profile.objects.filter(user__id=current_match_id, is_discoverable=True).first()
+    if current_match_id and current_match_id not in interacted_user_ids and current_match_id not in blocked_user_ids:
+        best_match = Profile.objects.filter(user__id=current_match_id, is_discoverable=True, is_face_verified=True).first()
         if best_match:
             user_ans = UserAnswer.objects.filter(user=user).select_related('option')
             user_dict = {ans.question_id: ans.option.id for ans in user_ans}
@@ -651,70 +653,79 @@ def check_match(request):
     # IDs of users already shown to this user in previous rounds (stored in session)
     seen_ids = request.session.get('seen_match_ids', [])
     
-    candidates = Profile.objects.filter(
-        is_discoverable=True,
-    ).exclude(user=user).exclude(user__id__in=interacted_user_ids).exclude(user__id__in=seen_ids)
-
-    user_ans = UserAnswer.objects.filter(user=user).select_related('option')
-    user_dict = {ans.question_id: ans.option.id for ans in user_ans}
-    
-    cand_user_ids = [c.user_id for c in candidates]
-    all_cand_ans = UserAnswer.objects.filter(user_id__in=cand_user_ids).select_related('option')
-    
-    cand_ans_map = {}
-    for ans in all_cand_ans:
-        if ans.user_id not in cand_ans_map: cand_ans_map[ans.user_id] = {}
-        cand_ans_map[ans.user_id][ans.question_id] = ans.option.id
-
-    matches_list = []
-    for c in candidates:
-        # 1. Strict Gender Preference
-        user_pref_ok = (profile.pref_gender == 'any' or profile.pref_gender == c.gender)
-        cand_pref_ok = (profile.pref_gender == 'any' or c.pref_gender == 'any' or c.pref_gender == profile.gender)
-        
-        if not (user_pref_ok and cand_pref_ok):
-            continue
-
-        cand_dict = cand_ans_map.get(c.user_id, {})
-        score, reasons, cand_ans_count, debug_info = calculate_intelligent_match(profile, c, user_dict, cand_dict)
-
-        admin_reasons = []
-        if request.user.email == 'arunmohankml@gmail.com':
-            admin_reasons = reasons + ["======== ADMIN DEBUG ========"] + debug_info
-
-        # Age range check (both ways)
-        user_age_ok = True
-        if profile.age:
-            user_age_ok = (c.pref_age_min <= profile.age <= c.pref_age_max)
-        cand_age_ok = True
-        if c.age:
-            cand_age_ok = (profile.pref_age_min <= c.age <= profile.pref_age_max)
-        mutual_age_ok = (user_age_ok and cand_age_ok)
-
-        looking_for_match = (profile.looking_for == c.looking_for)
-        campus_match = (profile.campus == c.campus)
-
-        matches_list.append({
-            'profile': c, 
-            'score': score,
-            'reasons': admin_reasons if request.user.email == 'arunmohankml@gmail.com' else [],
-            'mutual_age_ok': mutual_age_ok,
-            'looking_for_match': looking_for_match,
-            'campus_match': campus_match,
-            'cand_ans_count': cand_ans_count,
-            'created_at': c.created_at
-        })
-
-    # ── Step 2: Rank by priority ──
     best_match = None
     best_score = 0
     best_reasons = []
-    if matches_list:
-        matches_list.sort(key=lambda x: (x['score'], x['cand_ans_count'], x['campus_match'], x['created_at']), reverse=True)
-        best_match_data = matches_list[0]
-        best_match = best_match_data['profile']
-        best_score = best_match_data['score']
-        best_reasons = best_match_data['reasons']
+
+    for attempt in range(2):
+        candidates = Profile.objects.filter(
+            is_discoverable=True,
+            is_face_verified=True
+        ).exclude(user=user).exclude(user__id__in=interacted_user_ids).exclude(user__id__in=blocked_user_ids).exclude(user__id__in=seen_ids)
+
+        user_ans = UserAnswer.objects.filter(user=user).select_related('option')
+        user_dict = {ans.question_id: ans.option.id for ans in user_ans}
+        
+        cand_user_ids = [c.user_id for c in candidates]
+        all_cand_ans = UserAnswer.objects.filter(user_id__in=cand_user_ids).select_related('option')
+        
+        cand_ans_map = {}
+        for ans in all_cand_ans:
+            if ans.user_id not in cand_ans_map: cand_ans_map[ans.user_id] = {}
+            cand_ans_map[ans.user_id][ans.question_id] = ans.option.id
+
+        matches_list = []
+        for c in candidates:
+            # 1. Strict Gender Preference
+            user_pref_ok = (profile.pref_gender == 'any' or profile.pref_gender == c.gender)
+            cand_pref_ok = (profile.pref_gender == 'any' or c.pref_gender == 'any' or c.pref_gender == profile.gender)
+            
+            if not (user_pref_ok and cand_pref_ok):
+                continue
+
+            cand_dict = cand_ans_map.get(c.user_id, {})
+            score, reasons, cand_ans_count, debug_info = calculate_intelligent_match(profile, c, user_dict, cand_dict)
+
+            admin_reasons = []
+            if request.user.email == 'arunmohankml@gmail.com':
+                admin_reasons = reasons + ["======== ADMIN DEBUG ========"] + debug_info
+
+            # Age range check (both ways)
+            user_age_ok = True
+            if profile.age:
+                user_age_ok = (c.pref_age_min <= profile.age <= c.pref_age_max)
+            cand_age_ok = True
+            if c.age:
+                cand_age_ok = (profile.pref_age_min <= c.age <= profile.pref_age_max)
+            mutual_age_ok = (user_age_ok and cand_age_ok)
+
+            looking_for_match = (profile.looking_for == c.looking_for)
+            campus_match = (profile.campus == c.campus)
+
+            matches_list.append({
+                'profile': c, 
+                'score': score,
+                'reasons': admin_reasons if request.user.email == 'arunmohankml@gmail.com' else [],
+                'mutual_age_ok': mutual_age_ok,
+                'looking_for_match': looking_for_match,
+                'campus_match': campus_match,
+                'cand_ans_count': cand_ans_count,
+                'created_at': c.created_at
+            })
+
+        if matches_list:
+            matches_list.sort(key=lambda x: (x['score'], x['cand_ans_count'], x['campus_match'], x['created_at']), reverse=True)
+            best_match_data = matches_list[0]
+            best_match = best_match_data['profile']
+            best_score = best_match_data['score']
+            best_reasons = best_match_data['reasons']
+            break
+
+        if seen_ids:
+            seen_ids = []
+            request.session['seen_match_ids'] = []
+        else:
+            break
 
     if best_match is not None:
         # Remember we showed this person
@@ -730,7 +741,7 @@ def check_match(request):
     # No one left to show — reset seen list and send back to quiz
     request.session['seen_match_ids'] = []
     request.session['current_match_id'] = None
-    return redirect("home")
+    return redirect("match_feed")
 
 
 
@@ -1036,6 +1047,28 @@ def chat_view(request, partner_id):
     if not is_connected:
         return redirect('connections')
         
+    if request.method == 'GET':
+        from datetime import timedelta
+        abandoned_games = Message.objects.filter(sender=request.user, receiver=partner, text__startswith='__XOX_START__:')
+        for game_msg in abandoned_games:
+            parts = game_msg.text.split(':')
+            if len(parts) >= 2:
+                game_id = parts[1]
+                sender_name = request.user.profile.name if hasattr(request.user, 'profile') else request.user.username
+                try:
+                    broadcast_event(f'chat_{partner.id}', 'new_message', {
+                        'id': f"temp-{int(timezone.now().timestamp() * 1000)}",
+                        'text': f"__SPIN__:XOX_LEFT:{game_id}:{sender_name}",
+                        'sender_id': request.user.id,
+                        'timestamp': timezone.localtime(timezone.now()).strftime("%I:%M %p"),
+                        'reply_to': None
+                    })
+                except:
+                    pass
+        abandoned_games.delete()
+        cutoff = timezone.now() - timedelta(minutes=15)
+        Message.objects.filter(sender=partner, receiver=request.user, text__startswith='__XOX_START__:', timestamp__lt=cutoff).delete()
+
     if request.method == 'POST':
         is_ajax = request.headers.get('Content-Type') == 'application/json'
         
@@ -1053,6 +1086,34 @@ def chat_view(request, partner_id):
             parent_id = request.POST.get('parent_id')
             
         if text:
+            if text.startswith('__SPIN__:'):
+                if text.startswith('__SPIN__:XOX_LEFT:') or text.startswith('__SPIN__:XOX_CLOSE:'):
+                    parts = text.split(':')
+                    if len(parts) >= 3:
+                        game_id = parts[2]
+                        Message.objects.filter(
+                            Q(sender=request.user, receiver=partner) | Q(sender=partner, receiver=request.user),
+                            text=f"__XOX_START__:{game_id}"
+                        ).delete()
+                        
+                msg_id = f"temp-{int(timezone.now().timestamp() * 1000)}"
+                broadcast_event(f'chat_{partner.id}', 'new_message', {
+                    'id': msg_id,
+                    'text': text,
+                    'sender_id': request.user.id,
+                    'timestamp': timezone.localtime(timezone.now()).strftime("%I:%M %p"),
+                    'reply_to': None
+                })
+                if is_ajax:
+                    return JsonResponse({'success': True, 'message': {
+                        'id': msg_id,
+                        'text': text,
+                        'sender_id': request.user.id,
+                        'timestamp': timezone.localtime(timezone.now()).strftime("%I:%M %p"),
+                        'reply_to': None
+                    }})
+                return redirect('chat_view', partner_id=partner.id)
+
             reply_to_msg = None
             if parent_id:
                 reply_to_msg = Message.objects.filter(id=parent_id).first()
@@ -2576,97 +2637,101 @@ def api_create_room(request):
 @login_required
 def api_get_rooms(request):
     if request.method == 'GET':
-        listings = RoomListing.objects.filter(is_active=True).order_by('-created_at')
-        
-        # Exclude blocked users for safety
-        blocked_ids = set(BlockedUser.objects.filter(blocker=request.user).values_list('blocked_id', flat=True)) | \
-                      set(BlockedUser.objects.filter(blocked=request.user).values_list('blocker_id', flat=True))
-        if blocked_ids:
-            listings = listings.exclude(user_id__in=blocked_ids)
+        try:
+            listings = RoomListing.objects.filter(is_active=True).order_by('-created_at')
             
-        # Filters
-        saved_only = request.GET.get('saved_only')
-        if saved_only == 'true':
-            saved_ids = SavedRoomListing.objects.filter(user=request.user).values_list('listing_id', flat=True)
-            listings = listings.filter(id__in=saved_ids)
+            # Exclude blocked users for safety
+            blocked_ids = set(BlockedUser.objects.filter(blocker=request.user).values_list('blocked_id', flat=True)) | \
+                          set(BlockedUser.objects.filter(blocked=request.user).values_list('blocker_id', flat=True))
+            if blocked_ids:
+                listings = listings.exclude(user_id__in=blocked_ids)
+                
+            # Filters
+            saved_only = request.GET.get('saved_only')
+            if saved_only == 'true':
+                saved_ids = SavedRoomListing.objects.filter(user=request.user).values_list('listing_id', flat=True)
+                listings = listings.filter(id__in=saved_ids)
 
-        campus = request.GET.get('campus')
-        if campus:
-            listings = listings.filter(campus=campus)
+            campus = request.GET.get('campus')
+            if campus:
+                listings = listings.filter(campus=campus)
 
-        search_q = request.GET.get('search')
-        if search_q:
-            from django.db.models import Q
-            listings = listings.filter(
-                Q(location__icontains=search_q) |
-                Q(room_type__icontains=search_q) |
-                Q(campus__icontains=search_q) |
-                Q(custom_note__icontains=search_q) |
-                Q(gender_preference__icontains=search_q)
-            )
+            search_q = request.GET.get('search')
+            if search_q:
+                from django.db.models import Q
+                listings = listings.filter(
+                    Q(location__icontains=search_q) |
+                    Q(room_type__icontains=search_q) |
+                    Q(campus__icontains=search_q) |
+                    Q(custom_note__icontains=search_q) |
+                    Q(gender_preference__icontains=search_q)
+                )
+                
+            gender = request.GET.get('gender')
+            if gender:
+                listings = listings.filter(gender_preference=gender)
+                
+            room_type = request.GET.get('room_type')
+            if room_type:
+                listings = listings.filter(room_type=room_type)
+                
+            min_rent = request.GET.get('min_rent')
+            if min_rent:
+                listings = listings.filter(rent__gte=int(min_rent))
+                
+            max_rent = request.GET.get('max_rent')
+            if max_rent:
+                listings = listings.filter(rent__lte=int(max_rent))
+                
+            furnished = request.GET.get('furnished')
+            if furnished:
+                listings = listings.filter(furnished_status=furnished)
+                
+            # Pagination
+            page_num = request.GET.get('page', 1)
+            paginator = Paginator(listings, 10)
+            page = paginator.get_page(page_num)
             
-        gender = request.GET.get('gender')
-        if gender:
-            listings = listings.filter(gender_preference=gender)
-            
-        room_type = request.GET.get('room_type')
-        if room_type:
-            listings = listings.filter(room_type=room_type)
-            
-        min_rent = request.GET.get('min_rent')
-        if min_rent:
-            listings = listings.filter(rent__gte=int(min_rent))
-            
-        max_rent = request.GET.get('max_rent')
-        if max_rent:
-            listings = listings.filter(rent__lte=int(max_rent))
-            
-        furnished = request.GET.get('furnished')
-        if furnished:
-            listings = listings.filter(furnished_status=furnished)
-            
-        # Pagination
-        page_num = request.GET.get('page', 1)
-        paginator = Paginator(listings, 10)
-        page = paginator.get_page(page_num)
-        
-        data = []
-        saved_ids = set(SavedRoomListing.objects.filter(user=request.user).values_list('listing_id', flat=True))
-        for lst in page.object_list:
-            images = [img.image_url for img in lst.images.all()]
-            
-            # Simple compatibility score mock (randomized per user for now, or based on overlap)
-            # You can enhance this by comparing lst.user.profile and request.user.profile
-            compatibility = 85
-            
-            profile = lst.user.profile
-            data.append({
-                'id': lst.id,
-                'campus': lst.campus,
-                'location': lst.location,
-                'distance': lst.distance_from_campus,
-                'rent': lst.rent,
-                'room_type': lst.get_room_type_display(),
-                'furnished_status': lst.get_furnished_status_display(),
-                'current_occupants': lst.current_occupants,
-                'needed_occupants': lst.needed_occupants,
-                'gender_preference': lst.get_gender_preference_display(),
-                'images': images,
-                 'is_owner': lst.user == request.user,
-                'poster': {
-                    'id': lst.user.id,
-                    'name': profile.name,
-                    'pic': profile.get_profile_pic_url,
-                    'course': profile.course,
-                    'year': profile.clg_year,
-                    'is_verified': profile.is_face_verified
-                },
-                'compatibility': compatibility,
-                'is_saved': lst.id in saved_ids,
-                'created_at': lst.created_at.strftime("%b %d, %Y")
-            })
-            
-        return JsonResponse({'success': True, 'listings': data, 'has_next': page.has_next()})
+            data = []
+            saved_ids = set(SavedRoomListing.objects.filter(user=request.user).values_list('listing_id', flat=True))
+            for lst in page.object_list:
+                images = [img.image_url for img in lst.images.all()]
+                
+                # Simple compatibility score mock (randomized per user for now, or based on overlap)
+                # You can enhance this by comparing lst.user.profile and request.user.profile
+                compatibility = 85
+                
+                profile = getattr(lst.user, 'profile', None)
+                data.append({
+                    'id': lst.id,
+                    'campus': lst.campus,
+                    'campus_display': lst.campus_display,
+                    'location': lst.location,
+                    'distance': lst.distance_from_campus,
+                    'rent': lst.rent,
+                    'room_type': lst.get_room_type_display(),
+                    'furnished_status': lst.get_furnished_status_display(),
+                    'current_occupants': lst.current_occupants,
+                    'needed_occupants': lst.needed_occupants,
+                    'gender_preference': lst.get_gender_preference_display(),
+                    'images': images,
+                     'is_owner': lst.user == request.user,
+                    'poster': {
+                        'id': lst.user.id,
+                        'name': profile.name if profile else lst.user.username,
+                        'pic': profile.get_profile_pic_url if profile else "https://ui-avatars.com/api/?name=U&background=6366f1&color=fff&size=256",
+                        'course': profile.course if profile else '',
+                        'year': profile.clg_year if profile else '',
+                        'is_verified': profile.is_face_verified if profile else False
+                    },
+                    'compatibility': compatibility,
+                    'is_saved': lst.id in saved_ids,
+                    'created_at': lst.created_at.strftime("%b %d, %Y")
+                })
+                
+            return JsonResponse({'success': True, 'listings': data, 'has_next': page.has_next()})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
     
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
 
@@ -2818,95 +2883,99 @@ def api_create_room_request(request):
 @login_required
 def api_get_room_requests(request):
     if request.method == 'GET':
-        reqs = RoomRequest.objects.filter(is_active=True).order_by('-created_at')
-        
-        # Exclude blocked users for safety
-        blocked_ids = set(BlockedUser.objects.filter(blocker=request.user).values_list('blocked_id', flat=True)) | \
-                      set(BlockedUser.objects.filter(blocked=request.user).values_list('blocker_id', flat=True))
-        if blocked_ids:
-            reqs = reqs.exclude(user_id__in=blocked_ids)
+        try:
+            reqs = RoomRequest.objects.filter(is_active=True).order_by('-created_at')
             
-        # Filters
-        campus = request.GET.get('campus')
-        if campus:
-            reqs = reqs.filter(campus=campus)
+            # Exclude blocked users for safety
+            blocked_ids = set(BlockedUser.objects.filter(blocker=request.user).values_list('blocked_id', flat=True)) | \
+                          set(BlockedUser.objects.filter(blocked=request.user).values_list('blocker_id', flat=True))
+            if blocked_ids:
+                reqs = reqs.exclude(user_id__in=blocked_ids)
+                
+            # Filters
+            campus = request.GET.get('campus')
+            if campus:
+                reqs = reqs.filter(campus=campus)
 
-        search_q = request.GET.get('search')
-        if search_q:
-            from django.db.models import Q
-            reqs = reqs.filter(
-                Q(title__icontains=search_q) |
-                Q(looking_near__icontains=search_q) |
-                Q(campus__icontains=search_q) |
-                Q(preferred_room_type__icontains=search_q) |
-                Q(sharing_preference__icontains=search_q) |
-                Q(extra_note__icontains=search_q) |
-                Q(needed_amenities__icontains=search_q)
-            )
+            search_q = request.GET.get('search')
+            if search_q:
+                from django.db.models import Q
+                reqs = reqs.filter(
+                    Q(title__icontains=search_q) |
+                    Q(looking_near__icontains=search_q) |
+                    Q(campus__icontains=search_q) |
+                    Q(preferred_room_type__icontains=search_q) |
+                    Q(sharing_preference__icontains=search_q) |
+                    Q(extra_note__icontains=search_q) |
+                    Q(needed_amenities__icontains=search_q)
+                )
+                
+            min_rent = request.GET.get('min_rent')
+            if min_rent:
+                reqs = reqs.filter(max_rent__gte=int(min_rent))
+                
+            max_rent = request.GET.get('max_rent')
+            if max_rent:
+                reqs = reqs.filter(min_rent__lte=int(max_rent))
+                
+            gender = request.GET.get('gender')
+            if gender:
+                reqs = reqs.filter(user__profile__gender=gender)
+                
+            room_type = request.GET.get('room_type')
+            if room_type:
+                reqs = reqs.filter(preferred_room_type=room_type)
+                
+            amenity = request.GET.get('amenity')
+            if amenity:
+                reqs = reqs.filter(needed_amenities__icontains=amenity)
+                
+            mother_tongue = request.GET.get('mother_tongue')
+            if mother_tongue:
+                reqs = reqs.filter(user__profile__mother_tongues__icontains=mother_tongue)
+                
+            # Pagination
+            page_num = request.GET.get('page', 1)
+            paginator = Paginator(reqs, 10)
+            page = paginator.get_page(page_num)
             
-        min_rent = request.GET.get('min_rent')
-        if min_rent:
-            reqs = reqs.filter(max_rent__gte=int(min_rent))
-            
-        max_rent = request.GET.get('max_rent')
-        if max_rent:
-            reqs = reqs.filter(min_rent__lte=int(max_rent))
-            
-        gender = request.GET.get('gender')
-        if gender:
-            reqs = reqs.filter(user__profile__gender=gender)
-            
-        room_type = request.GET.get('room_type')
-        if room_type:
-            reqs = reqs.filter(preferred_room_type=room_type)
-            
-        amenity = request.GET.get('amenity')
-        if amenity:
-            reqs = reqs.filter(needed_amenities__icontains=amenity)
-            
-        mother_tongue = request.GET.get('mother_tongue')
-        if mother_tongue:
-            reqs = reqs.filter(user__profile__mother_tongues__icontains=mother_tongue)
-            
-        # Pagination
-        page_num = request.GET.get('page', 1)
-        paginator = Paginator(reqs, 10)
-        page = paginator.get_page(page_num)
-        
-        data = []
-        for r in page.object_list:
-            profile = r.user.profile
-            gender_char = 'M' if profile.gender == 'male' else 'F' if profile.gender == 'female' else 'O'
-            gender_age = f"{profile.age or ''}{gender_char}"
-            
-            data.append({
-                'id': r.id,
-                'title': r.title,
-                'campus': r.campus,
-                'looking_near': r.looking_near,
-                'min_rent': r.min_rent,
-                'max_rent': r.max_rent,
-                'preferred_room_type': r.preferred_room_type,
-                'sharing_preference': r.sharing_preference,
-                'needed_amenities': r.needed_amenities,
-                'move_in_date': r.move_in_date.strftime("%b %d, %Y") if r.move_in_date else '',
-                'extra_note': r.extra_note,
-                'created_at': r.created_at.strftime("%b %d, %Y"),
-                'is_owner': r.user == request.user,
-                'is_admin': request.user.is_staff or request.user.email == 'arunmohankml@gmail.com',
-                'user': {
-                    'id': r.user.id,
-                    'name': profile.name,
-                    'pic': profile.get_profile_pic_url,
-                    'gender_age': gender_age,
-                    'mother_tongue': profile.mother_tongues,
-                    'languages': profile.languages,
-                    'native_place': profile.native_place,
-                    'is_verified': profile.is_face_verified
-                }
-            })
-            
-        return JsonResponse({'success': True, 'requests': data, 'has_next': page.has_next()})
+            data = []
+            for r in page.object_list:
+                profile = getattr(r.user, 'profile', None)
+                gender_char = 'M' if profile and profile.gender == 'male' else 'F' if profile and profile.gender == 'female' else 'O'
+                gender_age = f"{profile.age or ''}{gender_char}" if profile else gender_char
+                
+                data.append({
+                    'id': r.id,
+                    'title': r.title,
+                    'campus': r.campus,
+                    'campus_display': r.campus_display,
+                    'looking_near': r.looking_near,
+                    'min_rent': r.min_rent,
+                    'max_rent': r.max_rent,
+                    'preferred_room_type': r.preferred_room_type,
+                    'sharing_preference': r.sharing_preference,
+                    'needed_amenities': r.needed_amenities,
+                    'move_in_date': r.move_in_date.strftime("%b %d, %Y") if r.move_in_date else '',
+                    'extra_note': r.extra_note,
+                    'created_at': r.created_at.strftime("%b %d, %Y"),
+                    'is_owner': r.user == request.user,
+                    'is_admin': request.user.is_staff or request.user.email == 'arunmohankml@gmail.com',
+                    'user': {
+                        'id': r.user.id,
+                        'name': profile.name if profile else r.user.username,
+                        'pic': profile.get_profile_pic_url if profile else "https://ui-avatars.com/api/?name=U&background=6366f1&color=fff&size=256",
+                        'gender_age': gender_age,
+                        'mother_tongue': profile.mother_tongues if profile else '',
+                        'languages': profile.languages if profile else '',
+                        'native_place': profile.native_place if profile else '',
+                        'is_verified': profile.is_face_verified if profile else False
+                    }
+                })
+                
+            return JsonResponse({'success': True, 'requests': data, 'has_next': page.has_next()})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
         
     return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=405)
 
@@ -3046,5 +3115,7 @@ def terms_and_conditions_view(request):
 def community_guidelines_view(request):
     return render(request, 'community_guidelines.html')
 
+def about_view(request):
+    return render(request, 'about.html')
 def about_view(request):
     return render(request, 'about.html')

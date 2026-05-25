@@ -186,6 +186,23 @@
     .message.sent .timestamp { color: rgba(255, 255, 255, 0.85); text-align: right; }
     .message.received .timestamp { color: #8a9bb0; }
 
+    /* XOX Game Message Styling */
+    .xox-game-message-container {
+        justify-content: center;
+        margin: 10px 0;
+    }
+    .xox-game-start-message {
+        padding: 0;
+        overflow: hidden;
+        border: none;
+        background: none;
+        box-shadow: none;
+    }
+    .xox-game-start-message.expired .xox-msg-card {
+        opacity: 0.6;
+        filter: grayscale(100%);
+        pointer-events: none; /* Disable interaction */
+    }
     .message.sending { opacity: 0.6; }
 
     /* ── Chat Input ── */
@@ -600,6 +617,45 @@
         background: linear-gradient(135deg, #dc2626, #ef4444);
         box-shadow: 0 8px 20px rgba(220, 38, 38, 0.18);
     }
+
+    /* ── XOX Game Overlay ── */
+    .xox-overlay { position: absolute; top: 64px; left: 0; right: 0; bottom: 0; background: rgba(247, 249, 251, 0.98); backdrop-filter: blur(10px); z-index: 150; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+    .xox-overlay.active { display: flex; transform: translateY(0); }
+    .xox-header { display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 320px; margin-bottom: 24px; }
+    .xox-title { font-size: 20px; font-weight: 800; color: #151b27; display: flex; align-items: center; gap: 8px; }
+    .xox-leave-btn { background: #fee2e2; color: #ef4444; border: none; padding: 8px 16px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 13px; transition: 0.2s; }
+    .xox-leave-btn:active { transform: scale(0.95); }
+    .xox-board { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 10px; width: 100%; max-width: 320px; aspect-ratio: 1; margin-bottom: 24px; }
+    .xox-cell { background: #ffffff; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; font-size: 48px; font-weight: 800; cursor: pointer; transition: 0.2s; border: 2px solid transparent; -webkit-tap-highlight-color: transparent; }
+    .xox-cell:active { transform: scale(0.95); }
+    .xox-cell.blue { color: #2563eb; background: #eff6ff; border-color: rgba(37,99,235,0.2); }
+    .xox-cell.black { color: #0f172a; background: #f1f5f9; border-color: rgba(15,23,42,0.2); }
+    .xox-status-bar { display: flex; justify-content: space-between; width: 100%; max-width: 320px; align-items: center; background: #ffffff; padding: 12px 16px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .xox-player { font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; opacity: 0.5; transition: 0.2s; color:#151b27;}
+    .xox-player.active { opacity: 1; }
+    .xox-player.blue .dot { width: 10px; height: 10px; border-radius: 50%; background: #2563eb; }
+    .xox-player.black .dot { width: 10px; height: 10px; border-radius: 50%; background: #0f172a; }
+    .xox-msg-card { background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 1px solid #bfdbfe; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 8px; align-items: center; text-align: center; min-width: 200px; }
+    .xox-msg-card h4 { margin: 0; font-size: 14px; color: #1e3a8a; font-weight: 800; }
+    .xox-msg-card p { margin: 0; font-size: 12px; color: #3b82f6; font-weight: 600; }
+    .xox-msg-btn { background: #2563eb; color: white; border: none; padding: 8px 16px; border-radius: 100px; font-weight: 700; font-size: 13px; cursor: pointer; width: 100%; transition: 0.2s; }
+    .xox-msg-btn:active { transform: scale(0.95); }
+
+    /* XOX System Messages (e.g., player left) */
+    .xox-system-message-row {
+        justify-content: center;
+        margin: 10px 0;
+    }
+    .xox-system-message-bubble {
+        background: rgba(100, 116, 139, 0.1); /* Light grey background */
+        color: #64748b; /* Grey text */
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        opacity: 0.7; /* Less visible */
+        filter: grayscale(50%); /* Slightly desaturate */
+    }
 </style>
 <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
 {% endblock %}
@@ -635,6 +691,17 @@
     <div class="chat-messages" id="chat-box">
         {% if chat_messages %}
             {% for msg in chat_messages %}
+            {% if '__XOX_START__:' in msg.text %}
+            <div class="message-row xox-game-message-container" data-game-id="{{ msg.text|slice:'14:' }}" data-id="{{ msg.id }}" style="display:flex; justify-content:center; width:100%;">
+                <div class="message {% if msg.sender == request.user %}sent{% else %}received{% endif %} xox-game-start-message" style="padding:0; overflow:hidden; border:none; background:none; box-shadow:none;">
+                    <div class="xox-msg-card">
+                        <h4>XOX Game</h4>
+                        <p>{% if msg.sender == request.user %}You started a game{% else %}Tap to join game{% endif %}</p>
+                        <button class="xox-msg-btn" onclick="joinXoxGame('{{ msg.text|slice:'14:' }}', {% if msg.sender == request.user %}true{% else %}false{% endif %})">{% if msg.sender == request.user %}Open{% else %}Join{% endif %}</button>
+                    </div>
+                </div>
+            </div>
+            {% else %}
             <div class="message-row {% if msg.sender == request.user %}sent{% else %}received{% endif %}" data-id="{{ msg.id }}">
                 <div class="message {% if msg.sender == request.user %}sent{% else %}received{% endif %}" onclick="handleMessageClick(event, this)">
                     {% if msg.reply_to %}
@@ -647,6 +714,7 @@
                     <span class="timestamp">{{ msg.timestamp|time:"H:i" }}</span>
                 </div>
             </div>
+            {% endif %}
             {% endfor %}
         {% else %}
             <div class="chat-empty">
@@ -680,6 +748,9 @@
                 <div class="actions-dropup" id="actionsDropup">
                     <button type="button" class="action-item" id="spinBtn">
                         <span class="material-symbols-outlined">sync_alt</span> Spin Bottle
+                    </button>
+                    <button type="button" class="action-item" id="xoxStartBtn">
+                        <span class="material-symbols-outlined">grid_3x3</span> Start XOX
                     </button>
                 </div>
             </div>
@@ -759,6 +830,24 @@
     </div>
 </div>
 
+<!-- XOX Overlay -->
+<div class="xox-overlay" id="xoxOverlay">
+    <div class="xox-header">
+        <div class="xox-title"><span class="material-symbols-outlined" style="color:#2563eb;">grid_3x3</span> XOX</div>
+        <button class="xox-leave-btn" onclick="leaveXoxGame()">Leave</button>
+    </div>
+    <div class="xox-board" id="xoxBoard">
+        <div class="xox-cell" data-index="0" onclick="makeXoxMove(0)"></div><div class="xox-cell" data-index="1" onclick="makeXoxMove(1)"></div><div class="xox-cell" data-index="2" onclick="makeXoxMove(2)"></div>
+        <div class="xox-cell" data-index="3" onclick="makeXoxMove(3)"></div><div class="xox-cell" data-index="4" onclick="makeXoxMove(4)"></div><div class="xox-cell" data-index="5" onclick="makeXoxMove(5)"></div>
+        <div class="xox-cell" data-index="6" onclick="makeXoxMove(6)"></div><div class="xox-cell" data-index="7" onclick="makeXoxMove(7)"></div><div class="xox-cell" data-index="8" onclick="makeXoxMove(8)"></div>
+    </div>
+    <div class="xox-status-bar">
+        <div class="xox-player blue" id="xoxPlayerBlue"><div class="dot"></div> <span id="xoxBlueName">Blue</span></div>
+        <div id="xoxStatusText" style="font-size:11px; font-weight:800; color:#64748b; text-transform:uppercase;">Waiting...</div>
+        <div class="xox-player black" id="xoxPlayerBlack"><div class="dot"></div> <span id="xoxBlackName">Black</span></div>
+    </div>
+</div>
+
 <script>
 async function confirmBlockUser(event, url) {
     event.preventDefault();
@@ -782,7 +871,7 @@ let lastSubmitTime = 0;
 const pusherKey = "{{ PUSHER_KEY|default:'' }}";
 const pusherCluster = "{{ PUSHER_CLUSTER|default:'ap2' }}";
 
-if (pusherKey) {
+if (pusherKey && typeof Pusher !== 'undefined') {
     fetch(`/chat/read/${partnerId}/`, { method: 'POST', headers: { 'X-CSRFToken': csrfToken } });
 
     const pusher = new Pusher(pusherKey, { cluster: pusherCluster });
@@ -849,7 +938,7 @@ function initiateReply() {
     const parentId = selectedMessageForReply.closest('.message-row').dataset.id;
     const msgText = selectedMessageForReply.querySelector('.message-text').innerText;
     const isSent = selectedMessageForReply.classList.contains('sent');
-    const senderName = isSent ? 'You' : '{{ partner.profile.name|default:partner.username }}';
+    const senderName = isSent ? 'You' : '{{ partner.profile.name|default:partner.username|escapejs }}';
     openReplyPreview(parentId, msgText, senderName);
 }
 
@@ -908,6 +997,7 @@ document.querySelectorAll('.message-row').forEach(bindMessageEvents);
 const plusBtn = document.getElementById('plusBtn');
 const actionsDropup = document.getElementById('actionsDropup');
 const spinBtn = document.getElementById('spinBtn');
+const xoxStartBtn = document.getElementById('xoxStartBtn');
 const spinOverlay = document.getElementById('spinOverlay');
 const bottle = document.getElementById('bottle');
 const spinResult = document.getElementById('spinResult');
@@ -924,6 +1014,363 @@ document.addEventListener('click', () => {
     if (actionsDropup) actionsDropup.classList.remove('active');
 });
 
+if (xoxStartBtn) {
+    xoxStartBtn.onclick = async (e) => {
+        e.stopPropagation();
+        actionsDropup.classList.remove('active');
+        plusBtn.classList.remove('active');
+
+        // Check if there is already an active game message in the chat
+        const existingGameContainer = Array.from(document.querySelectorAll('.xox-game-message-container:not(.expired)')).find(el => window.getComputedStyle(el).display !== 'none');
+        if (existingGameContainer) {
+            const joinBtn = existingGameContainer.querySelector('.xox-msg-btn');
+            if (joinBtn) {
+                // If a game already exists, just join it instead of creating a new one
+                joinBtn.click();
+                return;
+            }
+        }
+
+        const gameId = 'xox-' + Date.now();
+        const signal = `__XOX_START__:${gameId}`;
+        
+        const tempId = 'temp-' + Date.now();
+        const optimisticMsg = {
+            id: tempId, text: signal, sender_id: currentUserId,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
+            isOptimistic: true
+        };
+        appendMessage(optimisticMsg);
+
+        try {
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ text: signal })
+            });
+            const data = await response.json();
+            if (data.success && data.message) {
+                const tempEl = document.querySelector(`[data-id="${tempId}"]`);
+                if (tempEl) {
+                    tempEl.dataset.id = data.message.id;
+                    renderedIds.add(data.message.id);
+                }
+            }
+            joinXoxGame(gameId, true);
+        } catch (e) {
+            console.error(e);
+        }
+    };
+}
+
+let currentXoxGameId = null;
+let xoxBoard = Array(9).fill(null);
+let xoxTurn = 'blue'; 
+let myXoxRole = null; 
+let xoxGameActive = false;
+
+window.joinXoxGame = async function(gameId, isCreator) {
+    currentXoxGameId = gameId;
+    xoxBoard = Array(9).fill(null);
+    xoxTurn = 'blue'; 
+    myXoxRole = isCreator ? 'blue' : 'black';
+    xoxGameActive = !isCreator; // Only active for the joiner initially
+    
+    document.querySelectorAll('.xox-cell').forEach(cell => {
+        cell.className = 'xox-cell';
+        cell.innerText = '';
+    });
+    
+    const myName = "{{ request.user.profile.name|default:request.user.username|escapejs }}";
+    const partnerName = "{{ partner.profile.name|default:partner.username|escapejs }}";
+    
+    document.getElementById('xoxBlueName').innerText = isCreator ? myName : partnerName;
+    document.getElementById('xoxBlackName').innerText = isCreator ? partnerName : myName;
+    
+    updateXoxStatus();
+    document.getElementById('xoxOverlay').classList.add('active');
+
+    if (!isCreator) {
+        const signal = `__SPIN__:XOX_JOIN:${gameId}`;
+        try {
+            await fetch(window.location.href, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ text: signal })
+            });
+        } catch (e) {
+            console.error(e);
+        }
+    }
+};
+
+window.leaveXoxGame = async function() {
+    if (currentXoxGameId) {
+        const myName = "{{ request.user.profile.name|default:request.user.username|escapejs }}";
+        const signal = `__SPIN__:XOX_LEFT:${currentXoxGameId}:${myName}`; // Send gameId and leaver name
+        try {
+            await fetch(window.location.href, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ text: signal })
+            });
+        } catch (e) {
+            console.error(e);
+        }
+        removeGameBox(currentXoxGameId); // Remove locally with animation
+    }
+    
+    document.getElementById('xoxOverlay').classList.remove('active');
+    currentXoxGameId = null;
+    xoxGameActive = false;
+};
+
+window.removeGameBox = function(gameId) {
+    const containers = document.querySelectorAll(`.xox-game-message-container[data-game-id="${gameId}"]`);
+    containers.forEach(container => {
+        container.style.transition = 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
+        container.style.opacity = '0';
+        container.style.transform = 'scale(0.8) translateY(10px)';
+        setTimeout(() => {
+            if (container.parentElement) {
+                container.remove();
+            }
+        }, 400);
+    });
+};
+
+window.makeXoxMove = async function(index) {
+    if (!xoxGameActive || !currentXoxGameId) return;
+    if (xoxTurn !== myXoxRole) return;
+    if (xoxBoard[index] !== null) return;
+    
+    applyXoxMove(index, myXoxRole);
+    
+    const signal = `__SPIN__:XOX_MOVE:${currentXoxGameId}:${index}`;
+    try {
+        await fetch(window.location.href, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify({ text: signal })
+        });
+    } catch (e) {
+        console.error(e);
+    }
+};
+
+function applyXoxMove(index, role) {
+    xoxBoard[index] = role;
+    const cell = document.querySelector(`.xox-cell[data-index="${index}"]`);
+    if (cell) {
+        cell.classList.add(role);
+        cell.innerText = role === 'blue' ? 'X' : 'O';
+    }
+    
+    const winResult = checkXoxWinner();
+    if (winResult && xoxGameActive) {
+        if (winResult.pattern.length > 0) {
+            winResult.pattern.forEach(i => {
+                const wCell = document.querySelector(`.xox-cell[data-index="${i}"]`);
+                if (wCell) {
+                    wCell.style.backgroundColor = '#dcfce7';
+                    wCell.style.transform = 'scale(1.05)';
+                    wCell.style.borderColor = '#16a34a';
+                    wCell.style.zIndex = '10';
+                }
+            });
+        }
+        handleGameOver(winResult.role);
+    } else if (xoxGameActive && !winResult) {
+        xoxTurn = xoxTurn === 'blue' ? 'black' : 'blue';
+        updateXoxStatus();
+    }
+}
+
+function updateXoxStatus() {
+    const bluePlayer = document.getElementById('xoxPlayerBlue');
+    const blackPlayer = document.getElementById('xoxPlayerBlack');
+    const statusText = document.getElementById('xoxStatusText');
+    
+    if (xoxTurn === 'blue') {
+        bluePlayer.classList.add('active');
+        blackPlayer.classList.remove('active');
+    } else {
+        blackPlayer.classList.add('active');
+        bluePlayer.classList.remove('active');
+    }
+    
+    if (!xoxGameActive && myXoxRole === 'blue' && !xoxBoard.includes('blue') && !xoxBoard.includes('black')) {
+        statusText.innerText = "Waiting for partner...";
+        statusText.style.color = '#64748b';
+    } else if (xoxTurn === myXoxRole) {
+        statusText.innerText = "Your Turn";
+        statusText.style.color = '#2563eb';
+    } else {
+        statusText.innerText = "Waiting...";
+        statusText.style.color = '#64748b';
+    }
+}
+
+function checkXoxWinner() {
+    const winPatterns = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8],
+        [0, 3, 6], [1, 4, 7], [2, 5, 8],
+        [0, 4, 8], [2, 4, 6]
+    ];
+    
+    for (let i = 0; i < winPatterns.length; i++) {
+        const [a, b, c] = winPatterns[i];
+        if (xoxBoard[a] !== null && xoxBoard[a] === xoxBoard[b] && xoxBoard[a] === xoxBoard[c]) {
+            return { role: xoxBoard[a], pattern: winPatterns[i] };
+        }
+    }
+    
+    if (!xoxBoard.includes(null)) {
+        return { role: 'draw', pattern: [] };
+    }
+
+    return null; // No winner yet
+}
+
+function handleGameOver(winner) {
+    xoxGameActive = false;
+    const titleText = document.querySelector('.xox-title');
+
+    const actualPartnerName = "{{ partner.profile.name|default:partner.username|escapejs }}";
+
+    if (winner === 'draw') {
+        if(titleText) titleText.innerHTML = `<span class="material-symbols-outlined" style="color:#f59e0b;">handshake</span> Draw`;
+    } else if (winner === myXoxRole) {
+        if(titleText) titleText.innerHTML = `<span class="material-symbols-outlined" style="color:#16a34a;">emoji_events</span> You Won!`;
+    } else {
+        if(titleText) titleText.innerHTML = `<span class="material-symbols-outlined" style="color:#ef4444;">mood_bad</span> ${actualPartnerName} Won!`;
+    }
+    
+    setTimeout(() => {
+        if (myXoxRole === 'blue' && currentXoxGameId) {
+            const nextStart = Math.random() > 0.5 ? 'blue' : 'black';
+            requestRematch(nextStart);
+        }
+    }, 2000);
+}
+
+async function requestRematch(nextStart) {
+    const signal = `__SPIN__:XOX_REMATCH:${currentXoxGameId}:${nextStart}`;
+    try {
+        await fetch(window.location.href, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify({ text: signal })
+        });
+        resetXoxGame(nextStart);
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+window.handleXoxRematch = function(gameId, nextStart) {
+    if (currentXoxGameId === gameId) {
+        resetXoxGame(nextStart);
+    }
+};
+
+function resetXoxGame(nextStart) {
+    const board = document.getElementById('xoxBoard');
+    board.style.transition = 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
+    board.style.transform = 'translateX(-120%)';
+    board.style.opacity = '0';
+    
+    xoxBoard.fill(null);
+    xoxTurn = nextStart || 'blue';
+    xoxGameActive = true;
+    
+    setTimeout(() => {
+        document.querySelectorAll('.xox-cell').forEach((cell, idx) => {
+            cell.style.backgroundColor = '';
+            cell.style.transform = '';
+            cell.style.borderColor = 'transparent';
+            cell.style.zIndex = '';
+            if (xoxBoard[idx] === null) {
+                cell.className = 'xox-cell';
+                cell.innerText = '';
+            }
+        });
+        const titleText = document.querySelector('.xox-title');
+        if (titleText) {
+            titleText.innerHTML = `<span class="material-symbols-outlined" style="color:#2563eb;">grid_3x3</span> XOX`;
+        }
+        updateXoxStatus();
+        
+        board.style.transition = 'none';
+        board.style.transform = 'translateX(120%)';
+        void board.offsetWidth;
+        
+        board.style.transition = 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
+        board.style.transform = 'translateX(0)';
+        board.style.opacity = '1';
+    }, 400);
+}
+
+window.endXoxGame = async function(gameId, signalType) {
+    xoxBoard.fill(null);
+    document.querySelectorAll('.xox-cell').forEach(cell => {
+        cell.className = 'xox-cell';
+        cell.innerText = '';
+    });
+    document.getElementById('xoxOverlay').classList.remove('active');
+    currentXoxGameId = null;
+    xoxGameActive = false;
+
+    // Send a signal to the other player that the game has ended naturally
+    if (signalType === 'XOX_CLOSE') {
+        // This signal is already handled by handleXoxClose
+    }
+}
+
+window.handleXoxMove = function(gameId, index, senderId) {
+    if (currentXoxGameId !== gameId) return;
+    if (senderId.toString() === currentUserId.toString()) return;
+    if (xoxBoard[index] !== null) return;
+    
+    const role = myXoxRole === 'blue' ? 'black' : 'blue';
+    applyXoxMove(index, role);
+};
+
+window.handleXoxJoin = function(gameId) {
+    if (currentXoxGameId === gameId && myXoxRole === 'blue') {
+        xoxGameActive = true;
+        updateXoxStatus();
+    } else if (currentXoxGameId === gameId && myXoxRole === 'black') {
+        xoxGameActive = true; // The creator has joined, so the joiner can now play.
+    }
+};
+
+window.handleXoxClose = function(gameId) {
+    if (currentXoxGameId === gameId) {
+        document.getElementById('xoxOverlay').classList.remove('active');
+        currentXoxGameId = null;
+        xoxGameActive = false;
+    }
+};
+
+window.handleXoxLeft = function(gameId, leaverName) {
+    const gameStartMessageEl = document.querySelector(`.xox-game-message-container[data-game-id="${gameId}"] .xox-game-start-message`);
+    if (gameStartMessageEl) {
+        gameStartMessageEl.classList.add('expired');
+        gameStartMessageEl.querySelector('p').innerText = `Game ended: ${leaverName} left.`;
+        gameStartMessageEl.querySelector('button').innerText = 'Expired';
+        gameStartMessageEl.querySelector('button').disabled = true;
+        gameStartMessageEl.querySelector('button').onclick = null; // Disable click
+    }
+    removeGameBox(gameId); // Smooth animated removal
+    
+    if (currentXoxGameId === gameId) { // If currently in the game that was left
+        document.getElementById('xoxOverlay').classList.remove('active');
+        currentXoxGameId = null;
+        xoxGameActive = false;
+    }
+};
+
 function runSpinAnimation(winnerId, winnerName) {
     spinOverlay.classList.add('active');
     spinResult.classList.remove('active');
@@ -932,7 +1379,7 @@ function runSpinAnimation(winnerId, winnerName) {
     setTimeout(() => {
         const spins = 5 + Math.floor(Math.random() * 5);
         const isMeWinner = (winnerId.toString() === currentUserId.toString());
-        const extraDeg = isMeWinner ? 0 : 180;
+        const extraDeg = isMeWinner ? 0 : 180; // Land on self or partner
         const totalDeg = (spins * 360) + extraDeg;
         bottle.style.transition = 'transform 3s cubic-bezier(0.15, 0, 0.15, 1)';
         bottle.style.transform = `rotate(${totalDeg}deg)`;
@@ -946,9 +1393,9 @@ function runSpinAnimation(winnerId, winnerName) {
 
 spinBtn.onclick = async () => {
     const myId = "{{ request.user.id }}";
-    const myName = "{{ request.user.profile.name|default:request.user.username }}";
+    const myName = "{{ request.user.profile.name|default:request.user.username|escapejs }}";
     const pId = "{{ partner.id }}";
-    const pName = "{{ partner.profile.name|default:partner.username }}";
+    const pName = "{{ partner.profile.name|default:partner.username|escapejs }}";
     const isMeWinner = Math.random() > 0.5;
     const winnerId = isMeWinner ? myId : pId;
     const winnerName = isMeWinner ? myName : pName;
@@ -960,6 +1407,7 @@ spinBtn.onclick = async () => {
             body: JSON.stringify({ text: signal })
         });
     } catch (e) {
+        // Fallback for local animation if network fails
         runSpinAnimation(winnerId, winnerName);
     }
 };
@@ -1018,7 +1466,7 @@ function scrollToBottom(smooth = false) {
         else chatBox.scrollTop = target;
     });
 }
-scrollToBottom(false);
+scrollToBottom();
 
 function appendMessage(msg) {
     if (!msg.id) return;
@@ -1044,6 +1492,49 @@ function appendMessage(msg) {
 
     if (msg.text.startsWith('__SPIN__:')) {
         const parts = msg.text.split(':');
+        
+        // Add rendered ID for all signals to prevent re-processing
+        if (!msg.isOptimistic) {
+            renderedIds.add(msg.id);
+        }
+
+        const isMe = msg.sender_id.toString() === currentUserId.toString();
+
+        if (parts[1] === 'XOX_MOVE') {
+            handleXoxMove(parts[2], parseInt(parts[3]), msg.sender_id);
+            return;
+        }
+        if (parts[1] === 'XOX_CLOSE') {
+            if (!isMe) handleXoxClose(parts[2]);
+            return;
+        }
+        if (parts[1] === 'XOX_JOIN') {
+            if (!isMe) handleXoxJoin(parts[2]);
+            return;
+        }
+        if (parts[1] === 'XOX_REMATCH') {
+            if (!isMe) handleXoxRematch(parts[2], parts[3]);
+            return;
+        }
+        if (parts[1] === 'XOX_LEFT') {
+            const gameId = parts[2];
+            const leaverName = parts[3];
+            
+            if (!isMe) {
+                handleXoxLeft(gameId, leaverName);
+                const html = `
+                    <div class="message-row xox-system-message-row" data-id="${msg.id}">
+                        <div class="xox-system-message-bubble">
+                            ${leaverName} left the XOX game.
+                        </div>
+                    </div>
+                `;
+                chatBox.insertAdjacentHTML('beforeend', html);
+                scrollToBottom();
+            }
+            return;
+        }
+        
         const winnerId = parts[1];
         const winnerName = parts[2];
         runSpinAnimation(winnerId, winnerName);
@@ -1054,6 +1545,16 @@ function appendMessage(msg) {
                 </div>
             </div>
         `;
+        chatBox.insertAdjacentHTML('beforeend', html);
+        if (!msg.isOptimistic) renderedIds.add(msg.id);
+        scrollToBottom();
+        return;
+    }
+    
+    if (msg.text.startsWith('__XOX_START__:')) {
+        const gameId = msg.text.split(':')[1];
+        const isSender = (msg.sender_id.toString() === currentUserId.toString());
+        const html = `<div class="message-row xox-game-message-container" data-game-id="${gameId}" data-id="${msg.id}" style="display:flex; justify-content:center; width:100%;"><div class="message ${isSender ? 'sent' : 'received'} xox-game-start-message" style="padding:0; overflow:hidden; border:none; background:none; box-shadow:none;"><div class="xox-msg-card"><h4>XOX Game</h4><p>${isSender ? 'You started a game' : 'Tap to join game'}</p><button class="xox-msg-btn" onclick="joinXoxGame('${gameId}', ${isSender})">${isSender ? 'Open' : 'Join'}</button></div></div></div>`;
         chatBox.insertAdjacentHTML('beforeend', html);
         if (!msg.isOptimistic) renderedIds.add(msg.id);
         scrollToBottom();
@@ -1182,6 +1683,19 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             backBtn.href = "{% url 'chat_list' %}?from=" + fromParam;
         }
+    }
+});
+
+window.addEventListener('beforeunload', function() {
+    if (currentXoxGameId) {
+        const myName = "{{ request.user.profile.name|default:request.user.username|escapejs }}";
+        const signal = `__SPIN__:XOX_LEFT:${currentXoxGameId}:${myName}`;
+        fetch(window.location.href, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify({ text: signal }),
+            keepalive: true
+        }).catch(()=>{});
     }
 });
 </script>

@@ -282,6 +282,22 @@ html, body {
     backdrop-filter: blur(4px);
 }
 
+/* Campus Badge */
+.rf-campus-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: rgba(15, 23, 42, 0.75);
+    color: #ffffff;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    backdrop-filter: blur(4px);
+    z-index: 10;
+}
+
 /* Card Body */
 .rf-card-body {
     padding: 16px 18px 18px;
@@ -1527,6 +1543,7 @@ html, body {
                     return `
                     <div class="rf-card" onclick="window.location.href='/roomfinder/${l.id}/'" style="cursor:pointer;">
                         <div class="rf-card-img-wrap" id="carousel-${l.id}">
+                            <div class="rf-campus-badge">${l.campus_display}</div>
                             ${imgHtml}
                             ${l.images.length > 1 ? `
                                 <button type="button" class="rf-card-img-nav rf-card-img-prev" onclick="event.stopPropagation(); changeImage(${l.id}, -1)"><span class="material-symbols-outlined">chevron_left</span></button>

@@ -517,6 +517,26 @@ class RoomListing(models.Model):
     def __str__(self):
         return f"{self.room_type} at {self.location} by {self.user.username}"
 
+    @property
+    def campus_display(self):
+        campus_map = {
+            'Kattankulathur (KTR)': 'KTR',
+            'Ramapuram (RMP)': 'RMP',
+            'Ramapuram': 'RMP',
+            'Vadapalani (VDP)': 'VDP',
+            'Vadapalani': 'VDP',
+            'Eswari (ESW)': 'ESW',
+            'Delhi NCR': 'NCR',
+            'NCR Modinagar': 'NCR',
+            'Tiruchirappalli (TCY)': 'TCY',
+            'Tiruchirappalli': 'TCY',
+            'Amaravati (AMT)': 'AMT',
+            'SRM AP': 'AMT',
+            'Sikkim (SKM)': 'SKM',
+            'Sonepat (SPT)': 'SPT',
+        }
+        return campus_map.get(self.campus, self.campus)
+
 
 class RoomImage(models.Model):
     listing = models.ForeignKey(RoomListing, on_delete=models.CASCADE, related_name='images')
@@ -582,4 +602,22 @@ class RoomRequest(models.Model):
     def __str__(self):
         return f"RoomRequest: {self.title[:20]} by {self.user.username}"
 
-
+    @property
+    def campus_display(self):
+        campus_map = {
+            'Kattankulathur (KTR)': 'KTR',
+            'Ramapuram (RMP)': 'RMP',
+            'Ramapuram': 'RMP',
+            'Vadapalani (VDP)': 'VDP',
+            'Vadapalani': 'VDP',
+            'Eswari (ESW)': 'ESW',
+            'Delhi NCR': 'NCR',
+            'NCR Modinagar': 'NCR',
+            'Tiruchirappalli (TCY)': 'TCY',
+            'Tiruchirappalli': 'TCY',
+            'Amaravati (AMT)': 'AMT',
+            'SRM AP': 'AMT',
+            'Sikkim (SKM)': 'SKM',
+            'Sonepat (SPT)': 'SPT',
+        }
+        return campus_map.get(self.campus, self.campus)

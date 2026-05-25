@@ -630,7 +630,7 @@
         // UI Utilities
         function checkAndShowWarning(key, title, html, btnText, onConfirm) {
             if (localStorage.getItem(key)) {
-                onConfirm();
+                if (typeof onConfirm === 'function') onConfirm();
                 return;
             }
             const modal = document.createElement('div');
@@ -646,7 +646,7 @@
             document.getElementById('warning-confirm-btn').onclick = () => {
                 localStorage.setItem(key, 'true');
                 modal.remove();
-                onConfirm();
+                if (typeof onConfirm === 'function') onConfirm();
             };
         }
 
