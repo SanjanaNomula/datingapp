@@ -240,8 +240,10 @@ def verify(request):
 
 
 # ---------------- HOME HUB ----------------
-@login_required
 def home_hub(request):
+    if not request.user.is_authenticated:
+        return render(request, "login.html")
+        
     user = request.user
     profile = getattr(user, 'profile', None)
     if not profile or not profile.name or not profile.age or not profile.gender or not profile.campus or not profile.native_place:
@@ -392,7 +394,7 @@ def match_feed(request):
         ).exclude(user=user).exclude(user__id__in=interacted_user_ids).exclude(user__id__in=blocked_user_ids).select_related('user')
         
         user_ans = UserAnswer.objects.filter(user=user).select_related('option')
-        user_dict = {ans.question_id: ans.option.weight for ans in user_ans}
+        user_dict = {ans.question_id: ans.option.id for ans in user_ans}
         
         cand_user_ids = [c.user_id for c in candidates]
         all_cand_ans = UserAnswer.objects.filter(user_id__in=cand_user_ids).select_related('option')
@@ -400,7 +402,7 @@ def match_feed(request):
         cand_ans_map = {}
         for ans in all_cand_ans:
             if ans.user_id not in cand_ans_map: cand_ans_map[ans.user_id] = {}
-            cand_ans_map[ans.user_id][ans.question_id] = ans.option.weight
+            cand_ans_map[ans.user_id][ans.question_id] = ans.option.id
 
         matches_list = []
         for c in candidates:
@@ -412,7 +414,11 @@ def match_feed(request):
                 continue
                 
             cand_dict = cand_ans_map.get(c.user_id, {})
-            score = calculate_match_score_optimized(user_dict, cand_dict)
+            score, reasons, cand_ans_count, debug_info = calculate_intelligent_match(profile, c, user_dict, cand_dict)
+            
+            admin_reasons = []
+            if request.user.email == 'arunmohankml@gmail.com':
+                admin_reasons = reasons + ["======== ADMIN DEBUG ========"] + debug_info
             
             # Age preference bool
             user_age_ok = True
@@ -428,15 +434,17 @@ def match_feed(request):
             
             matches_list.append({
                 'profile': c, 
-                'score': min(score, 100),
+                'score': score,
+                'reasons': admin_reasons if request.user.email == 'arunmohankml@gmail.com' else [],
                 'mutual_age_ok': mutual_age_ok,
                 'looking_for_match': looking_for_match,
-                'campus_match': campus_match
+                'campus_match': campus_match,
+                'cand_ans_count': cand_ans_count,
+                'created_at': c.created_at
             })
         
-        # Sort by: (Age Match, Looking For Match, Question Score, Campus Match, Random/Fallthrough)
-        # True sorts after False, so reverse=True sorts True first
-        matches_list.sort(key=lambda x: (x['mutual_age_ok'], x['looking_for_match'], x['score'], x['campus_match']), reverse=True)
+        # Sort by: highest final_score first, more quiz answers second, same campus third, recently active / recently created fourth
+        matches_list.sort(key=lambda x: (x['score'], x['cand_ans_count'], x['campus_match'], x['created_at']), reverse=True)
         sparked_ids = list(Spark.objects.filter(sender=user).values_list('receiver_id', flat=True))
         
         return render(request, "home.html", {
@@ -457,46 +465,150 @@ def match_feed(request):
 import math
 
 # ---------------- MATCHING LOGIC ----------------
-# ---------------- MATCHING LOGIC ----------------
-def calculate_match_score(user1_or_obj, user2_or_obj):
-    """Calculate match % between two users based on common answers."""
-    # Handle if objects or users are passed
-    u1 = user1_or_obj if hasattr(user1_or_obj, 'id') else user1_or_obj.user
-    u2 = user2_or_obj if hasattr(user2_or_obj, 'id') else user2_or_obj.user
-    
-    user1_ans = UserAnswer.objects.filter(user=u1).select_related('option')
-    user2_ans = UserAnswer.objects.filter(user=u2).select_related('option')
-    
-    u1_dict = {ans.question_id: ans.option.weight for ans in user1_ans}
-    u2_dict = {ans.question_id: ans.option.weight for ans in user2_ans}
-    
-    common_questions = set(u1_dict.keys()).intersection(set(u2_dict.keys()))
-    if not common_questions: return 0
-    
-    v1 = [u1_dict[q_id] for q_id in common_questions]
-    v2 = [u2_dict[q_id] for q_id in common_questions]
-    
-    # Blended Score: Cosine Similarity + Euclidean Distance
-    euc_dist = math.sqrt(sum((x - y) ** 2 for x, y in zip(v1, v2)))
-    euc_sim = 1 / (1 + euc_dist)
-    
-    dot_product = sum(x * y for x, y in zip(v1, v2))
-    norm_v1 = math.sqrt(sum(x * x for x in v1))
-    norm_v2 = math.sqrt(sum(x * x for x in v2))
-    cos_sim = dot_product / (norm_v1 * norm_v2) if (norm_v1 > 0 and norm_v2 > 0) else 0
-    
-    final_score = (cos_sim * 0.7) + (euc_sim * 0.3)
-    return int(round(final_score * 100))
+def calculate_intelligent_match(user_profile, cand_profile, user_ans_dict, cand_ans_dict):
+    reasons = []
+    debug = [f"Analyzing candidate: {cand_profile.name}"]
 
-def calculate_match_score_optimized(u1_dict, u2_dict):
-    """Fast version for bulk ranking in discovery feed."""
-    common = set(u1_dict.keys()).intersection(set(u2_dict.keys()))
-    if not common: return 0
-    v1 = [u1_dict[q] for q in common]; v2 = [u2_dict[q] for q in common]
-    euc = 1 / (1 + math.sqrt(sum((x-y)**2 for x,y in zip(v1,v2))))
-    dot = sum(x*y for x,y in zip(v1,v2)); n1 = math.sqrt(sum(x*x for x in v1)); n2 = math.sqrt(sum(x*x for x in v2))
-    cos = dot / (n1*n2) if (n1>0 and n2>0) else 0
-    return int(round(((cos*0.7) + (euc*0.3)) * 100))
+    # 1. Quiz Score (Max 50)
+    quiz_score = 0
+    common_questions = set(user_ans_dict.keys()).intersection(set(cand_ans_dict.keys()))
+    common_len = len(common_questions)
+    debug.append(f"[Quiz] Common Qs: {common_len}")
+
+    if common_len > 0:
+        same_answers = sum(1 for q in common_questions if user_ans_dict[q] == cand_ans_dict[q])
+        if common_len >= 5:
+            quiz_score = (same_answers / common_len) * 50
+        else:
+            quiz_score = (same_answers / max(common_len, 1)) * 25
+
+        quiz_score = min(quiz_score, 50)
+        debug.append(f"[Quiz] Same Ans: {same_answers}, Score: {quiz_score:.2f}")
+        if same_answers > 0:
+            reasons.append(f"You both answered {same_answers} questions similarly")
+    else:
+        debug.append("[Quiz] Same Ans: 0, Score: 0")
+
+    debug.append(f"Quiz: {quiz_score:.2f}/50")
+
+    # 2. Profile Score (Max 30)
+    profile_score = 0
+
+    # Age
+    age_diff = abs((user_profile.age or 0) - (cand_profile.age or 0))
+    age_pts = 0
+    if user_profile.age and cand_profile.age:
+        if age_diff == 0:
+            age_pts = 4
+        elif age_diff == 1:
+            age_pts = 3
+        elif age_diff == 2:
+            age_pts = 2
+    profile_score += age_pts
+    debug.append(f"[Profile] Age Diff ({age_diff} yrs): +{age_pts} pts")
+
+    # Campus
+    campus_pts = 0
+    if user_profile.campus and user_profile.campus == cand_profile.campus:
+        campus_pts = 6
+        reasons.append("Same campus")
+    profile_score += campus_pts
+    debug.append(f"[Profile] Same Campus: +{campus_pts} pts")
+
+    # Mother tongue
+    mt_pts = 0
+    user_mt = set(user_profile.mother_tongues_list)
+    cand_mt = set(cand_profile.mother_tongues_list)
+    common_mt = user_mt.intersection(cand_mt)
+    if common_mt:
+        mt_pts = 6
+        reasons.append("Same mother tongue")
+    profile_score += mt_pts
+    debug.append(f"[Profile] Common Mother Tongue {list(common_mt)}: +{mt_pts} pts")
+
+    # Shared language
+    lang_pts = 0
+    user_lang = set(user_profile.languages_list)
+    cand_lang = set(cand_profile.languages_list)
+    common_lang = user_lang.intersection(cand_lang)
+    if common_lang:
+        lang_pts = 4
+        if not common_mt:
+            reasons.append("Shared language")
+    profile_score += lang_pts
+    debug.append(f"[Profile] Common Languages {list(common_lang)}: +{lang_pts} pts")
+
+    # Shared interests
+    int_pts = 0
+    user_int = set(user_profile.interest_tags_list)
+    cand_int = set(cand_profile.interest_tags_list)
+    common_int = user_int.intersection(cand_int)
+    if common_int:
+        int_pts = min(len(common_int) * 2, 8)
+        shared_int_str = ", ".join([str(i).capitalize() for i in list(common_int)[:3]])
+        reasons.append(f"Shared interests: {shared_int_str}")
+    profile_score += int_pts
+    debug.append(f"[Profile] Shared Interests {list(common_int)}: +{int_pts} pts")
+
+    # Looking For
+    lf_pts = 0
+    if user_profile.looking_for and user_profile.looking_for == cand_profile.looking_for:
+        lf_pts = 2
+        reasons.append("Looking for the same thing")
+    profile_score += lf_pts
+    debug.append(f"[Profile] Same Looking For: +{lf_pts} pts")
+
+    profile_score = min(profile_score, 30)
+    debug.append(f"Profile: {profile_score}/30")
+
+    # 3. Preference Score (Max 20)
+    pref_score = 0
+
+    pg_pts = 0
+    if user_profile.pref_gender != 'any' and cand_profile.gender == user_profile.pref_gender:
+        pg_pts = 8
+    elif user_profile.pref_gender == 'any':
+        pg_pts = 8
+    pref_score += pg_pts
+    debug.append(f"[Pref] Cand matches User Gender Pref: +{pg_pts} pts")
+
+    cg_pts = 0
+    if cand_profile.pref_gender != 'any' and user_profile.gender == cand_profile.pref_gender:
+        cg_pts = 5
+    elif cand_profile.pref_gender == 'any':
+        cg_pts = 5
+    pref_score += cg_pts
+    debug.append(f"[Pref] User matches Cand Gender Pref: +{cg_pts} pts")
+
+    pc_pts = 0
+    if user_profile.pref_campus and user_profile.pref_campus == cand_profile.campus:
+        pc_pts = 3
+        reasons.append("Matches preferred campus")
+    pref_score += pc_pts
+    debug.append(f"[Pref] Cand matches User Campus Pref: +{pc_pts} pts")
+
+    pl_pts = 0
+    user_pref_lang = set(user_profile.pref_languages_list)
+    if user_pref_lang and user_pref_lang.intersection(cand_lang.union(cand_mt)):
+        pl_pts = 4
+        reasons.append("Matches preferred language")
+    pref_score += pl_pts
+    debug.append(f"[Pref] Cand matches User Lang Pref: +{pl_pts} pts")
+
+    pref_score = min(pref_score, 20)
+    debug.append(f"Preference: {pref_score}/20")
+
+    final_score = quiz_score + profile_score + pref_score
+    final_score = int(round(final_score))
+
+    if final_score > 100:
+        final_score = 100
+    if final_score < 0:
+        final_score = 0
+
+    debug.append(f"Final: {final_score}/100")
+
+    return final_score, reasons, len(cand_ans_dict), debug
 
 
 
@@ -520,10 +632,20 @@ def check_match(request):
     if current_match_id and current_match_id not in interacted_user_ids:
         best_match = Profile.objects.filter(user__id=current_match_id, is_discoverable=True).first()
         if best_match:
-            score = calculate_match_score(user, best_match.user)
+            user_ans = UserAnswer.objects.filter(user=user).select_related('option')
+            user_dict = {ans.question_id: ans.option.id for ans in user_ans}
+            cand_ans = UserAnswer.objects.filter(user=best_match.user).select_related('option')
+            cand_dict = {ans.question_id: ans.option.id for ans in cand_ans}
+            score, reasons, _, debug_info = calculate_intelligent_match(profile, best_match, user_dict, cand_dict)
+            
+            admin_reasons = []
+            if request.user.email == 'arunmohankml@gmail.com':
+                admin_reasons = reasons + ["======== ADMIN DEBUG ========"] + debug_info
+                
             return render(request, "match_popup.html", {
                 "match": best_match,
-                "score": score
+                "score": score,
+                "reasons": admin_reasons if request.user.email == 'arunmohankml@gmail.com' else []
             })
 
     # IDs of users already shown to this user in previous rounds (stored in session)
@@ -532,6 +654,17 @@ def check_match(request):
     candidates = Profile.objects.filter(
         is_discoverable=True,
     ).exclude(user=user).exclude(user__id__in=interacted_user_ids).exclude(user__id__in=seen_ids)
+
+    user_ans = UserAnswer.objects.filter(user=user).select_related('option')
+    user_dict = {ans.question_id: ans.option.id for ans in user_ans}
+    
+    cand_user_ids = [c.user_id for c in candidates]
+    all_cand_ans = UserAnswer.objects.filter(user_id__in=cand_user_ids).select_related('option')
+    
+    cand_ans_map = {}
+    for ans in all_cand_ans:
+        if ans.user_id not in cand_ans_map: cand_ans_map[ans.user_id] = {}
+        cand_ans_map[ans.user_id][ans.question_id] = ans.option.id
 
     matches_list = []
     for c in candidates:
@@ -542,8 +675,12 @@ def check_match(request):
         if not (user_pref_ok and cand_pref_ok):
             continue
 
-        score = calculate_match_score(user, c.user)
-        score = min(score, 100)
+        cand_dict = cand_ans_map.get(c.user_id, {})
+        score, reasons, cand_ans_count, debug_info = calculate_intelligent_match(profile, c, user_dict, cand_dict)
+
+        admin_reasons = []
+        if request.user.email == 'arunmohankml@gmail.com':
+            admin_reasons = reasons + ["======== ADMIN DEBUG ========"] + debug_info
 
         # Age range check (both ways)
         user_age_ok = True
@@ -560,19 +697,24 @@ def check_match(request):
         matches_list.append({
             'profile': c, 
             'score': score,
+            'reasons': admin_reasons if request.user.email == 'arunmohankml@gmail.com' else [],
             'mutual_age_ok': mutual_age_ok,
             'looking_for_match': looking_for_match,
-            'campus_match': campus_match
+            'campus_match': campus_match,
+            'cand_ans_count': cand_ans_count,
+            'created_at': c.created_at
         })
 
     # ── Step 2: Rank by priority ──
     best_match = None
     best_score = 0
+    best_reasons = []
     if matches_list:
-        matches_list.sort(key=lambda x: (x['mutual_age_ok'], x['looking_for_match'], x['score'], x['campus_match']), reverse=True)
+        matches_list.sort(key=lambda x: (x['score'], x['cand_ans_count'], x['campus_match'], x['created_at']), reverse=True)
         best_match_data = matches_list[0]
         best_match = best_match_data['profile']
         best_score = best_match_data['score']
+        best_reasons = best_match_data['reasons']
 
     if best_match is not None:
         # Remember we showed this person
@@ -581,7 +723,8 @@ def check_match(request):
         request.session['current_match_id'] = best_match.user.id
         return render(request, "match_popup.html", {
             "match": best_match,
-            "score": best_score
+            "score": best_score,
+            "reasons": best_reasons
         })
 
     # No one left to show — reset seen list and send back to quiz
@@ -2893,4 +3036,3 @@ def sitemap_view(request):
 def robots_txt_view(request):
     text = "User-agent: *\nAllow: /\n\nSitemap: https://srm-match.vercel.app/sitemap.xml\n"
     return HttpResponse(text, content_type='text/plain')
-

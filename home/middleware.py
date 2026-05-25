@@ -6,7 +6,7 @@ from django.utils.html import format_html
 
 # Paths that are always allowed (login, static assets, admin)
 EXEMPT_PATHS = re.compile(
-    r'^/(login|logout|static|admin|favicon|api/verify-token|api/save-fcm-token)/'
+    r'^/(login|logout|static|admin|favicon|api/verify-token|api/save-fcm-token|manifest\.json|sw\.js|robots\.txt|sitemap\.xml|confessions)(/|$)'
 )
 
 _BAN_HTML = """

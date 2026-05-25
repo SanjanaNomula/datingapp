@@ -1,5 +1,6 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
+from django.views.generic import TemplateView
 from . import views
 urlpatterns = [
     path("login/", views.login_view, name="login"),
@@ -7,6 +8,8 @@ urlpatterns = [
     path("api/verify-token/", views.api_verify_token, name="api_verify_token"),
     path("api/save-fcm-token/", views.api_save_fcm_token, name="api_save_fcm_token"),
     path("", views.home_hub, name="home"),
+    path("manifest.json", TemplateView.as_view(template_name="manifest.json", content_type="application/json"), name="manifest"),
+    path("sw.js", TemplateView.as_view(template_name="sw.js", content_type="application/javascript"), name="sw"),
     path("match/", views.match_feed, name="match_feed"),
     path("more/", views.more_menu, name="more_menu"),
     path("complete_profile/", views.complete_profile, name="complete_profile"),

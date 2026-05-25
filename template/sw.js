@@ -1,5 +1,61 @@
+const CACHE_NAME = 'srm-match-v1';
+const STATIC_ASSETS = [
+  '/',
+  '/login/',
+  '/confessions/',
+  '/manifest.json'
+];
+
+self.addEventListener('install', (event) => {
+    self.skipWaiting();
+    event.waitUntil(
+        caches.open(CACHE_NAME).then((cache) => {
+            return cache.addAll(STATIC_ASSETS);
+        })
+    );
+});
+
+self.addEventListener('activate', (event) => {
+    event.waitUntil(
+        caches.keys().then((cacheNames) => {
+            return Promise.all(
+                cacheNames.map((name) => {
+                    if (name !== CACHE_NAME) {
+                        return caches.delete(name);
+                    }
+                })
+            );
+        })
+    );
+    self.clients.claim();
+});
+
 self.addEventListener("fetch", function(event) {
-  event.respondWith(fetch(event.request));
+    const url = event.request.url;
+    const isDynamic = url.includes('/api/') || url.includes('/chat/') || event.request.method !== 'GET';
+    
+    if (isDynamic) {
+        return event.respondWith(fetch(event.request));
+    }
+
+    event.respondWith(
+        caches.match(event.request).then((cachedResponse) => {
+            const fetchPromise = fetch(event.request).then((networkResponse) => {
+                if (networkResponse && networkResponse.status === 200) {
+                    const responseToCache = networkResponse.clone();
+                    if (url.includes('/static/') || url.match(/\.(png|jpg|jpeg|svg|gif|woff2?|css|js)$/)) {
+                        caches.open(CACHE_NAME).then((cache) => {
+                            cache.put(event.request, responseToCache);
+                        });
+                    }
+                }
+                return networkResponse;
+            }).catch(() => {
+                // Network failed, rely on cache.
+            });
+            return cachedResponse || fetchPromise;
+        })
+    );
 });
 
 self.addEventListener('push', function(event) {

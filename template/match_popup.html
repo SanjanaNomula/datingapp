@@ -425,6 +425,17 @@
 </div>
 {% endif %}
 
+<!-- Admin Match Analysis -->
+{% if reasons %}
+<div class="detail-card" style="background: #1e293b; border-color: #0f172a; color: #f8fafc;">
+    <div class="detail-label" style="color: #94a3b8;"><i class="fas fa-terminal"></i> Match Analysis Log</div>
+    <div style="font-family: monospace; font-size: 11px; white-space: pre-wrap; line-height: 1.5; overflow-x: auto;">
+        {% for reason in reasons %}
+            <div style="padding: 2px 0;">{{ reason }}</div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
 
 <!-- Actions -->
 <div class="actions">
