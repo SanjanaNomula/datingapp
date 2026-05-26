@@ -354,19 +354,8 @@ def match_feed(request):
     for c in candidates_qs:
         user_pref_ok = (profile.pref_gender == 'any' or profile.pref_gender == c.gender)
         cand_pref_ok = (profile.pref_gender == 'any' or c.pref_gender == 'any' or c.pref_gender == profile.gender)
-        user_age_ok = True
-        if profile.age:
-            user_age_ok = (c.pref_age_min <= profile.age <= c.pref_age_max)
-        cand_age_ok = True
-        if c.age:
-            cand_age_ok = (profile.pref_age_min <= c.age <= profile.pref_age_max)
 
-        if user_pref_ok and cand_pref_ok and user_age_ok and cand_age_ok:
-            has_valid_candidates = True
-            break
-        elif user_pref_ok and user_age_ok:
-            # At least one person matches the user's criteria, even if the other person's criteria isn't met.
-            # This allows the quiz to continue so the user can see potential matches even if they aren't perfect mutual matches.
+        if user_pref_ok and cand_pref_ok:
             has_valid_candidates = True
             break
 
