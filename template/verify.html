@@ -296,6 +296,22 @@
     .btn-small:active { opacity: 0.7; }
     .btn-small.danger { color: #ef4444; }
     .btn-small.danger:hover { background: rgba(239, 68, 68, 0.05); }
+
+    .btn-skip-verification {
+        display: inline-block;
+        margin-top: 18px;
+        color: #94a3b8;
+        text-decoration: none;
+        font-size: 13.5px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        padding: 8px 16px;
+        border-radius: 12px;
+    }
+    .btn-skip-verification:hover {
+        color: #64748b;
+        background: rgba(148, 163, 184, 0.08);
+    }
 </style>
 {% endblock %}
 
@@ -370,6 +386,7 @@
         </div>
 
         <button type="submit" class="btn-verify-submit" id="submit-btn" disabled>Complete Verification</button>
+        <a href="{% url 'skip_verification' %}" class="btn-skip-verification">Skip for now</a>
     </form>
 </div>
 
@@ -418,7 +435,7 @@
             mesh: { enabled: false },
             description: { enabled: false },
             liveness: { enabled: false },
-            gear: { enabled: true }
+            gear: { enabled: true, modelPath: 'gear.json' }
         },
         body: { enabled: false },
         hand: { enabled: false },

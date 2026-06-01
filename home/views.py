@@ -103,9 +103,8 @@ def complete_profile(request):
     user = request.user
     profile, created = Profile.objects.get_or_create(user=user)
 
-    # If profile is already initialized with basic info, don't allow re-entry
     if profile.name and profile.age and profile.gender and profile.campus and profile.native_place:
-        if not profile.is_face_verified:
+        if not profile.is_face_verified and not request.session.get('skipped_verification'):
             return redirect('verify')
         return redirect('home')
 
@@ -234,6 +233,11 @@ def verify(request):
 
     return render(request, 'verify.html', {'profile': profile})
 
+@login_required
+def skip_verification(request):
+    request.session['skipped_verification'] = True
+    messages.info(request, "Verification skipped for now. You can verify anytime to enable your discovery badge!")
+    return redirect('home')
 
 # ---------------- HOME HUB ----------------
 def home_hub(request):
@@ -245,7 +249,7 @@ def home_hub(request):
     if not profile or not profile.name or not profile.age or not profile.gender or not profile.campus or not profile.native_place:
         return redirect('complete_profile')
 
-    if not profile.is_face_verified:
+    if not profile.is_face_verified and not request.session.get('skipped_verification'):
         return redirect('verify')
 
     from .models import Confession, Announcement

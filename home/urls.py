@@ -15,6 +15,7 @@ urlpatterns = [
     path("complete_profile/", views.complete_profile, name="complete_profile"),
     path("save_profile_progress/", views.save_profile_progress, name="save_profile_progress"),
     path("verify/", views.verify, name="verify"),
+    path("verify/skip/", views.skip_verification, name="skip_verification"),
     path("check_match/", views.check_match, name="check_match"),
     path("api/quiz/batch/", views.get_quiz_batch, name="get_quiz_batch"),
     path("api/quiz/save/", views.save_quiz_batch, name="save_quiz_batch"),
