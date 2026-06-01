@@ -2045,6 +2045,10 @@ def admin_view_user(request, user_id):
     target_user = get_object_or_404(User, id=user_id)
     profile = get_object_or_404(Profile, user=target_user)
 
+    back_url = request.GET.get('back', '')
+    if back_url and not (back_url.startswith('/') and not back_url.startswith('//')):
+        back_url = ''
+
     # All related data
     gallery_images = ProfileImage.objects.filter(profile=profile)
     match_requests_sent = MatchRequest.objects.filter(sender=target_user).select_related('receiver__profile')
@@ -2064,6 +2068,7 @@ def admin_view_user(request, user_id):
     return render(request, 'admin_user_view.html', {
         'u': target_user,
         'p': profile,
+        'back_url': back_url,
         'gallery': gallery_images,
         'sent_requests': match_requests_sent,
         'received_requests': match_requests_received,

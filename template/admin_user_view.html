@@ -116,7 +116,7 @@
 
     <div class="admin-header">
         <div class="admin-header-main">
-            <a href="{% url 'admin_dashboard' %}" class="match-back-btn"><span class="material-symbols-outlined">arrow_back</span></a>
+            <a href="{% if back_url %}{{ back_url }}{% else %}{% url 'admin_dashboard' %}{% endif %}" class="match-back-btn"><span class="material-symbols-outlined">arrow_back</span></a>
             <div class="user-hero">
                 <img src="{{ p.get_profile_pic_url }}" class="user-hero-avatar" onerror="this.src='https://placehold.co/100x100?text=U'">
                 <div class="user-hero-info">
