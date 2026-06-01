@@ -279,15 +279,16 @@
 
     <div class="admin-tabs-container">
         <div class="admin-tabs">
-            <button class="admin-tab active" onclick="switchAdminTab('overview')"><i class="fas fa-chart-pie"></i><span class="admin-tab-text">Overview</span></button>
-            <button class="admin-tab" onclick="switchAdminTab('moderation')">
+            <button class="admin-tab active" onclick="switchAdminTab('overview', this)"><i class="fas fa-chart-pie"></i><span class="admin-tab-text">Overview</span></button>
+            <button class="admin-tab" onclick="switchAdminTab('moderation', this)">
                 <i class="fas fa-shield-alt"></i><span class="admin-tab-text">Moderation</span>
                 {% if face_reviews.count > 0 or pending_confessions.count > 0 or user_reports.count > 0 %}
                 <span class="tab-badge">{{ face_reviews.count|add:pending_confessions.count|add:user_reports.count }}</span>
                 {% endif %}
             </button>
-            <button class="admin-tab" onclick="switchAdminTab('users')"><i class="fas fa-users"></i><span class="admin-tab-text">Users Directory</span></button>
-            <button class="admin-tab" onclick="switchAdminTab('system')"><i class="fas fa-server"></i><span class="admin-tab-text">System</span></button>
+            <button class="admin-tab" onclick="switchAdminTab('users', this)"><i class="fas fa-users"></i><span class="admin-tab-text">Users Directory</span></button>
+            <a href="{% url 'admin_manual_verification' %}" class="admin-tab" style="text-decoration: none;"><i class="fas fa-user-check"></i><span class="admin-tab-text">Manual Verify</span></a>
+            <button class="admin-tab" onclick="switchAdminTab('system', this)"><i class="fas fa-server"></i><span class="admin-tab-text">System</span></button>
         </div>
     </div>
 
@@ -324,7 +325,8 @@
                 </div>
                 <div style="display:flex; gap:12px; flex-wrap:wrap;">
                     <a href="{% url 'announcements' %}" class="btn btn-primary"><i class="fas fa-bullhorn"></i> Post Announcement</a>
-                    <button onclick="switchAdminTab('moderation')" class="btn btn-outline"><i class="fas fa-broom"></i> Clear Queue</button>
+                    <a href="{% url 'admin_manual_verification' %}" class="btn btn-success"><i class="fas fa-user-check"></i> Manual Verify Page</a>
+                    <button onclick="switchAdminTab('moderation', document.querySelector('[onclick*=\'moderation\']'))" class="btn btn-outline"><i class="fas fa-broom"></i> Clear Queue</button>
                 </div>
             </div>
         </div>
@@ -578,6 +580,7 @@
                         {% else %}
                         <button class="btn btn-outline" style="color:#ef4444; border-color:#fca5a5; flex:1;" onclick="confirmAdminAction('ban_user','{{ p.id }}','Ban {{ p.name|escapejs }}?','They will lose access.')"><i class="fas fa-ban"></i> Ban</button>
                         {% endif %}
+                        <button class="btn btn-danger" style="flex:none; width:40px; padding:8px 0; justify-content:center; background:#dc2626;" onclick="confirmAdminAction('delete_user','{{ p.id }}','Delete {{ p.name|escapejs }}?','This will permanently delete their account and all data. This cannot be undone.')" title="Delete Account"><i class="fas fa-trash"></i></button>
                     </div>
                 </div>
                 {% endfor %}
@@ -678,11 +681,15 @@
 
 <script>
 // ── Tabs Logic ──
-function switchAdminTab(tabId) {
+function switchAdminTab(tabId, tabBtn) {
     document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
     
-    event.currentTarget.classList.add('active');
+    if (tabBtn) {
+        tabBtn.classList.add('active');
+    } else if (typeof event !== 'undefined' && event.currentTarget) {
+        event.currentTarget.classList.add('active');
+    }
     document.getElementById('tab-' + tabId).classList.add('active');
 }
 

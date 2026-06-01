@@ -2115,6 +2115,42 @@ def admin_all_users(request):
     return render(request, 'admin_all_users.html', {'profiles': profiles})
 
 @login_required
+def admin_manual_verification(request):
+    if not is_admin_check(request.user):
+        return HttpResponse("Not authorized", status=403)
+
+    profiles_list = Profile.objects.all().select_related('user').order_by('-created_at')
+    
+    # Optional search / filter
+    query = request.GET.get('q', '').strip()
+    if query:
+        profiles_list = profiles_list.filter(
+            Q(name__icontains=query) |
+            Q(user__username__icontains=query) |
+            Q(user__email__icontains=query) |
+            Q(campus__icontains=query)
+        )
+        
+    status_filter = request.GET.get('status', '').strip()
+    if status_filter:
+        if status_filter == 'verified':
+            profiles_list = profiles_list.filter(is_face_verified=True)
+        elif status_filter == 'unverified':
+            profiles_list = profiles_list.filter(is_face_verified=False)
+        elif status_filter == 'pending_review':
+            profiles_list = profiles_list.filter(verification_status='manual_review')
+
+    paginator = Paginator(profiles_list, 10)  # Show 10 profiles per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, 'admin_manual_verification.html', {
+        'page_obj': page_obj,
+        'q': query,
+        'status': status_filter,
+    })
+
+@login_required
 def admin_action(request):
     if not is_admin_check(request.user):
         return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
@@ -2212,6 +2248,14 @@ def admin_action(request):
             
             messages.warning(request, f"Verification reset for {profile.user.username}. They must verify again.")
 
+        redirect_to = request.POST.get('redirect_to')
+        if redirect_to:
+            return redirect(redirect_to)
+            
+        referer = request.META.get('HTTP_REFERER')
+        if referer:
+            return redirect(referer)
+            
         return redirect('admin_dashboard')
 
     return redirect('admin_dashboard')
