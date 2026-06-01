@@ -105,6 +105,8 @@ def complete_profile(request):
 
     # If profile is already initialized with basic info, don't allow re-entry
     if profile.name and profile.age and profile.gender and profile.campus and profile.native_place:
+        if not profile.is_face_verified:
+            return redirect('verify')
         return redirect('home')
 
     if request.method == 'POST':
@@ -114,7 +116,7 @@ def complete_profile(request):
             new_profile.user = user
             new_profile.save()
             messages.success(request, "Welcome! Basic profile created successfully.")
-            return redirect('home')
+            return redirect('verify')
     else:
         form = ProfileInitForm(instance=profile)
 
@@ -224,17 +226,11 @@ def verify(request):
             if verify_status == 'verified':
                 profile.is_face_verified = True
             
-        # Handle profile pic
-        pfp_url = request.POST.get('profile_pic_url')
-        if pfp_url:
-            profile.profile_pic = pfp_url
-        
-        if profile.verification_image and profile.profile_pic:
             profile.save()
             messages.success(request, "Identity verification submitted!")
             return redirect('home')
         else:
-            messages.error(request, "Both verification and profile picture are required.")
+            messages.error(request, "Verification selfie is required.")
 
     return render(request, 'verify.html', {'profile': profile})
 
@@ -248,6 +244,9 @@ def home_hub(request):
     profile = getattr(user, 'profile', None)
     if not profile or not profile.name or not profile.age or not profile.gender or not profile.campus or not profile.native_place:
         return redirect('complete_profile')
+
+    if not profile.is_face_verified:
+        return redirect('verify')
 
     from .models import Confession, Announcement
     latest_confession = Confession.objects.filter(moderation_status='approved', is_flagged=False).order_by('-created_at').first()
@@ -770,6 +769,7 @@ def api_verify_token(request):
             # Check if profile is complete
             profile = getattr(user, 'profile', None)
             profile_complete = profile is not None and bool(profile.name) and bool(profile.age) and bool(profile.gender) and bool(profile.campus) and bool(profile.native_place)
+            is_verified = profile.is_face_verified if profile else False
             
             # Sync round count to avoid immediate check_match popup for existing users
             if profile_complete:
@@ -778,7 +778,8 @@ def api_verify_token(request):
             
             return JsonResponse({
                 'success': True,
-                'profile_complete': profile_complete
+                'profile_complete': profile_complete,
+                'is_verified': is_verified
             })
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)}, status=400)
@@ -3168,5 +3169,9 @@ def about_view(request):
 def about_view(request):
     return render(request, 'about.html')
 
+def contact_view(request):
+    return render(request, 'contact.html')
+def contact_view(request):
+    return render(request, 'contact.html')
 def contact_view(request):
     return render(request, 'contact.html')

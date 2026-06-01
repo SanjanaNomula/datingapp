@@ -1370,14 +1370,14 @@
     face: {
       enabled: true,
       detector: { rotation: true, return: true },
-      mesh: { enabled: true },
-      description: { enabled: true },
+      mesh: { enabled: false },
+      description: { enabled: false },
       liveness: { enabled: false },
-      gender: { enabled: true }
+      gender: { enabled: false }
     },
-    body: { enabled: false },
+    body: { enabled: true },
     hand: { enabled: false },
-    object: { enabled: false },
+    object: { enabled: true },
     gesture: { enabled: false }
   };
   const human = new Human.Human(humanConfig);
@@ -2024,6 +2024,72 @@
   const faceToast = document.getElementById('pfp-face-status');
   const isAdminEdit = {{ is_admin_editing|yesno:"true,false" }};
 
+  async function checkHumanPhoto(imageElement) {
+    const tempCanvas = document.createElement('canvas');
+    const width = imageElement.naturalWidth || imageElement.width || 400;
+    const height = imageElement.naturalHeight || imageElement.height || 400;
+
+    tempCanvas.width = width;
+    tempCanvas.height = height;
+
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCtx.drawImage(imageElement, 0, 0, width, height);
+
+    // 1. Aspect Ratio check: reject extremely tall or wide images typical of mobile/desktop screenshots
+    const aspectRatio = height / width;
+    if (aspectRatio > 1.85 || aspectRatio < 0.54) {
+        console.log("Rejected due to screenshot-like aspect ratio:", aspectRatio);
+        return false;
+    }
+
+    const result = await human.detect(tempCanvas);
+
+    const faces = result.face || [];
+    const bodies = result.body || [];
+
+    const FACE_MIN_SCORE = 0.25;  // face confidence threshold
+    const BODY_MIN_SCORE = 0.30;  // body/pose confidence threshold
+
+    const validFaces = faces.filter(f => (f.score ?? f.faceScore ?? 0) >= FACE_MIN_SCORE);
+    const validBodies = bodies.filter(b => (b.score ?? 0) >= BODY_MIN_SCORE);
+
+    if (validFaces.length === 0 && validBodies.length === 0) {
+        console.log("Rejected: No face or body detected with sufficient confidence.");
+        return false;
+    }
+
+    // 2. Coverage check: In screenshots containing photos, the detected person occupies a tiny fraction of the canvas.
+    // In real photos, the face or body covers a significant portion of the image.
+    const isFaceLargeEnough = validFaces.some(f => {
+        const box = f.box; // [x, y, w, h]
+        const boxW = box[2];
+        const boxH = box[3];
+        const normW = boxW > 1 ? boxW / width : boxW;
+        const normH = boxH > 1 ? boxH / height : boxH;
+        const normArea = normW * normH;
+        // Face must cover at least 12% of the width and 1.5% of the total area
+        return normW >= 0.12 && normArea >= 0.015;
+    });
+
+    const isBodyLargeEnough = validBodies.some(b => {
+        const box = b.box;
+        const boxW = box[2];
+        const boxH = box[3];
+        const normW = boxW > 1 ? boxW / width : boxW;
+        const normH = boxH > 1 ? boxH / height : boxH;
+        const normArea = normW * normH;
+        // Body must cover at least 8% of the total area or at least 22% of the dimensions
+        return normArea >= 0.08 || (normW >= 0.22 && normH >= 0.22);
+    });
+
+    if (!isFaceLargeEnough && !isBodyLargeEnough) {
+        console.log("Rejected: Face/body detected but occupies too little of the canvas (typical of screenshots).");
+        return false;
+    }
+
+    return true;
+  }
+
   if (pfpInput) {
     pfpInput.addEventListener('change', async function() {
       if (!this.files || !this.files[0]) return;
@@ -2044,111 +2110,27 @@
         await loadHumanOnce();
       } catch (e) {
         hideOverlay();
-        customAlert("Failed to load face verification modules: " + e.message, "Error");
+        customAlert("Failed to load human detection modules: " + e.message, "Error");
         this.value = '';
         return;
       }
 
       try {
-        const verificationUrl = "{{ profile.verification_image|default:'' }}";
-        if (!verificationUrl || verificationUrl === 'None') { await submitCompressed(); return; }
-
-        const verifyImg = new Image();
-        try {
-          const r = await fetch(verificationUrl);
-          verifyImg.src = URL.createObjectURL(await r.blob());
-        } catch (e) {
-          verifyImg.crossOrigin = 'anonymous';
-          verifyImg.src = verificationUrl;
-        }
-        await new Promise((res, rej) => { verifyImg.onload = res; verifyImg.onerror = rej; });
-
-        // Fresh canvas for verification image to bypass TF.js WebGL texture caching
-        const vCanvas = document.createElement('canvas');
-        const vWidth = verifyImg.naturalWidth || verifyImg.width || 400;
-        const vHeight = verifyImg.naturalHeight || verifyImg.height || 400;
-        vCanvas.width = vWidth;
-        vCanvas.height = vHeight;
-        const vCtx = vCanvas.getContext('2d');
-        vCtx.drawImage(verifyImg, 0, 0, vWidth, vHeight);
-
-        console.log("Running Human face detection on verification scan canvas...");
-        const vResult = await human.detect(vCanvas);
-        const vFaces = vResult.face || [];
-        if (vFaces.length === 0) throw new Error('No face detected in your verification scan.');
-        const vFace = vFaces[0];
-        if (!vFace.embedding) throw new Error('Failed to extract face features from verification scan.');
-
-        // Load and detect face in the uploaded profile picture
         const pfpImg = new Image();
         pfpImg.src = URL.createObjectURL(file);
         await new Promise((res, rej) => { pfpImg.onload = res; pfpImg.onerror = rej; });
 
-        const pCanvas = document.createElement('canvas');
-        const pWidth = pfpImg.naturalWidth || pfpImg.width || 400;
-        const pHeight = pfpImg.naturalHeight || pfpImg.height || 400;
-        pCanvas.width = pWidth;
-        pCanvas.height = pHeight;
-        const pCtx = pCanvas.getContext('2d');
-        pCtx.drawImage(pfpImg, 0, 0, pWidth, pHeight);
-
-        console.log("Running Human face detection on uploaded PFP canvas...");
-        const pResult = await human.detect(pCanvas);
-        const pFaces = pResult.face || [];
-        if (pFaces.length === 0) {
-          hideOverlay();
-          faceToast.textContent = 'No face in photo';
-          faceToast.style.display = 'block';
-          this.value = '';
-          customAlert("No face detected in your profile picture. Please upload a clear photo of yourself.", "Verification Failed");
-          return;
-        }
-        if (pFaces.length > 1) {
-          hideOverlay();
-          faceToast.textContent = 'Multiple faces in photo';
-          faceToast.style.display = 'block';
-          this.value = '';
-          customAlert("Multiple faces detected in your profile picture. Please upload a photo with only you.", "Verification Failed");
-          return;
-        }
-        const pFace = pFaces[0];
-        if (!pFace.embedding) {
-          hideOverlay();
-          faceToast.textContent = 'Feature extraction failed';
-          faceToast.style.display = 'block';
-          this.value = '';
-          customAlert("Could not read face features from your profile picture. Please try another photo.", "Verification Failed");
-          return;
-        }
-
-        // Validate gender match
-        console.log("Selfie Gender:", vFace.gender, "Score:", vFace.genderScore);
-        console.log("PFP Gender:", pFace.gender, "Score:", pFace.genderScore);
-        if (vFace.gender && pFace.gender && vFace.gender !== pFace.gender) {
-          hideOverlay();
-          faceToast.textContent = 'Gender mismatch';
-          faceToast.style.display = 'block';
-          this.value = '';
-          customAlert(`Gender mismatch detected: Your verification selfie was detected as ${vFace.gender}, but this profile picture is detected as ${pFace.gender}. Please upload a correct photo of yourself.`, "Rejected");
-          return;
-        }
-
-        // Calculate similarity using human.match.similarity
-        const similarity = human.match.similarity(vFace.embedding, pFace.embedding);
-        console.log("Calculated face similarity between verification and PFP:", similarity);
-
-        const isMatch = similarity > 0.4; // Strict match threshold of 0.4 (user preferred value)
-
-        if (isMatch) {
+        const isHuman = await checkHumanPhoto(pfpImg);
+        if (isHuman) {
           faceToast.style.display = 'none';
           showOverlay('Updating photo…');
           await submitCompressed();
         } else {
           hideOverlay();
-          faceToast.textContent = 'Photo does not match verification';
+          faceToast.textContent = 'Screenshot or invalid photo detected';
           faceToast.style.display = 'block';
           this.value = '';
-          customAlert("Profile picture does not match your verification scan. Please upload a clear photo of yourself.", 'Rejected');
+          customAlert("Screenshots and downloaded images are not allowed. Please upload a real photo where a person (or body part) is clearly visible.", 'Invalid Photo');
         }
       } catch (err) {
         hideOverlay();

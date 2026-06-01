@@ -358,7 +358,7 @@
             <div id="verify-success-ui" style="display: none;">
                 <div class="state-icon success"><i class="fas fa-check-circle"></i></div>
                 <h4 style="margin: 0 0 4px; font-size: 14px; font-weight: 700; color: #16a34a;">Identity Scanned!</h4>
-                <p style="font-size: 11px; color: #94a3b8; margin: 0 0 8px;">Now upload your profile picture below</p>
+                <p style="font-size: 11px; color: #94a3b8; margin: 0 0 8px;">Verification selfie accepted. Click submit to complete.</p>
                 <button type="button" onclick="showRetakeConfirmationModal(handleVerificationRetake)" class="btn-small danger">
                     <i class="fas fa-redo-alt"></i> Retake Scan
                 </button>
@@ -367,20 +367,6 @@
             <input type="hidden" name="verification_image_data" id="verification-image-data">
             <input type="hidden" name="verification_image_url" id="verification-image-url" value="{{ profile.verification_image|default:'' }}">
             <input type="hidden" name="verification_status" id="verification-status-input" value="{{ profile.verification_status|default:'pending' }}">
-            <input type="hidden" name="profile_pic_url" id="profile-pic-url-input" value="{{ profile.profile_pic|default:'' }}">
-        </div>
-
-        <!-- Profile Picture — flat area -->
-        <div class="pfp-area" id="pfp-group">
-            <label for="id_profile_pic_file">Profile Picture <span style="color:#ef4444">*</span></label>
-            <div class="pfp-drop" id="pfp-upload-area" onclick="document.getElementById('id_profile_pic_file').click()">
-                <img id="pfp-preview" class="pfp-preview-img" src="" alt="">
-                <div id="pfp-placeholder">
-                    <i class="fas fa-image" style="font-size: 24px; color: var(--primary); margin-bottom: 6px; display: block;"></i>
-                    <p style="margin:0; color:#475569; font-weight:600; font-size:13px;">Tap to upload your best photo</p>
-                </div>
-            </div>
-            <input type="file" id="id_profile_pic_file" accept="image/*" style="display: none;">
         </div>
 
         <button type="submit" class="btn-verify-submit" id="submit-btn" disabled>Complete Verification</button>
@@ -417,7 +403,6 @@
     // ───── SIMPLIFIED FACE VERIFICATION STATE ─────
     let verificationCaptured = false;
     let verificationBase64 = null;
-    let verificationDescriptor = null;
     let verificationGender = null;
     let verifyStream = null;
     let faceSeenStartTime = null;
@@ -430,10 +415,10 @@
         face: {
             enabled: true,
             detector: { rotation: true, return: true },
-            mesh: { enabled: true },
-            description: { enabled: true },
+            mesh: { enabled: false },
+            description: { enabled: false },
             liveness: { enabled: false },
-            gender: { enabled: true }
+            gear: { enabled: true }
         },
         body: { enabled: false },
         hand: { enabled: false },
@@ -695,20 +680,20 @@
             const result = await human.detect(tempCanvas);
             const faces = result.face || [];
             
-            if (faces.length === 0) {
-                return handleFailure("No human face detected clearly. Please try again.");
-            }
-            if (faces.length > 1) {
-                return handleFailure("Multiple faces detected. Please make sure only you are in the picture.");
+            if (faces.length === 0 || faces.length > 1) {
+                return handleFailure("Please take a clear selfie with only your face visible.");
             }
             
             const face = faces[0];
-            if (!face.embedding) {
-                return handleFailure("Failed to extract face features. Please try again in better lighting.");
+            verificationGender = face.gender;
+            
+            // Check detected selfie gender against user profile's gender
+            const profileGender = "{{ profile.gender }}";
+            console.log("Detected selfie gender:", verificationGender, "Profile gender:", profileGender);
+            if (verificationGender && profileGender && profileGender !== 'other' && verificationGender !== 'unknown' && verificationGender !== profileGender) {
+                return handleFailure("Gender verification failed. Please retake your verification photo.");
             }
             
-            verificationDescriptor = face.embedding;
-            verificationGender = face.gender;
             document.getElementById('verification-image-data').value = verificationBase64;
 
             // Base64 upload
@@ -730,123 +715,15 @@
                 vfSection.style.cursor = 'pointer';
                 vfSection.title = 'Click to retake verification scan';
                 
-                // Enable PFP upload
-                const pfpGrp = document.getElementById('pfp-group');
-                pfpGrp.classList.add('active');
+                // Set verification status and validate
+                document.getElementById('verification-status-input').value = 'verified';
+                checkReverifyValidity();
             } else {
                 return handleFailure("Upload failed: " + data.message);
             }
         } catch (e) {
             console.error("Camera analysis error", e);
             return handleFailure("Error processing photo. Please retry.");
-        }
-    }
-
-    function clearPfp() {
-        const pfpInput = document.getElementById('id_profile_pic_file');
-        const preview = document.getElementById('pfp-preview');
-        const placeholder = document.getElementById('pfp-placeholder');
-        const urlInput = document.getElementById('profile-pic-url-input');
-        
-        if (pfpInput) pfpInput.value = '';
-        if (urlInput) urlInput.value = '';
-        if (preview) {
-            preview.src = ''; 
-            preview.style.display = 'none';
-        }
-        if (placeholder) placeholder.style.display = 'block';
-        
-        checkReverifyValidity();
-    }
-
-    async function compareLocally(pfpImgElement) {
-        if (!verificationDescriptor) {
-            console.warn("compareLocally: Aborted because verificationDescriptor is null!");
-            return;
-        }
-        
-        console.log("compareLocally triggered with element:", pfpImgElement);
-        console.log("PFP Element dimensions:", pfpImgElement.naturalWidth || pfpImgElement.width, "x", pfpImgElement.naturalHeight || pfpImgElement.height);
-        
-        const statusText = document.getElementById('verify-success-ui').querySelector('p');
-        statusText.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Comparing Face...';
-        statusText.style.color = 'var(--primary)';
-        
-        try {
-            // Create a completely fresh canvas for face detection to bypass TF.js WebGL texture caching!
-            const tempCanvas = document.createElement('canvas');
-            const width = pfpImgElement.naturalWidth || pfpImgElement.width || 400;
-            const height = pfpImgElement.naturalHeight || pfpImgElement.height || 400;
-            tempCanvas.width = width;
-            tempCanvas.height = height;
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCtx.drawImage(pfpImgElement, 0, 0, width, height);
-
-            console.log("Running Human face detection on a fresh offline canvas of size:", width, "x", height);
-
-            const result = await human.detect(tempCanvas);
-            const faces = result.face || [];
-            
-            if (faces.length === 0) {
-                console.warn("compareLocally: No face detected in PFP image!");
-                statusText.innerHTML = '<i class="fas fa-times-circle"></i> No face detected in PFP!';
-                statusText.style.color = '#ef4444';
-                clearPfp();
-                customAlert("No face detected in your profile picture. Please upload a clear photo of yourself.", "Verification Failed");
-                return;
-            }
-            if (faces.length > 1) {
-                console.warn("compareLocally: Multiple faces detected in PFP image!");
-                statusText.innerHTML = '<i class="fas fa-times-circle"></i> Multiple faces detected in PFP!';
-                statusText.style.color = '#ef4444';
-                clearPfp();
-                customAlert("Multiple faces detected in your profile picture. Please upload a photo with only you.", "Verification Failed");
-                return;
-            }
-
-            const pfpFace = faces[0];
-            if (!pfpFace.embedding) {
-                statusText.innerHTML = '<i class="fas fa-times-circle"></i> Feature extraction failed!';
-                statusText.style.color = '#ef4444';
-                clearPfp();
-                customAlert("Could not read face features from your profile picture. Please try another photo.", "Verification Failed");
-                return;
-            }
-
-            // Validate gender match
-            console.log("Selfie Gender:", verificationGender, "PFP Gender:", pfpFace.gender);
-            if (verificationGender && pfpFace.gender && verificationGender !== pfpFace.gender) {
-                statusText.innerHTML = '<i class="fas fa-times-circle"></i> Gender mismatch!';
-                statusText.style.color = '#ef4444';
-                clearPfp();
-                customAlert(`Gender mismatch detected: Your verification selfie was detected as ${verificationGender}, but this profile picture is detected as ${pfpFace.gender}. Please upload a correct photo of yourself.`, "Rejected");
-                return;
-            }
-
-            console.log("Selfie reference embedding (first 5):", Array.from(verificationDescriptor).slice(0, 5));
-            console.log("PFP detected embedding (first 5):", Array.from(pfpFace.embedding).slice(0, 5));
-
-            // Calculate similarity using human.match.similarity
-            const similarity = human.match.similarity(verificationDescriptor, pfpFace.embedding);
-            console.log("Calculated face similarity:", similarity);
-            
-            const isMatch = similarity > 0.4; // Strict match threshold of 0.4 (user preferred value)
-            
-            if (isMatch) {
-                statusText.innerHTML = '<i class="fas fa-check-circle"></i> Profiles Match! (Verified)';
-                statusText.style.color = '#16a34a';
-                document.getElementById('verification-status-input').value = 'verified';
-                checkReverifyValidity();
-            } else {
-                statusText.innerHTML = '<i class="fas fa-times-circle"></i> Identity mismatch! (Rejected)';
-                statusText.style.color = '#ef4444';
-                clearPfp();
-                customAlert("Profile picture does not match verification photo. Please upload a clear photo of yourself.", "Rejected");
-            }
-        } catch (err) {
-            console.error("Local comparison error detail:", err);
-            statusText.innerText = 'Analysis failed. Try again.';
-            clearPfp();
         }
     }
 
@@ -885,7 +762,7 @@
         card.appendChild(title);
 
         const desc = document.createElement('p');
-        desc.innerText = 'Retaking the identity scan will delete your current verified scan and profile photo. You will need to take a new scan and upload your PFP again.';
+        desc.innerText = 'Retaking the identity scan will delete your current verified scan. You will need to take a new scan.';
         desc.style.margin = '0 0 24px'; desc.style.fontSize = '14px'; desc.style.lineHeight = '1.5'; desc.style.color = '#64748b';
         card.appendChild(desc);
 
@@ -941,12 +818,10 @@
     function handleVerificationRetake() {
         verificationCaptured = false;
         verificationBase64 = null;
-        verificationDescriptor = null;
         
         document.getElementById('verification-image-data').value = '';
         document.getElementById('verification-image-url').value = '';
         document.getElementById('verification-status-input').value = 'pending';
-        document.getElementById('profile-pic-url-input').value = '';
         
         const vfSection = document.getElementById('face-verification-section');
         vfSection.classList.remove('verified', 'error');
@@ -964,15 +839,10 @@
             status.innerText = '';
             status.style.color = '';
         }
-        
-        clearPfp();
-        const pfpGrp = document.getElementById('pfp-group');
-        pfpGrp.classList.remove('active');
 
         const formData = new FormData();
         formData.append('verification_image_url', '');
         formData.append('verification_status', 'pending');
-        formData.append('profile_pic_url', '');
         
         fetch('/save_profile_progress/', {
             method: 'POST',
@@ -996,61 +866,10 @@
         }
     });
 
-    async function handlePfpSelect(input) {
-        if (input.files && input.files[0]) {
-            const submitBtn = document.getElementById('submit-btn');
-            if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = "Processing..."; }
-            try {
-                const compressedFile = await compressImage(input.files[0], 0.7, 800);
-                const reader = new FileReader();
-                reader.onload = async function(e) {
-                    const preview = document.getElementById('pfp-preview');
-                    const placeholder = document.getElementById('pfp-placeholder');
-                    
-                    // Assign onload BEFORE setting src to guarantee it fires immediately for base64 data URIs
-                    preview.onload = () => {
-                        console.log("preview.onload triggered! Running face comparison on PFP image.");
-                        compareLocally(preview);
-                    };
-                    
-                    preview.src = e.target.result;
-                    preview.style.display = 'block';
-                    placeholder.style.display = 'none';
-
-                    try {
-                        const res = await fetch('/api/upload/base64/', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
-                            body: JSON.stringify({ image: e.target.result, path: 'profile_pics' })
-                        });
-                        const data = await res.json();
-                        if (data.success) {
-                            document.getElementById('profile-pic-url-input').value = data.url;
-                            input.value = ""; 
-                            checkReverifyValidity();
-                        } else {
-                            customAlert("Upload failed. Please try again.", "Error");
-                        }
-                    } catch (fetchErr) {
-                        console.error("PFP upload error:", fetchErr);
-                        customAlert("Network error. Please try uploading again.", "Error");
-                    }
-                    if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = 'Complete Setup'; }
-                };
-                reader.readAsDataURL(compressedFile);
-            } catch (err) {
-                console.error("Compression failed:", err);
-                customAlert("Failed to process profile picture. Please try another image.", "Error");
-                if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = 'Complete Setup'; }
-            }
-        }
-    }
-
     function checkReverifyValidity() {
         const submitBtn = document.getElementById('submit-btn');
         const verificationStatus = document.getElementById('verification-status-input').value;
-        const pfpUrl = document.getElementById('profile-pic-url-input').value;
-        const isValid = (pfpUrl && pfpUrl.length > 0) && (verificationStatus === 'verified');
+        const isValid = (verificationStatus === 'verified');
         
         if (submitBtn) {
             submitBtn.disabled = !isValid;
@@ -1059,11 +878,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        const pfpInput = document.getElementById('id_profile_pic_file');
-        if (pfpInput) { pfpInput.addEventListener('change', function() { handlePfpSelect(this); }); }
-
         const verificationStatus = document.getElementById('verification-status-input').value;
-        const pfpUrlVal = document.getElementById('profile-pic-url-input').value;
         
         if (verificationStatus === 'verified') {
             verificationCaptured = true;
@@ -1074,11 +889,6 @@
                 vfSection.title = 'Click to retake verification scan';
             }
             
-            const pfpGrp = document.getElementById('pfp-group');
-            if (pfpGrp) {
-                pfpGrp.classList.add('active');
-            }
-            
             const camUI = document.getElementById('verify-camera-ui');
             const initUI = document.getElementById('verify-initial-ui');
             const succUI = document.getElementById('verify-success-ui');
@@ -1086,39 +896,7 @@
             if (initUI) initUI.style.display = 'none';
             if (succUI) succUI.style.display = 'block';
             
-            if (pfpUrlVal) {
-                const preview = document.getElementById('pfp-preview');
-                const placeholder = document.getElementById('pfp-placeholder');
-                if (preview) {
-                    preview.src = pfpUrlVal;
-                    preview.style.display = 'block';
-                }
-                if (placeholder) placeholder.style.display = 'none';
-            }
             checkReverifyValidity();
-
-            // Background load and extract reference selfie descriptor in case user wants to re-upload PFP
-            const verificationUrl = document.getElementById('verification-image-url').value;
-            if (verificationUrl) {
-                console.log("Pre-extracting face descriptor from existing selfie URL in background...");
-                const img = new Image();
-                img.crossOrigin = "anonymous";
-                img.onload = async () => {
-                    try {
-                        await loadHumanOnce();
-                        const result = await human.detect(img);
-                        if (result.face && result.face[0]) {
-                            verificationDescriptor = result.face[0].embedding;
-                            console.log("Successfully pre-extracted selfie face descriptor in background.");
-                        } else {
-                            console.warn("No face detected in the stored verified selfie.");
-                        }
-                    } catch (err) {
-                        console.error("Failed to pre-extract selfie face descriptor in background:", err);
-                    }
-                };
-                img.src = verificationUrl;
-            }
         }
     });
 </script>
