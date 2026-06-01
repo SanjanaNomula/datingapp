@@ -84,7 +84,7 @@ import base64
 import math
 from django.utils import timezone
 
-from .models import Profile, Question, Option, UserAnswer, MatchRequest, Message, ProfileImage, WallStroke, WallImage, Confession, ConfessionComment, ConfessionLike, ConfessionReport, UserReport, Spark, BlockedUser, Announcement, FavoriteMovie, FavoriteSong, FCMToken, BannedIdentifier, Conversation, RoomRequest
+from .models import Profile, Question, Option, UserAnswer, MatchRequest, Message, ProfileImage, WallStroke, WallImage, Confession, ConfessionComment, ConfessionLike, ConfessionReport, UserReport, Spark, BlockedUser, Announcement, FavoriteMovie, FavoriteSong, FCMToken, BannedIdentifier, Conversation, RoomRequest, StaffMember
 from .forms import ProfileForm, ProfileEditForm, ProfileImageForm, ProfileInitForm
 from .supabase_utils import delete_from_supabase_by_url
 from .cloudinary_utils import upload_to_cloudinary, upload_base64_to_cloudinary
@@ -2037,10 +2037,19 @@ def save_quiz_batch(request):
 def is_admin_check(user):
     return user.is_authenticated and user.email == 'arunmohankml@gmail.com'
 
+def is_staff_check(user):
+    if not user or not user.is_authenticated:
+        return False
+    if is_admin_check(user):
+        return True
+    return StaffMember.objects.filter(email=user.email).exists()
+
 @login_required
 def admin_view_user(request, user_id):
-    if not is_admin_check(request.user):
+    if not is_staff_check(request.user):
         return HttpResponse("Not authorized", status=403)
+
+    is_admin = is_admin_check(request.user)
 
     target_user = get_object_or_404(User, id=user_id)
     profile = get_object_or_404(Profile, user=target_user)
@@ -2081,12 +2090,56 @@ def admin_view_user(request, user_id):
         'fav_movies': fav_movies,
         'fav_songs': fav_songs,
         'connections': connections,
+        'is_admin': is_admin,
+    })
+
+@login_required
+def admin_manage_staff(request):
+    if not is_admin_check(request.user):
+        return HttpResponse("Not authorized", status=403)
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        email = request.POST.get('email', '').strip().lower()
+
+        if action == 'add':
+            if not email:
+                messages.error(request, "Email address is required.")
+            elif not email.endswith('@gmail.com'):
+                messages.error(request, "Only Gmail addresses are allowed.")
+            else:
+                member, created = StaffMember.objects.get_or_create(
+                    email=email,
+                    defaults={'added_by': request.user}
+                )
+                if created:
+                    messages.success(request, f"Added {email} as a staff member.")
+                else:
+                    messages.warning(request, f"{email} is already a staff member.")
+            return redirect('admin_manage_staff')
+
+        elif action == 'remove':
+            if email:
+                deleted, _ = StaffMember.objects.filter(email=email).delete()
+                if deleted:
+                    messages.success(request, f"Removed {email} from staff members.")
+                else:
+                    messages.error(request, f"Staff member with email {email} not found.")
+            return redirect('admin_manage_staff')
+
+    # GET
+    staff_members = StaffMember.objects.all().order_by('-created_at')
+    return render(request, 'admin_staff.html', {
+        'staff_members': staff_members,
+        'is_admin': True,
     })
 
 @login_required
 def admin_dashboard(request):
-    if not is_admin_check(request.user):
+    if not is_staff_check(request.user):
         return HttpResponse("Not authorized", status=403)
+
+    is_admin = is_admin_check(request.user)
 
     reported_confessions = Confession.objects.filter(
         is_flagged=True
@@ -2110,6 +2163,8 @@ def admin_dashboard(request):
         'all_users':             all_users,
         'face_reviews':          face_reviews,
         'banned_identifiers':    banned_identifiers,
+        'is_admin':              is_admin,
+        'is_staff':              True,
     })
 
 @login_required
@@ -2157,12 +2212,23 @@ def admin_manual_verification(request):
 
 @login_required
 def admin_action(request):
-    if not is_admin_check(request.user):
+    if not is_staff_check(request.user):
         return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
+
+    is_admin = is_admin_check(request.user)
 
     if request.method == 'POST':
         action    = request.POST.get('action')
         target_id = request.POST.get('target_id')
+
+        # Restrict sensitive/destructive actions to full admin only
+        restricted_actions = [
+            'clear_wall', 'ban_user', 'unban_user', 'delete_user',
+            'ban_fingerprint', 'shadow_ban_fingerprint', 'unban_fingerprint',
+            'reset_verification'
+        ]
+        if action in restricted_actions and not is_admin:
+            return JsonResponse({'success': False, 'error': 'Unauthorized action'}, status=403)
 
         if action == 'delete_confession':
             Confession.objects.filter(id=target_id).delete()
@@ -2342,9 +2408,11 @@ def admin_edit_user_profile(request, user_id):
     })
 @login_required
 def announcements_view(request):
-    is_admin = is_admin_check(request.user)
+    is_staff = is_staff_check(request.user)
+    if not is_staff:
+        return HttpResponse("Not authorized", status=403)
     
-    if request.method == 'POST' and is_admin:
+    if request.method == 'POST':
         text = request.POST.get('text')
         if text:
             Announcement.objects.create(text=text)
@@ -2354,7 +2422,7 @@ def announcements_view(request):
     announcements = Announcement.objects.all()
     return render(request, 'announcements.html', {
         'announcements': announcements,
-        'is_admin': is_admin
+        'is_admin': is_staff
     })
 
 @login_required

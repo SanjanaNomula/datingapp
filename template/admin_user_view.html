@@ -144,6 +144,7 @@
 
         <!-- ================= OVERVIEW TAB ================= -->
         <div id="tab-overview" class="admin-panel active">
+            {% if is_admin %}
             <div class="admin-card" style="background: #fffbeb; border-color: #fde68a;">
                 <div class="admin-card-header">
                     <h3 style="color: #92400e;"><i class="fas fa-user-shield"></i> User Management</h3>
@@ -178,11 +179,12 @@
                     </form>
                 </div>
             </div>
+            {% endif %}
 
             <div class="av-grid">
                 <div class="admin-card">
                     <div class="admin-card-header">
-                        <h3><i class="fas fa-user"></i> Profile Info <a href="{% url 'admin_edit_user_profile' u.id %}" class="admin-edit-link">Edit</a></h3>
+                        <h3><i class="fas fa-user"></i> Profile Info {% if is_admin %}<a href="{% url 'admin_edit_user_profile' u.id %}" class="admin-edit-link">Edit</a>{% endif %}</h3>
                     </div>
                     <div class="av-row"><span class="av-label">Name</span><span class="av-val">{{ p.name|default:"—" }}</span></div>
                     <div class="av-row"><span class="av-label">Gender</span><span class="av-val">{{ p.gender|default:"—" }}</span></div>
@@ -211,7 +213,7 @@
 
             <div class="admin-card">
                 <div class="admin-card-header">
-                    <h3><i class="fas fa-align-left"></i> Bio <a href="{% url 'admin_edit_user_profile' u.id %}" class="admin-edit-link">Edit</a></h3>
+                    <h3><i class="fas fa-align-left"></i> Bio {% if is_admin %}<a href="{% url 'admin_edit_user_profile' u.id %}" class="admin-edit-link">Edit</a>{% endif %}</h3>
                 </div>
                 <p style="font-size:14px;color:#334155;margin:0; line-height:1.6;">{{ p.bio|default:"No bio." }}</p>
             </div>
@@ -219,13 +221,13 @@
             <div class="av-grid">
                 <div class="admin-card">
                     <div class="admin-card-header">
-                        <h3><i class="fas fa-tags"></i> Interests <a href="{% url 'admin_edit_user_profile' u.id %}" class="admin-edit-link">Edit</a></h3>
+                        <h3><i class="fas fa-tags"></i> Interests {% if is_admin %}<a href="{% url 'admin_edit_user_profile' u.id %}" class="admin-edit-link">Edit</a>{% endif %}</h3>
                     </div>
                     {% for t in p.interest_tags_list %}<span class="tag-pill">{{ t }}</span>{% empty %}<span style="font-size:12px;color:#94a3b8;">None</span>{% endfor %}
                 </div>
                 <div class="admin-card">
                     <div class="admin-card-header">
-                        <h3><i class="fas fa-language"></i> Languages <a href="{% url 'admin_edit_user_profile' u.id %}" class="admin-edit-link">Edit</a></h3>
+                        <h3><i class="fas fa-language"></i> Languages {% if is_admin %}<a href="{% url 'admin_edit_user_profile' u.id %}" class="admin-edit-link">Edit</a>{% endif %}</h3>
                     </div>
                     {% for l in p.languages_list %}<span class="tag-pill">{{ l }}</span>{% empty %}<span style="font-size:12px;color:#94a3b8;">None</span>{% endfor %}
                     <div style="margin-top:8px;font-size:11px;color:#94a3b8;font-weight:700;">Mother tongue</div>
@@ -304,7 +306,7 @@
         <!-- ================= MEDIA TAB ================= -->
         <div id="tab-media" class="admin-panel">
             <div class="admin-card">
-                <div class="admin-card-header"><h3><i class="fas fa-images"></i> Gallery ({{ gallery.count }}) <a href="{% url 'admin_edit_user_profile' u.id %}" class="admin-edit-link">Manage</a></h3></div>
+                <div class="admin-card-header"><h3><i class="fas fa-images"></i> Gallery ({{ gallery.count }}) {% if is_admin %}<a href="{% url 'admin_edit_user_profile' u.id %}" class="admin-edit-link">Manage</a>{% endif %}</h3></div>
                 {% if gallery %}
                 <div class="gallery-grid">
                     {% for img in gallery %}<img src="{{ img.image }}" loading="lazy">{% endfor %}
@@ -315,7 +317,7 @@
             </div>
 
             <div class="admin-card">
-                <div class="admin-card-header"><h3><i class="fas fa-camera"></i> Verification Image <a href="{% url 'admin_edit_user_profile' u.id %}" class="admin-edit-link">Manage</a></h3></div>
+                <div class="admin-card-header"><h3><i class="fas fa-camera"></i> Verification Image {% if is_admin %}<a href="{% url 'admin_edit_user_profile' u.id %}" class="admin-edit-link">Manage</a>{% endif %}</h3></div>
                 {% if p.verification_image %}
                 <img src="{{ p.verification_image }}" style="max-width:200px;border-radius:12px;border:2px solid #e2e8f0;">
                 {% else %}

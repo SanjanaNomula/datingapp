@@ -58,6 +58,7 @@ urlpatterns = [
     path("master/dashboard/", views.admin_dashboard, name="admin_dashboard"),
     path("master/dashboard/allusers", views.admin_all_users, name="admin_all_users"),
     path("master/dashboard/verification/", views.admin_manual_verification, name="admin_manual_verification"),
+    path("master/dashboard/staffs/", views.admin_manage_staff, name="admin_manage_staff"),
     path("master/action/", views.admin_action, name="admin_action"),
     path("master/user/<int:user_id>/", views.admin_view_user, name="admin_view_user"),
     path("master/profile/edit/<int:user_id>/", views.admin_edit_user_profile, name="admin_edit_user_profile"),

@@ -621,3 +621,22 @@ class RoomRequest(models.Model):
             'Sonepat (SPT)': 'SPT',
         }
         return campus_map.get(self.campus, self.campus)
+
+
+class StaffMember(models.Model):
+    """Staff moderators who can access limited admin features."""
+    email = models.EmailField(unique=True)
+    added_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.email
+
+    @property
+    def user_profile(self):
+        """Return the Profile if this email matches a registered user."""
+        try:
+            user = User.objects.get(email=self.email)
+            return user.profile
+        except (User.DoesNotExist, Profile.DoesNotExist):
+            return None
