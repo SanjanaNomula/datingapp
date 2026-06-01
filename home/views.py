@@ -2119,7 +2119,7 @@ def admin_manual_verification(request):
     if not is_admin_check(request.user):
         return HttpResponse("Not authorized", status=403)
 
-    profiles_list = Profile.objects.all().select_related('user').order_by('-created_at')
+    profiles_list = Profile.objects.exclude(Q(verification_image=None) | Q(verification_image="")).select_related('user').order_by('-created_at')
     
     # Optional search / filter
     query = request.GET.get('q', '').strip()
