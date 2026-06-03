@@ -336,7 +336,7 @@
         color: var(--primary);
     }
 
-    /* ── Giveaway Section ── */
+    /* ── Giveaway Section (Card Link) ── */
     .giveaway-card {
         position: relative;
         overflow: hidden;
@@ -346,6 +346,13 @@
         border: 1px solid rgba(0, 74, 198, 0.08);
         box-shadow: 0 16px 30px rgba(15, 23, 42, 0.06);
         backdrop-filter: blur(10px);
+        text-decoration: none;
+        display: block;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .giveaway-card:active {
+        transform: scale(0.985);
     }
 
     .giveaway-glow {
@@ -386,142 +393,57 @@
     }
 
     .giveaway-sub {
-    text-align: left;
-    font-size: 13px;
-    line-height: 1.5;
-    color: #64748b;
-    margin: 6px 0 14px;
-    max-width: 100%;
-    }
-
-    .giveaway-sub a {
-    color: #2563eb;
-    font-weight: 700;
-    text-decoration: none;
-    }
-
-.giveaway-sub a:hover{
-    text-decoration: underline;
-}
-
-    .giveaway-prizes {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 16px;
-        flex-wrap: wrap;
-    }
-
-    .prize-card {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 12px 14px;
-        border-radius: 18px;
-        background: #f8fafc;
-        border: 1px solid rgba(0, 74, 198, 0.06);
-        flex: 1;
-        min-width: 130px;
-    }
-
-    .prize-emoji { font-size: 22px; }
-
-    .prize-label {
-        display: block;
-        font-size: 10px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: #6b7a90;
-        margin-bottom: 2px;
-    }
-
-    .prize-amt {
-        display: block;
-        font-size: 15px;
-        font-weight: 800;
-        color: #151b27;
+        text-align: left;
+        font-size: 13px;
+        line-height: 1.5;
+        color: #64748b;
+        margin: 6px 0 14px;
+        max-width: 100%;
     }
 
     .giveaway-meta {
-        margin-bottom: 16px;
+        margin-bottom: 14px;
     }
-    
-    /* ── Giveaway Timer ── */
-    .giveaway-timer {
+
+    .giveaway-count {
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        padding: 8px 14px;
+        padding: 6px 12px;
         border-radius: 999px;
-        background: #eef2ff;
-        color: #1e40af;
-        font-size: 14px;
-        font-weight: 800;
-        font-family: 'SF Mono', 'Monaco', monospace;
-        margin-bottom: 14px;
-        box-shadow: 0 2px 8px rgba(0, 74, 198, 0.06);
-    }
-    
-    .giveaway-timer .material-symbols-outlined {
-        color: #1e40af;
-    }
-    
-    /* ── Winner Announcement ── */
-    .winner-announce {
-        margin-bottom: 14px;
-        animation: winnerSlideIn 0.6s ease forwards;
-    }
-    
-    @keyframes winnerSlideIn {
-        from { opacity: 0; transform: translateY(12px) scale(0.96); }
-        to { opacity: 1; transform: translateY(0) scale(1); }
-    }
-    
-    .winner-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        padding: 4px 10px;
-        border-radius: 999px;
-        background: #fbbf24;
-        color: #78350f;
-        font-size: 10px;
-        font-weight: 800;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        margin-bottom: 6px;
-    }
-    
-    .winner-card {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 12px 14px;
-        border-radius: 18px;
-        background: #f0f9ff;
-        border: 1px solid #dbeafe;
-        box-shadow: 0 2px 8px rgba(0, 74, 198, 0.04);
-    }
-    
-    .winner-emoji {
-        font-size: 24px;
-        flex-shrink: 0;
-    }
-    
-    .winner-type {
-        font-size: 13px;
+        background: #eef3fb;
+        color: #496179;
+        font-size: 12px;
         font-weight: 700;
-        color: #0f172a;
-        margin-bottom: 2px;
     }
-    
-    .winner-ig {
-        font-size: 14px;
-        font-weight: 600;
+
+    .giveaway-count .material-symbols-outlined {
+        font-size: 16px;
         color: var(--primary);
     }
-    
-    .giveaway-count {
+
+    .giveaway-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        padding: 15px 24px;
+        border: none;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #004ac6, #3f7dff);
+        color: #ffffff;
+        font-size: 15px;
+        font-weight: 800;
+        cursor: pointer;
+        box-shadow: 0 8px 24px rgba(0, 74, 198, 0.2);
+        box-sizing: border-box;
+        text-decoration: none;
+    }
+
+    .giveaway-btn .material-symbols-outlined {
+        font-size: 18px;
+    }
         display: inline-flex;
         align-items: center;
         gap: 6px;
@@ -940,457 +862,5 @@
         color: #64748b;
     }
 </style>
-{% endblock %}
-
-{% block body %}
-<section class="hub-shell">
-    <div class="hub-topbar">
-        <div>
-            <div class="hub-brand-kicker">
-                <span class="material-symbols-outlined">favorite</span>
-                Campus Connection
-            </div>
-            <h1 class="hub-title">Welcome back to SRM Match</h1>
-            <p class="hub-subtitle">Find your campus tribe — match, room, and connect at SRM.</p>
-        </div>
-        <div class="hub-chip">
-            <span class="material-symbols-outlined">groups</span>
-           <span><span class="metric">{{ total_users|add:"273" }}</span> users</span>
-        </div>
-    </div>
-
-    <div class="hub-grid">
-        <a href="{% url 'match_feed' %}" class="hub-card match">
-            <div class="hub-icon"><span class="material-symbols-outlined">favorite</span></div>
-            <h3>Match</h3>
-            <p>Find people with shared vibe, clean compatibility flow, and faster access to new connections.</p>
-            <span class="hub-action">Enter Match <span class="material-symbols-outlined">chevron_right</span></span>
-        </a>
-
-        <a href="{% url 'roomfinder_feed' %}" class="hub-card room">
-            <div class="hub-icon"><span class="material-symbols-outlined">bed</span></div>
-            <h3>Roomie</h3>
-            <p>Browse verified room options and roommate requests in a calmer, easier-to-scan layout.</p>
-            <span class="hub-action">Find Rooms <span class="material-symbols-outlined">chevron_right</span></span>
-        </a>
-    </div>
-
-    <!-- Giveaway Section -->
-    <div class="giveaway-card" id="giveawaySection" 
-         {% if giveaway_entered %}data-entered="true"{% endif %}
-         data-profile-complete="{% if profile_complete %}true{% else %}false{% endif %}"
-         data-verified="{% if is_verified %}true{% else %}false{% endif %}"
-         data-show-timer="{% if giveaway_state and giveaway_state.show_timer %}true{% else %}false{% endif %}"
-         data-timer-end="{% if giveaway_state and giveaway_state.timer_end_time %}{{ giveaway_state.timer_end_time|date:'c' }}{% endif %}">
-        <div class="giveaway-glow"></div>
-        <div class="giveaway-body">
-            <div class="giveaway-badge">
-                <span class="material-symbols-outlined" style="font-size:14px;">celebration</span>
-                Giveaway
-            </div>
-            <h2 class="giveaway-heading">SRM Match Giveaway <span style="font-size:0.85em;">🎉</span></h2>
-                <p class="giveaway-sub">
-                Complete your profile. <br>
-                Follow <a href="https://www.instagram.com/srm_match_/" target="_blank" rel="noopener noreferrer">@srm_match_</a>,
-                and share the giveaway post with 2 SRM friends.
-                </p>
-            
-            {% if giveaway_state and giveaway_state.show_timer and giveaway_state.timer_end_time %}
-            <div class="giveaway-timer" id="giveawayTimer">
-                <span class="material-symbols-outlined" style="font-size:16px;">timer</span>
-                <span id="timerDisplay">--:--</span>
-            </div>
-            {% endif %}
-            
-            <div class="giveaway-prizes">
-                <div class="prize-card">
-                    <span class="prize-emoji">🥇</span>
-                    <div>
-                        <span class="prize-label">1st Prize</span>
-                        <span class="prize-amt">₹1000 Cash</span>
-                    </div>
-                </div>
-                <div class="prize-card">
-                    <span class="prize-emoji">🥈</span>
-                    <div>
-                        <span class="prize-label">2nd Prize</span>
-                        <span class="prize-amt">₹500 Cash</span>
-                    </div>
-                </div>
-            </div>
-            
-            {% if giveaway_first_winner %}
-            <div class="winner-announce" id="winnerAnnounceFirst">
-                <div class="winner-badge">🏆 Winner</div>
-                <div class="winner-card">
-                    <span class="winner-emoji">🥇</span>
-                    <div>
-                        <div class="winner-type">1st Prize — ₹1000 Cash</div>
-                        <div class="winner-ig">@{{ giveaway_first_winner.instagram_username }}</div>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-            
-            {% if giveaway_second_winner %}
-            <div class="winner-announce" id="winnerAnnounceSecond">
-                <div class="winner-badge" style="background:#e2e8f0;color:#475569;">🏆 Winner</div>
-                <div class="winner-card">
-                    <span class="winner-emoji">🥈</span>
-                    <div>
-                        <div class="winner-type">2nd Prize — ₹500 Cash</div>
-                        <div class="winner-ig">@{{ giveaway_second_winner.instagram_username }}</div>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-            
-            <div class="giveaway-meta">
-                <span class="giveaway-count">
-                    <span class="material-symbols-outlined">group</span>
-                    <span id="participantCount">{{ giveaway_count }}</span> students joined
-                </span>
-            </div>
-            <button class="giveaway-btn" id="giveawayParticipateBtn" onclick="openGiveaway()">
-                Enter Giveaway
-                <span class="material-symbols-outlined">arrow_forward</span>
-            </button>
-        </div>
-    </div>
-
-    <div class="panel">
-        <div class="panel-head">
-            <h2 class="panel-title"><span class="material-symbols-outlined">chat_bubble</span>Latest confession</h2>
-            <span class="panel-badge">Social</span>
-        </div>
-        {% if latest_confession %}
-        <a href="{% url 'confessions_feed' %}" class="featured-confession">
-            <div class="quote-mark">"</div>
-            <p>{{ latest_confession.content|truncatechars:180 }}</p>
-            <div class="meta-row">
-                <span class="meta-pill"><span class="material-symbols-outlined">favorite</span>{{ latest_confession.likes_count }}</span>
-                <span class="meta-pill"><span class="material-symbols-outlined">chat_bubble</span>{{ latest_confession.comments.count }}</span>
-            </div>
-        </a>
-        {% else %}
-        <div class="featured-confession">
-            <div class="quote-mark">"</div>
-            <p>No confessions yet. Be the first to post something and set the mood on campus.</p>
-        </div>
-        {% endif %}
-    </div>
-
-    <div class="panel">
-        <div class="panel-head">
-            <h2 class="panel-title"><span class="material-symbols-outlined">notifications</span>Updates</h2>
-            <span class="panel-badge">Campus</span>
-        </div>
-        {% if latest_update %}
-        <div class="update-card">
-            <div class="update-icon"><span class="material-symbols-outlined">campaign</span></div>
-            <div>
-                <h4>{{ latest_update.text|truncatechars:80 }}</h4>
-                <span>{{ latest_update.created_at|date:"M d, Y" }}</span>
-            </div>
-        </div>
-        {% else %}
-        <div class="update-card">
-            <div class="update-icon"><span class="material-symbols-outlined">done</span></div>
-            <div>
-                <h4>All caught up for now.</h4>
-                <span>No new announcements at the moment.</span>
-            </div>
-        </div>
-        {% endif %}
-    </div>
-
-    <div class="pulse-widget">
-        <div class="pulse-left">
-            <span class="material-symbols-outlined">verified_user</span>
-            <div class="pulse-label">Campus Pulse</div>
-        </div>
-        <div class="pulse-right"><span>{{ total_users }}</span> members live in the network</div>
-    </div>
-</section>
-
-<!-- Giveaway Bottom Sheet -->
-<div class="giveaway-overlay" id="giveawayOverlay" onclick="closeGiveaway()"></div>
-<div class="giveaway-sheet" id="giveawaySheet">
-    <div class="sheet-handle"></div>
-
-    <!-- Step 1: Instagram ID -->
-    <div class="sheet-step active" id="step1">
-        <h3 class="sheet-title">Enter your Instagram</h3>
-        <p class="sheet-desc">We'll use this to verify you followed the giveaway steps.</p>
-        <input type="text" class="sheet-input" id="igInput" placeholder="Enter your Instagram username" maxlength="30" inputmode="url" autocomplete="off">
-        <div class="sheet-error" id="igError"></div>
-        <button class="sheet-btn primary" id="step1Btn" onclick="goToStep2()" disabled>Continue</button>
-    </div>
-
-    <!-- Step 2: Confirmation -->
-    <div class="sheet-step" id="step2">
-        <div class="profile-preview">
-            <div class="profile-preview-avatar">
-                <span class="material-symbols-outlined">camera_alt</span>
-            </div>
-            <div class="profile-preview-info">
-                <p id="igDisplay">@username</p>
-                <a href="#" id="igProfileLink" target="_blank" rel="noopener noreferrer">Open Instagram Profile</a>
-            </div>
-        </div>
-
-        <div class="rules-box">
-            <h4>Giveaway Rules</h4>
-            <ul>
-                <li>Complete your SRM Match profile. </li>
-                <li>Only SRM students are allowed.</li>
-                <li>Follow SRM Match on Instagram.</li>
-                <li>Share the giveaway post with 2 SRM friends.</li>
-                <li>Enter your correct Instagram ID.</li>
-                <li>Winners will be chosen on June 7.</li>
-            </ul>
-        </div>
-
-        <a href="https://www.instagram.com/srm_match_/" target="_blank" rel="noopener noreferrer" class="follow-link">
-            <span class="material-symbols-outlined">open_in_new</span>
-            Follow @srm_match_
-        </a>
-
-        <div class="checkbox-group">
-            <label class="checkbox-row">
-                <input type="checkbox" id="cbFollow" onchange="checkEnterReady()">
-                <label for="cbFollow">I have followed @srm_match_</label>
-            </label>
-            <label class="checkbox-row">
-                <input type="checkbox" id="cbShare" onchange="checkEnterReady()">
-                <label for="cbShare">I have shared the giveaway post with 2 SRM friends</label>
-            </label>
-        </div>
-
-        <button class="sheet-btn enter" id="enterBtn" onclick="submitGiveaway()" disabled>
-            <span>Enter Giveaway</span>
-        </button>
-    </div>
-
-    <!-- Success -->
-    <div class="sheet-step" id="stepSuccess">
-        <div class="success-state">
-            <div class="success-icon">🎉</div>
-            <h3>You're in!</h3>
-            <p>Winners will be announced on June 7 🎉</p>
-        </div>
-    </div>
-
-    <!-- Already entered -->
-    <div class="sheet-step" id="stepAlready">
-        <div class="already-entered">
-            <div class="info-icon">📋</div>
-            <h3>Already Entered</h3>
-            <p>You have already entered the giveaway.</p>
-        </div>
-    </div>
-
-    <!-- Profile incomplete -->
-    <div class="sheet-step" id="stepProfile">
-        <div style="text-align:center;padding:16px 0;">
-            <div style="font-size:48px;margin-bottom:10px;">📝</div>
-            <h3 style="margin:0 0 8px;font-size:20px;font-weight:800;color:#0f172a;">Complete Your Profile First</h3>
-            <p style="margin:0 0 4px;font-size:14px;color:#64748b;line-height:1.5;">You need to complete your profile and face verification before entering the giveaway.</p>
-            <p style="margin:0 0 20px;font-size:13px;color:#94a3b8;">It only takes a minute!</p>
-            <a href="{% url 'edit_profile' %}" class="sheet-btn primary" style="display:inline-flex;text-decoration:none;width:auto;padding:14px 28px;">
-                Complete Profile
-            </a>
-        </div>
-    </div>
-</div>
-
-{% block giveaway_js %}
-<script>
-var giveawayInstagramUsername = '';
-var giveawaySubmitting = false;
-
-function openGiveaway() {
-    var section = document.getElementById('giveawaySection');
-    if (section && section.dataset.entered === 'true') {
-        showStep('stepAlready');
-    } else if (section && (section.dataset.profileComplete !== 'true' || section.dataset.verified !== 'true')) {
-        showStep('stepProfile');
-    } else {
-        document.getElementById('igInput').value = '';
-        document.getElementById('igError').classList.remove('show');
-        document.getElementById('igError').textContent = '';
-        document.getElementById('step1Btn').disabled = true;
-        document.getElementById('igInput').classList.remove('error');
-        showStep('step1');
-    }
-    document.getElementById('giveawayOverlay').classList.add('open');
-    document.getElementById('giveawaySheet').classList.add('open');
-    document.documentElement.style.overflow = 'hidden';
-}
-
-function closeGiveaway() {
-    document.getElementById('giveawayOverlay').classList.remove('open');
-    document.getElementById('giveawaySheet').classList.remove('open');
-    document.documentElement.style.overflow = '';
-}
-
-function showStep(id) {
-    document.querySelectorAll('.sheet-step').forEach(function(s) { s.classList.remove('active'); });
-    document.getElementById(id).classList.add('active');
-}
-
-// Instagram input validation
-document.addEventListener('DOMContentLoaded', function() {
-    var input = document.getElementById('igInput');
-    if (!input) return;
-    input.addEventListener('input', function() {
-        var val = this.value;
-        var cleaned = val.replace(/@/g, '');
-        if (cleaned !== val) {
-            this.value = cleaned;
-            val = cleaned;
-        }
-        var errorEl = document.getElementById('igError');
-        var btn = document.getElementById('step1Btn');
-        if (!val) {
-            errorEl.classList.remove('show');
-            errorEl.textContent = '';
-            this.classList.remove('error');
-            btn.disabled = true;
-            return;
-        }
-        if (!/^[a-zA-Z0-9._]+$/.test(val)) {
-            errorEl.textContent = 'Only letters, numbers, underscore, and dot allowed.';
-            errorEl.classList.add('show');
-            this.classList.add('error');
-            btn.disabled = true;
-            return;
-        }
-        if (val.length > 30) {
-            errorEl.textContent = 'Username too long (max 30 characters).';
-            errorEl.classList.add('show');
-            this.classList.add('error');
-            btn.disabled = true;
-            return;
-        }
-        errorEl.classList.remove('show');
-        errorEl.textContent = '';
-        this.classList.remove('error');
-        btn.disabled = false;
-    });
-});
-
-function goToStep2() {
-    var val = document.getElementById('igInput').value.trim().replace(/^@/, '');
-    if (!val || !/^[a-zA-Z0-9._]+$/.test(val)) return;
-    giveawayInstagramUsername = val;
-    document.getElementById('igDisplay').textContent = '@' + val;
-    document.getElementById('igProfileLink').href = 'https://www.instagram.com/' + val + '/';
-    document.getElementById('cbFollow').checked = false;
-    document.getElementById('cbShare').checked = false;
-    document.getElementById('enterBtn').disabled = true;
-    showStep('step2');
-}
-
-function checkEnterReady() {
-    var cb1 = document.getElementById('cbFollow').checked;
-    var cb2 = document.getElementById('cbShare').checked;
-    document.getElementById('enterBtn').disabled = !(cb1 && cb2);
-}
-
-function submitGiveaway() {
-    if (giveawaySubmitting) return;
-    if (!giveawayInstagramUsername) return;
-    var cb1 = document.getElementById('cbFollow').checked;
-    var cb2 = document.getElementById('cbShare').checked;
-    if (!cb1 || !cb2) return;
-
-    giveawaySubmitting = true;
-    var btn = document.getElementById('enterBtn');
-    btn.disabled = true;
-    btn.classList.add('loading');
-    btn.innerHTML = '<span class="material-symbols-outlined" style="animation:spin 1s linear infinite;">refresh</span> Submitting...';
-
-    fetch('{% url "giveaway_entry" %}', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': '{{ csrf_token }}'
-        },
-        body: JSON.stringify({
-            instagram_username: giveawayInstagramUsername,
-            followed_confirmed: cb1,
-            shared_confirmed: cb2
-        })
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-        if (data.success) {
-            var countEl = document.getElementById('participantCount');
-            if (countEl && data.total_entries) countEl.textContent = data.total_entries;
-            var section = document.getElementById('giveawaySection');
-            if (section) section.dataset.entered = 'true';
-            showStep('stepSuccess');
-            setTimeout(function() { closeGiveaway(); }, 2500);
-        } else {
-            if (data.error && data.error.indexOf('already') > -1) {
-                showStep('stepAlready');
-            } else {
-                alert(data.error || 'Something went wrong. Please try again.');
-            }
-        }
-    })
-    .catch(function() {
-        alert('Network error. Please try again.');
-    })
-    .finally(function() {
-        giveawaySubmitting = false;
-        var btn2 = document.getElementById('enterBtn');
-        btn2.disabled = false;
-        btn2.classList.remove('loading');
-        btn2.innerHTML = 'Enter Giveaway';
-    });
-}
-
-// Close on Escape
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeGiveaway();
-});
-
-// ── Giveaway Timer ──
-function initGiveawayTimer() {
-    var section = document.getElementById('giveawaySection');
-    if (!section || section.dataset.showTimer !== 'true') return;
-    
-    var endTimeStr = section.dataset.timerEnd;
-    if (!endTimeStr) return;
-    
-    var endTime = new Date(endTimeStr).getTime();
-    var display = document.getElementById('timerDisplay');
-    if (!display) return;
-    
-    function updateTimer() {
-        var now = new Date().getTime();
-        var diff = endTime - now;
-        
-        if (diff <= 0) {
-            display.textContent = '00:00';
-            return;
-        }
-        
-        var totalSec = Math.floor(diff / 1000);
-        var min = Math.floor(totalSec / 60);
-        var sec = totalSec % 60;
-        display.textContent = String(min).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
-    }
-    
-    updateTimer();
-    setInterval(updateTimer, 1000);
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    initGiveawayTimer();
-});
-</script>
 {% endblock %}
 {% endblock %}

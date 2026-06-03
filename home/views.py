@@ -252,7 +252,7 @@ def home_hub(request):
     if not profile.is_face_verified and not request.session.get('skipped_verification'):
         return redirect('verify')
 
-    from .models import Confession, Announcement, GiveawayEntry, GiveawayWinner, GiveawayState
+    from .models import Confession, Announcement, GiveawayEntry
     latest_confession = Confession.objects.filter(moderation_status='approved', is_flagged=False).order_by('-created_at').first()
     latest_update = Announcement.objects.order_by('-created_at').first()
     total_users = User.objects.count() + 50
@@ -262,6 +262,32 @@ def home_hub(request):
     checklist = _profile_discovery_checklist(profile)
     profile_complete = len(missing) == 0
     is_verified = profile.is_face_verified
+    
+    giveaway_entered = GiveawayEntry.objects.filter(user=user).exists()
+    giveaway_count = GiveawayEntry.objects.count()
+    
+    return render(request, "home_hub.html", {
+        "profile": profile,
+        "latest_confession": latest_confession,
+        "latest_update": latest_update,
+        "total_users": total_users,
+        "is_discoverable": profile.is_discoverable,
+        "profile_complete": profile_complete,
+        "is_verified": is_verified,
+        "missing_fields": missing,
+        "checklist": checklist,
+        "giveaway_entered": giveaway_entered,
+        "giveaway_count": giveaway_count,
+    })
+
+
+@login_required
+def giveaway_page(request):
+    """Dedicated giveaway page with all features"""
+    user = request.user
+    profile = getattr(user, 'profile', None)
+    
+    from .models import GiveawayEntry, GiveawayWinner, GiveawayState
     
     giveaway_entered = GiveawayEntry.objects.filter(user=user).exists()
     giveaway_count = GiveawayEntry.objects.count()
@@ -282,22 +308,15 @@ def home_hub(request):
     except GiveawayState.DoesNotExist:
         giveaway_state = None
     
-    return render(request, "home_hub.html", {
+    return render(request, "giveaway_page.html", {
         "profile": profile,
-        "latest_confession": latest_confession,
-        "latest_update": latest_update,
-        "total_users": total_users,
-        "is_discoverable": profile.is_discoverable,
-        "profile_complete": profile_complete,
-        "is_verified": is_verified,
-        "missing_fields": missing,
-        "checklist": checklist,
         "giveaway_entered": giveaway_entered,
         "giveaway_count": giveaway_count,
         "giveaway_first_winner": giveaway_first_winner,
         "giveaway_second_winner": giveaway_second_winner,
         "giveaway_state": giveaway_state,
     })
+
 
 from django.views.decorators.http import require_POST
 import re

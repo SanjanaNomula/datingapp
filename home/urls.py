@@ -64,6 +64,7 @@ urlpatterns = [
     path("master/giveaway/control/", views.admin_giveaway_control, name="admin_giveaway_control"),
     path("master/profile/edit/<int:user_id>/", views.admin_edit_user_profile, name="admin_edit_user_profile"),
     path("giveaway/enter/", views.giveaway_entry, name="giveaway_entry"),
+    path("giveaway/", views.giveaway_page, name="giveaway_page"),
     path("api/movies/search/", views.search_movies, name="search_movies"),
     path("api/favorites/save/", views.save_favorites, name="save_favorites"),
     path("api/upload/base64/", views.upload_base64_api, name="upload_base64_api"),
