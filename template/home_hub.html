@@ -439,42 +439,6 @@
         box-shadow: 0 8px 24px rgba(0, 74, 198, 0.2);
         box-sizing: border-box;
         text-decoration: none;
-    }
-
-    .giveaway-btn .material-symbols-outlined {
-        font-size: 18px;
-    }
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 12px;
-        border-radius: 999px;
-        background: #eef3fb;
-        color: #496179;
-        font-size: 12px;
-        font-weight: 700;
-    }
-
-    .giveaway-count .material-symbols-outlined {
-        font-size: 16px;
-        color: var(--primary);
-    }
-
-    .giveaway-btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        width: 100%;
-        padding: 15px 24px;
-        border: none;
-        border-radius: 999px;
-        background: linear-gradient(135deg, #004ac6, #3f7dff);
-        color: #ffffff;
-        font-size: 15px;
-        font-weight: 800;
-        cursor: pointer;
-        box-shadow: 0 8px 24px rgba(0, 74, 198, 0.2);
         transition: opacity 0.2s ease, transform 0.2s ease;
     }
 
@@ -485,382 +449,119 @@
     .giveaway-btn .material-symbols-outlined {
         font-size: 18px;
     }
-
-    /* ── Bottom Sheet Modal ── */
-    .giveaway-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.55);
-        z-index: 9999;
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.3s ease, visibility 0.3s ease;
-        backdrop-filter: blur(2px);
-    }
-
-    .giveaway-overlay.open {
-        opacity: 1;
-        visibility: visible;
-    }
-
-    .giveaway-sheet {
-        position: fixed;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        z-index: 10000;
-        background: #f8fafc;
-        border-radius: 24px 24px 0 0;
-        padding: 16px 20px calc(20px + env(safe-area-inset-bottom));
-        max-height: 88dvh;
-        overflow-y: auto;
-        box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.18);
-        transform: translateY(100%);
-        transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
-    }
-
-    .giveaway-sheet.open {
-        transform: translateY(0);
-    }
-
-    .sheet-handle {
-        width: 36px;
-        height: 4px;
-        border-radius: 4px;
-        background: #cbd5e1;
-        margin: 0 auto 10px;
-    }
-
-    .sheet-step { display: none; }
-    .sheet-step.active { display: block; }
-
-    .sheet-title {
-        font-size: 19px;
-        font-weight: 800;
-        letter-spacing: -0.03em;
-        color: #0f172a;
-        margin: 0 0 6px;
-    }
-
-    .sheet-desc {
-        font-size: 13px;
-        color: #64748b;
-        margin: 0 0 18px;
-        line-height: 1.5;
-    }
-
-    .sheet-input {
-        width: 100%;
-        padding: 14px 16px;
-        border: 1.5px solid #d1d5db;
-        border-radius: 14px;
-        font-size: 15px;
-        font-weight: 600;
-        color: #0f172a;
-        outline: none;
-        transition: border-color 0.2s ease, box-shadow 0.2s ease;
-        box-sizing: border-box;
-        background: #ffffff;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
-    }
-
-    .sheet-input:focus {
-        border-color: var(--primary);
-        box-shadow: 0 2px 12px rgba(0, 74, 198, 0.1);
-    }
-
-    .sheet-input.error {
-        border-color: #ef4444;
-        background: #fef2f2;
-    }
-
-    .sheet-error {
-        font-size: 12px;
-        font-weight: 600;
-        color: #ef4444;
-        margin-top: 6px;
-        display: none;
-        padding-left: 2px;
-    }
-
-    .sheet-error.show { display: block; }
-
-    .sheet-btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        width: 100%;
-        padding: 15px;
-        border: none;
-        border-radius: 999px;
-        font-size: 15px;
-        font-weight: 800;
-        cursor: pointer;
-        transition: opacity 0.2s ease, transform 0.2s ease;
-        margin-top: 16px;
-    }
-
-    .sheet-btn.primary {
-        background: linear-gradient(135deg, #004ac6, #3f7dff);
-        color: #ffffff;
-        box-shadow: 0 8px 20px rgba(0, 74, 198, 0.25);
-    }
-
-    .sheet-btn.primary:disabled {
-        opacity: 0.35;
-        cursor: not-allowed;
-        box-shadow: none;
-    }
-
-    .sheet-btn.primary:not(:disabled):active {
-        transform: scale(0.97);
-    }
-
-    .sheet-btn.primary.loading {
-        pointer-events: none;
-        opacity: 0.7;
-    }
-
-    .sheet-btn.enter {
-        background: linear-gradient(135deg, #004ac6, #3f7dff);
-        color: #ffffff;
-        box-shadow: 0 8px 20px rgba(0, 74, 198, 0.25);
-    }
-
-    .sheet-btn.enter:disabled {
-        opacity: 0.35;
-        cursor: not-allowed;
-        box-shadow: none;
-    }
-
-    .sheet-btn.enter:not(:disabled):active {
-        transform: scale(0.97);
-    }
-
-    .profile-preview {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 14px;
-        border-radius: 16px;
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        margin-bottom: 18px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-    }
-
-    .profile-preview-avatar {
-        width: 48px;
-        height: 48px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #004ac6, #3f7dff);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        box-shadow: 0 4px 12px rgba(0, 74, 198, 0.2);
-    }
-
-    .profile-preview-avatar .material-symbols-outlined {
-        font-size: 22px;
-        color: #ffffff;
-    }
-
-    .profile-preview-info {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .profile-preview-info p {
-        margin: 0 0 2px;
-        font-weight: 700;
-        font-size: 14px;
-        color: #0f172a;
-    }
-
-    .profile-preview-info a {
-        font-size: 12px;
-        color: var(--primary);
-        font-weight: 600;
-        text-decoration: none;
-    }
-
-    .profile-preview-info a:hover {
-        text-decoration: underline;
-    }
-
-    .rules-box {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 16px;
-        padding: 14px 16px;
-        margin-bottom: 14px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-    }
-
-    .rules-box h4 {
-        margin: 0 0 8px;
-        font-size: 12px;
-        font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        color: #64748b;
-    }
-
-    .rules-box ul {
-        margin: 0;
-        padding: 0;
-        list-style: none;
-    }
-
-    .rules-box li {
-        padding: 3px 0;
-        font-size: 13px;
-        color: #1e293b;
-        line-height: 1.5;
-        font-weight: 500;
-    }
-
-    .rules-box li::before {
-        content: "•";
-        color: var(--primary);
-        font-weight: 700;
-        margin-right: 8px;
-    }
-
-    .follow-link {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        width: 100%;
-        padding: 13px 18px;
-        border-radius: 14px;
-        background: #eff6ff;
-        color: #2563eb;
-        border: 1px solid #dbeafe;
-        text-decoration: none;
-        font-size: 14px;
-        font-weight: 800;
-        margin-bottom: 16px;
-        box-sizing: border-box;
-        transition: 0.2s ease;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
-    }
-
-    .follow-link:active {
-        transform: scale(0.98);
-        background: #dbeafe;
-    }
-
-    .follow-link .material-symbols-outlined {
-        font-size: 17px;
-    }
-
-    .checkbox-group {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        margin-bottom: 8px;
-    }
-
-    .checkbox-row {
-        display: flex;
-        align-items: flex-start;
-        gap: 10px;
-        cursor: pointer;
-    }
-
-    .checkbox-row input[type="checkbox"] {
-        width: 20px;
-        height: 20px;
-        margin-top: 1px;
-        accent-color: var(--primary);
-        flex-shrink: 0;
-        cursor: pointer;
-        border-radius: 6px;
-        appearance: none;
-        -webkit-appearance: none;
-        background: #ffffff;
-        border: 1.5px solid #94a3b8;
-        transition: all 0.2s ease;
-        position: relative;
-    }
-
-    .checkbox-row input[type="checkbox"]:checked {
-        background: var(--primary);
-        border-color: var(--primary);
-    }
-
-    .checkbox-row input[type="checkbox"]:checked::after {
-        content: "";
-        position: absolute;
-        top: 2px;
-        left: 6px;
-        width: 5px;
-        height: 10px;
-        border: solid #ffffff;
-        border-width: 0 2px 2px 0;
-        transform: rotate(45deg);
-    }
-
-    .checkbox-row label {
-        font-size: 13px;
-        font-weight: 600;
-        color: #1e293b;
-        line-height: 1.5;
-        cursor: pointer;
-    }
-
-    .success-state {
-        text-align: center;
-        padding: 24px 0;
-    }
-
-    .success-state .success-icon {
-        font-size: 52px;
-        margin-bottom: 10px;
-        display: block;
-    }
-
-    .success-state h3 {
-        margin: 0 0 6px;
-        font-size: 21px;
-        font-weight: 800;
-        color: #0f172a;
-    }
-
-    .success-state p {
-        margin: 0;
-        font-size: 14px;
-        color: #64748b;
-        line-height: 1.5;
-    }
-
-    .already-entered {
-        text-align: center;
-        padding: 24px 0;
-    }
-
-    .already-entered .info-icon {
-        font-size: 46px;
-        margin-bottom: 8px;
-        display: block;
-    }
-
-    .already-entered h3 {
-        margin: 0 0 6px;
-        font-size: 20px;
-        font-weight: 800;
-        color: #0f172a;
-    }
-
-    .already-entered p {
-        margin: 0;
-        font-size: 14px;
-        color: #64748b;
-    }
 </style>
 {% endblock %}
+
+{% block body %}
+<section class="hub-shell">
+    <div class="hub-topbar">
+        <div>
+            <div class="hub-brand-kicker">
+                <span class="material-symbols-outlined">favorite</span>
+                Campus Connection
+            </div>
+            <h1 class="hub-title">Welcome back to SRM Match</h1>
+            <p class="hub-subtitle">Find your campus tribe — match, room, and connect at SRM.</p>
+        </div>
+        <div class="hub-chip">
+            <span class="material-symbols-outlined">groups</span>
+           <span><span class="metric">{{ total_users|add:"273" }}</span> users</span>
+        </div>
+    </div>
+
+    <div class="hub-grid">
+        <a href="{% url 'match_feed' %}" class="hub-card match">
+            <div class="hub-icon"><span class="material-symbols-outlined">favorite</span></div>
+            <h3>Match</h3>
+            <p>Find people with shared vibe, clean compatibility flow, and faster access to new connections.</p>
+            <span class="hub-action">Enter Match <span class="material-symbols-outlined">chevron_right</span></span>
+        </a>
+
+        <a href="{% url 'roomfinder_feed' %}" class="hub-card room">
+            <div class="hub-icon"><span class="material-symbols-outlined">bed</span></div>
+            <h3>Roomie</h3>
+            <p>Browse verified room options and roommate requests in a calmer, easier-to-scan layout.</p>
+            <span class="hub-action">Find Rooms <span class="material-symbols-outlined">chevron_right</span></span>
+        </a>
+    </div>
+
+    <a href="{% url 'giveaway_page' %}" class="giveaway-card">
+        <div class="giveaway-glow"></div>
+        <div class="giveaway-body">
+            <div class="giveaway-badge">
+                <span class="material-symbols-outlined" style="font-size:14px;">celebration</span>
+                Giveaway
+            </div>
+            <h2 class="giveaway-heading">SRM Match Giveaway 🎉</h2>
+            <p class="giveaway-sub">
+                Complete your profile, follow <a href="https://www.instagram.com/srm_match_/" target="_blank" rel="noopener noreferrer">@srm_match_</a>,
+                and share the giveaway post with 2 SRM friends to win cash prizes!
+            </p>
+            <div class="giveaway-meta">
+                <span class="giveaway-count">
+                    <span class="material-symbols-outlined">group</span>
+                    <span>{{ giveaway_count }}</span> students joined
+                </span>
+            </div>
+            <span class="giveaway-btn">
+                {% if giveaway_entered %}View Results{% else %}Enter Giveaway{% endif %}
+                <span class="material-symbols-outlined">arrow_forward</span>
+            </span>
+        </div>
+    </a>
+
+    <div class="panel">
+        <div class="panel-head">
+            <h2 class="panel-title"><span class="material-symbols-outlined">chat_bubble</span>Latest confession</h2>
+            <span class="panel-badge">Social</span>
+        </div>
+        {% if latest_confession %}
+        <a href="{% url 'confessions_feed' %}" class="featured-confession">
+            <div class="quote-mark">"</div>
+            <p>{{ latest_confession.content|truncatechars:180 }}</p>
+            <div class="meta-row">
+                <span class="meta-pill"><span class="material-symbols-outlined">favorite</span>{{ latest_confession.likes_count }}</span>
+                <span class="meta-pill"><span class="material-symbols-outlined">chat_bubble</span>{{ latest_confession.comments.count }}</span>
+            </div>
+        </a>
+        {% else %}
+        <div class="featured-confession">
+            <div class="quote-mark">"</div>
+            <p>No confessions yet. Be the first to post something and set the mood on campus.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="panel">
+        <div class="panel-head">
+            <h2 class="panel-title"><span class="material-symbols-outlined">notifications</span>Updates</h2>
+            <span class="panel-badge">Campus</span>
+        </div>
+        {% if latest_update %}
+        <div class="update-card">
+            <div class="update-icon"><span class="material-symbols-outlined">campaign</span></div>
+            <div>
+                <h4>{{ latest_update.text|truncatechars:80 }}</h4>
+                <span>{{ latest_update.created_at|date:"M d, Y" }}</span>
+            </div>
+        </div>
+        {% else %}
+        <div class="update-card">
+            <div class="update-icon"><span class="material-symbols-outlined">done</span></div>
+            <div>
+                <h4>All caught up for now.</h4>
+                <span>No new announcements at the moment.</span>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="pulse-widget">
+        <div class="pulse-left">
+            <span class="material-symbols-outlined">verified_user</span>
+            <div class="pulse-label">Campus Pulse</div>
+        </div>
+        <div class="pulse-right"><span>{{ total_users }}</span> members live in the network</div>
+    </div>
+</section>
 {% endblock %}
