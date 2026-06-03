@@ -275,6 +275,24 @@
         line-height: 1.5;
     }
 
+    .entry-entered-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 18px;
+        border-radius: 999px;
+        background: #dcfce7;
+        color: #166534;
+        font-size: 15px;
+        font-weight: 800;
+        margin-bottom: 12px;
+    }
+
+    .entry-entered-badge .material-symbols-outlined {
+        font-size: 20px;
+        color: #16a34a;
+    }
+
     .entry-btn {
         display: inline-flex;
         align-items: center;
@@ -295,11 +313,6 @@
 
     .entry-btn:active {
         transform: scale(0.97);
-    }
-
-    .entry-btn.completed {
-        background: linear-gradient(135deg, #16a34a, #22c55e);
-        box-shadow: 0 8px 24px rgba(22, 163, 74, 0.2);
     }
 
     .entry-count {
@@ -704,25 +717,30 @@
     </div>
     {% endif %}
 
-    <!-- Entry / Status -->
+    <!-- Entry card with status -->
     <div class="entry-card">
-        <h3>{% if giveaway_entered %}You've Entered!{% else %}Enter the Giveaway{% endif %}</h3>
-        <p>{% if giveaway_entered %}You're in the running. Winners will be announced on June 7.{% else %}Complete the steps below to participate. It only takes a minute!{% endif %}</p>
-
-        <div class="entry-count">
-            <span class="material-symbols-outlined">group</span>
-            <span id="participantCount">{{ giveaway_count }}</span> students joined
-        </div>
-
-        <button class="entry-btn {% if giveaway_entered %}completed{% endif %}" id="giveawayParticipateBtn" onclick="openGiveaway()">
-            {% if giveaway_entered %}
-                <span class="material-symbols-outlined">check</span>
-                Entered
-            {% else %}
+        {% if giveaway_entered %}
+            <div class="entry-entered-badge">
+                <span class="material-symbols-outlined">check_circle</span>
+                You're entered!
+            </div>
+            <p>You're in the running. Winners will be announced on June 7.</p>
+            <div class="entry-count">
+                <span class="material-symbols-outlined">group</span>
+                <span id="participantCount">{{ giveaway_count }}</span> students joined
+            </div>
+        {% else %}
+            <h3>Enter the Giveaway</h3>
+            <p>Complete the steps below to participate. It only takes a minute!</p>
+            <div class="entry-count">
+                <span class="material-symbols-outlined">group</span>
+                <span id="participantCount">{{ giveaway_count }}</span> students joined
+            </div>
+            <button class="entry-btn" id="giveawayParticipateBtn" onclick="openGiveaway()">
                 Enter Giveaway
                 <span class="material-symbols-outlined">arrow_forward</span>
-            {% endif %}
-        </button>
+            </button>
+        {% endif %}
     </div>
 
     <!-- Winners -->
@@ -754,17 +772,6 @@
             </div>
         </div>
         {% endif %}
-    </div>
-    {% endif %}
-
-    {% if profile and not giveaway_entered %}
-    <div class="entry-card" style="text-align:center;">
-        <h3 style="margin-bottom:12px;">Already entered?</h3>
-        <p style="margin-bottom:16px;">Check your status or see the rules.</p>
-        <button class="entry-btn" onclick="openGiveaway()">
-            Manage Entry
-            <span class="material-symbols-outlined">arrow_forward</span>
-        </button>
     </div>
     {% endif %}
 </section>
