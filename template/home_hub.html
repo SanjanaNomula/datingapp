@@ -85,8 +85,8 @@
     .hub-card {
         display: flex;
         flex-direction: column;
-        gap: 12px;
-        min-height: 196px;
+        gap: 5px;
+        min-height: 150px;
         padding: 20px;
         text-decoration: none;
         background: rgba(255, 255, 255, 0.84);
@@ -459,14 +459,14 @@
         <a href="{% url 'match_feed' %}" class="hub-card match">
             <div class="hub-icon"><span class="material-symbols-outlined">favorite</span></div>
             <h3>Match</h3>
-            <p>Find people with shared vibe, clean compatibility flow, and faster access to new connections.</p>
+            <p>Find people who share your interests.</p>
             <span class="hub-action">Enter Match <span class="material-symbols-outlined">chevron_right</span></span>
         </a>
 
         <a href="{% url 'roomfinder_feed' %}" class="hub-card room">
             <div class="hub-icon"><span class="material-symbols-outlined">bed</span></div>
             <h3>Roomie</h3>
-            <p>Browse verified room options and roommate requests in a calmer, easier-to-scan layout.</p>
+            <p>Discover available rooms and roommates.</p>
             <span class="hub-action">Find Rooms <span class="material-symbols-outlined">chevron_right</span></span>
         </a>
     </div>
