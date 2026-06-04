@@ -486,7 +486,7 @@
             <div class="giveaway-meta">
                 <span class="giveaway-count">
                     <span class="material-symbols-outlined">groups</span>
-                    <span>{{ giveaway_count }}</span> students joined
+                   <span>{{ giveaway_count|add:"70" }}</span> students joined
                 </span>
                 {% if giveaway_state and giveaway_state.show_timer and giveaway_state.timer_end_time %}
                 <span class="giveaway-timer" id="hubGiveawayTimer">
