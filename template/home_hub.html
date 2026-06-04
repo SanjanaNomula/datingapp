@@ -534,7 +534,7 @@
                 {% if giveaway_state and giveaway_state.show_timer and giveaway_state.timer_end_time %}
                 <span class="giveaway-timer" id="hubGiveawayTimer">
                     <span class="material-symbols-outlined">schedule</span>
-                    <span id="hubTimerDisplay">--:--</span>
+                    <span id="hubTimerDisplay">0:00:00:00</span>
                 </span>
                 {% endif %}
             </div>
@@ -611,11 +611,13 @@
     if (!display) return;
     function update() {
         var diff = endTime - new Date().getTime();
-        if (diff <= 0) { display.textContent = '0:00'; return; }
+        if (diff <= 0) { display.textContent = '0:00:00:00'; return; }
         var totalSec = Math.floor(diff / 1000);
-        var m = Math.floor(totalSec / 60);
+        var d = Math.floor(totalSec / 86400);
+        var h = Math.floor((totalSec % 86400) / 3600);
+        var m = Math.floor((totalSec % 3600) / 60);
         var s = totalSec % 60;
-        display.textContent = String(m) + ':' + String(s).padStart(2, '0');
+        display.textContent = d + ':' + String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
     }
     update();
     setInterval(update, 1000);

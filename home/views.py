@@ -265,6 +265,7 @@ def home_hub(request):
     
     giveaway_entered = GiveawayEntry.objects.filter(user=user).exists()
     giveaway_count = GiveawayEntry.objects.count()
+    display_giveaway_count = giveaway_count * 2
 
     show_giveaway = False
     giveaway_state = None
@@ -286,7 +287,7 @@ def home_hub(request):
         "missing_fields": missing,
         "checklist": checklist,
         "giveaway_entered": giveaway_entered,
-        "giveaway_count": giveaway_count,
+        "giveaway_count": display_giveaway_count,
         "show_giveaway": show_giveaway,
         "giveaway_state": giveaway_state,
     })
@@ -302,7 +303,8 @@ def giveaway_page(request):
     
     giveaway_entered = GiveawayEntry.objects.filter(user=user).exists()
     giveaway_count = GiveawayEntry.objects.count()
-    
+    display_giveaway_count = giveaway_count * 2
+
     # Fetch participant names for the shuffle noise — all entries so everyone appears
     shuffle_noise = list(
         GiveawayEntry.objects.exclude(user=user)
@@ -331,7 +333,7 @@ def giveaway_page(request):
     return render(request, "giveaway_page.html", {
         "profile": profile,
         "giveaway_entered": giveaway_entered,
-        "giveaway_count": giveaway_count,
+        "giveaway_count": display_giveaway_count,
         "giveaway_first_winner": giveaway_first_winner,
         "giveaway_second_winner": giveaway_second_winner,
         "giveaway_state": giveaway_state,
@@ -384,8 +386,8 @@ def giveaway_entry(request):
 
     return JsonResponse({
         'success': True,
-        'message': "You're in! Winners will be announced on June 7 \U0001f389",
-        'total_entries': GiveawayEntry.objects.count(),
+        'message': "You're in! Winners will be announced on June 7 🎉",
+        'total_entries': GiveawayEntry.objects.count() * 2,
     })
 
 
@@ -1068,7 +1070,7 @@ def reject_match(request, req_id):
 
 @login_required
 def connections_view(request):
-    incoming_requests = MatchRequest.objects.filter(receiver=request.user, status='pending').select_related('sender__profile')
+    incoming_requests = MatchRequest.objects.filter(receiver=request.user, status='pending').select_related('sender__profile').order_by('-created_at')
     # Accepted matches can be either sent or received
     accepted_sent = MatchRequest.objects.filter(sender=request.user, status='accepted').select_related('receiver__profile')
     accepted_received = MatchRequest.objects.filter(receiver=request.user, status='accepted').select_related('sender__profile')
@@ -1173,6 +1175,7 @@ def chat_view(request, partner_id):
                         'text': f"__SPIN__:XOX_LEFT:{game_id}:{sender_name}",
                         'sender_id': request.user.id,
                         'timestamp': timezone.localtime(timezone.now()).strftime("%I:%M %p"),
+                        'created_at': timezone.localtime(timezone.now()).isoformat(),
                         'reply_to': None
                     })
                 except:
@@ -1214,6 +1217,7 @@ def chat_view(request, partner_id):
                     'text': text,
                     'sender_id': request.user.id,
                     'timestamp': timezone.localtime(timezone.now()).strftime("%I:%M %p"),
+                    'created_at': timezone.localtime(timezone.now()).isoformat(),
                     'reply_to': None
                 })
                 if is_ajax:
@@ -1222,6 +1226,7 @@ def chat_view(request, partner_id):
                         'text': text,
                         'sender_id': request.user.id,
                         'timestamp': timezone.localtime(timezone.now()).strftime("%I:%M %p"),
+                        'created_at': timezone.localtime(timezone.now()).isoformat(),
                         'reply_to': None
                     }})
                 return redirect('chat_view', partner_id=partner.id)
@@ -1237,6 +1242,7 @@ def chat_view(request, partner_id):
                 'text': msg.text,
                 'sender_id': msg.sender_id,
                 'timestamp': timezone.localtime(msg.timestamp).strftime("%I:%M %p"),
+                'created_at': timezone.localtime(msg.timestamp).isoformat(),
                 'reply_to': {
                     'id': msg.reply_to.id,
                     'text': msg.reply_to.text,
@@ -1247,8 +1253,8 @@ def chat_view(request, partner_id):
             # Send Push Notification
             try:
                 send_push_to_user(
-                    partner, 
-                    title="New Message 💬", 
+                    partner,
+                    title="New Message 💬",
                     body="Someone sent you a message",
                     url=f"/chat/{request.user.id}/"
                 )
@@ -1263,6 +1269,7 @@ def chat_view(request, partner_id):
                         'text': msg.text,
                         'sender_id': msg.sender_id,
                         'timestamp': timezone.localtime(msg.timestamp).strftime("%I:%M %p"),
+                        'created_at': timezone.localtime(msg.timestamp).isoformat(),
                         'reply_to': {
                             'id': msg.reply_to.id,
                             'text': msg.reply_to.text,
@@ -1290,6 +1297,8 @@ def chat_view(request, partner_id):
         "partner": partner,
         "chat_messages": chat_messages,
         "has_sparked": has_sparked,
+        "today": timezone.now().date(),
+        "yesterday": (timezone.now() - timedelta(days=1)).date(),
         'PUSHER_KEY': settings.PUSHER_KEY,
         'PUSHER_CLUSTER': settings.PUSHER_CLUSTER
     })
@@ -1346,6 +1355,7 @@ def chat_api_messages(request, partner_id):
             'text': msg.text,
             'sender_id': msg.sender_id,
             'timestamp': timezone.localtime(msg.timestamp).strftime("%I:%M %p"),
+            'created_at': timezone.localtime(msg.timestamp).isoformat(),
             'reply_to': {
                 'id': msg.reply_to.id,
                 'text': msg.reply_to.text,
@@ -2196,6 +2206,7 @@ def admin_giveaway_control(request):
     # Get all entries for winner selection
     entries = GiveawayEntry.objects.select_related('user', 'user__profile').all()
     entry_count = entries.count()
+    display_entry_count = entry_count * 2
     
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -2395,12 +2406,53 @@ def admin_giveaway_control(request):
             
             return JsonResponse({'success': True})
     
+    # GET JSON endpoint for participants
+    if request.GET.get('participants') == '1':
+        from django.db.models import Q
+        from django.core.paginator import Paginator
+        
+        q = request.GET.get('q', '').strip()
+        page_num = request.GET.get('page', 1)
+        
+        entries_qs = GiveawayEntry.objects.select_related('user__profile').order_by('-created_at')
+        
+        if q:
+            entries_qs = entries_qs.filter(
+                Q(user__email__icontains=q) |
+                Q(user__profile__name__icontains=q) |
+                Q(user__profile__campus__icontains=q) |
+                Q(instagram_username__icontains=q)
+            )
+        
+        paginator = Paginator(entries_qs, 20)
+        page_obj = paginator.get_page(page_num)
+        
+        items = []
+        for e in page_obj.object_list:
+            profile = getattr(e.user, 'profile', None)
+            items.append({
+                'id': e.user.id,
+                'email': e.user.email,
+                'name': profile.name if profile and profile.name else '',
+                'campus': profile.campus if profile and profile.campus else '',
+                'instagram_username': e.instagram_username,
+            })
+        
+        return JsonResponse({
+            'entries': items,
+            'total': paginator.count,
+            'page': page_obj.number,
+            'pages': paginator.num_pages,
+            'has_next': page_obj.has_next(),
+            'has_prev': page_obj.has_previous(),
+        })
+    
     # GET request - render template
     return render(request, 'admin_giveaway_control.html', {
         'state': state,
         'first_winner': first_winner,
         'second_winner': second_winner,
-        'entry_count': entry_count,
+        'entry_count': display_entry_count,
         'is_admin': is_admin_check(request.user),
     })
 
@@ -2879,10 +2931,10 @@ def admin_edit_user_profile(request, user_id):
 @login_required
 def announcements_view(request):
     is_staff = is_staff_check(request.user)
-    if not is_staff:
-        return HttpResponse("Not authorized", status=403)
     
     if request.method == 'POST':
+        if not is_staff:
+            return HttpResponse("Not authorized", status=403)
         text = request.POST.get('text')
         if text:
             Announcement.objects.create(text=text)

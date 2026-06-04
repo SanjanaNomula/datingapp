@@ -186,6 +186,24 @@
     .message.sent .timestamp { color: rgba(255, 255, 255, 0.85); text-align: right; }
     .message.received .timestamp { color: #8a9bb0; }
 
+    /* ── Date Divider (WhatsApp/Instagram style) ── */
+    .chat-date-divider {
+        display: flex;
+        justify-content: center;
+        margin: 6px 0;
+        pointer-events: none;
+    }
+    .chat-date-divider .chat-date-pill {
+        background: #f1f5f9;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 6px 12px;
+        border-radius: 999px;
+        letter-spacing: 0.01em;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+
     /* XOX Game Message Styling */
     .xox-game-message-container {
         justify-content: center;
@@ -691,8 +709,17 @@
     <div class="chat-messages" id="chat-box">
         {% if chat_messages %}
             {% for msg in chat_messages %}
+            {% ifchanged msg.timestamp|date:"Y-m-d" %}
+            <div class="chat-date-divider" data-date="{{ msg.timestamp|date:'Y-m-d' }}">
+                <div class="chat-date-pill">
+                    {% if msg.timestamp|date:"Y-m-d" == today|date:"Y-m-d" %}Today
+                    {% elif msg.timestamp|date:"Y-m-d" == yesterday|date:"Y-m-d" %}Yesterday
+                    {% else %}{{ msg.timestamp|date:"F j, Y" }}{% endif %}
+                </div>
+            </div>
+            {% endifchanged %}
             {% if '__XOX_START__:' in msg.text %}
-            <div class="message-row xox-game-message-container" data-game-id="{{ msg.text|slice:'14:' }}" data-id="{{ msg.id }}" style="display:flex; justify-content:center; width:100%;">
+            <div class="message-row xox-game-message-container" data-game-id="{{ msg.text|slice:'14:' }}" data-id="{{ msg.id }}" data-date="{{ msg.timestamp|date:'Y-m-d' }}" style="display:flex; justify-content:center; width:100%;">
                 <div class="message {% if msg.sender == request.user %}sent{% else %}received{% endif %} xox-game-start-message" style="padding:0; overflow:hidden; border:none; background:none; box-shadow:none;">
                     <div class="xox-msg-card">
                         <h4>XOX Game</h4>
@@ -702,7 +729,7 @@
                 </div>
             </div>
             {% else %}
-            <div class="message-row {% if msg.sender == request.user %}sent{% else %}received{% endif %}" data-id="{{ msg.id }}">
+            <div class="message-row {% if msg.sender == request.user %}sent{% else %}received{% endif %}" data-id="{{ msg.id }}" data-date="{{ msg.timestamp|date:'Y-m-d' }}" data-full-date="{{ msg.timestamp|date:'c' }}">
                 <div class="message {% if msg.sender == request.user %}sent{% else %}received{% endif %}" onclick="handleMessageClick(event, this)">
                     {% if msg.reply_to %}
                     <div class="quoted-message" onclick="scrollToMessage({{ msg.reply_to.id }})">
@@ -1468,6 +1495,50 @@ function scrollToBottom(smooth = false) {
 }
 scrollToBottom();
 
+// ── Date separator helpers (WhatsApp/Instagram style) ──
+function getYmdFromIso(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + day;
+}
+function getSmartDateLabel(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    const now = new Date();
+    const todayYmd = getYmdFromIso(now.toISOString());
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const yesterdayYmd = getYmdFromIso(yesterday.toISOString());
+    const msgYmd = getYmdFromIso(iso);
+    if (msgYmd === todayYmd) return 'Today';
+    if (msgYmd === yesterdayYmd) return 'Yesterday';
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    return months[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+}
+function getLastDateInChat() {
+    if (!chatBox) return '';
+    // Find the last .message-row and read its data-date; if none, find last .chat-date-divider
+    const rows = chatBox.querySelectorAll('.message-row[data-date]');
+    if (rows.length) return rows[rows.length - 1].dataset.date;
+    const dividers = chatBox.querySelectorAll('.chat-date-divider[data-date]');
+    if (dividers.length) return dividers[dividers.length - 1].dataset.date;
+    return '';
+}
+function insertDateDividerIfNeeded(ymd) {
+    if (!chatBox || !ymd) return;
+    if (getLastDateInChat() === ymd) return;
+    const label = getSmartDateLabel(ymd);
+    const html = '<div class="chat-date-divider" data-date="' + ymd + '">' +
+        '<div class="chat-date-pill">' + label + '</div>' +
+        '</div>';
+    chatBox.insertAdjacentHTML('beforeend', html);
+}
+
 function appendMessage(msg) {
     if (!msg.id) return;
     if (renderedIds.has(msg.id) || renderedIds.has(msg.id.toString()) || renderedIds.has(parseInt(msg.id))) return;
@@ -1572,8 +1643,12 @@ function appendMessage(msg) {
         `;
     }
 
+    const msgYmd = getYmdFromIso(msg.created_at) || getYmdFromIso(new Date().toISOString());
+
+    insertDateDividerIfNeeded(msgYmd);
+
     const html = `
-        <div class="message-row ${isSent ? 'sent' : 'received'}" data-id="${msg.id}">
+        <div class="message-row ${isSent ? 'sent' : 'received'}" data-id="${msg.id}" data-date="${msgYmd}">
             <div class="message ${isSent ? 'sent' : 'received'} ${msg.isOptimistic ? 'sending' : ''}" onclick="handleMessageClick(event, this)">
                 ${replyHtml}
                 <div class="message-text">${msg.text}</div>
@@ -1606,6 +1681,7 @@ chatForm.addEventListener('submit', async (e) => {
     const optimisticMsg = {
         id: tempId, text: text, sender_id: currentUserId,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
+        created_at: new Date().toISOString(),
         isOptimistic: true,
         reply_to: parentId ? { id: parentId, text: parentSnippet, sender_name: parentName } : null
     };

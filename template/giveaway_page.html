@@ -680,6 +680,7 @@
 
     /* ── Live Reveal — In-page announce panel (always visible between prize + entry cards) ── */
     .announce-panel {
+        position: relative;
         max-height: 1000px;
         opacity: 1;
         transform: scale(1);
@@ -843,9 +844,7 @@
         gap: 8px;
         padding: 0 16px;
         text-align: center;
-        background: rgba(255, 255, 255, 0.78);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
+        background: rgb(247, 249, 251);
         transition: opacity 0.5s ease, transform 0.5s ease;
         pointer-events: none;
     }
@@ -882,41 +881,43 @@
         font-weight: 600;
         line-height: 1.4;
     }
-    .announce-idle-timer-block {
+    .announce-timer-floating {
+        position: absolute;
+        left: 50%;
+        top: 56%;
+        transform: translate(-50%, -50%);
+        z-index: 50;
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 2px;
+        gap: 6px;
+        padding: 16px 28px;
+        border-radius: 20px;
+        background: white;
+        box-shadow: 0 18px 40px rgba(0, 74, 198, 0.25), 0 0 0 1px rgba(0, 74, 198, 0.1);
+        pointer-events: none;
+        transition: opacity 0.5s ease, transform 0.5s ease;
     }
-    .announce-idle-timer-block .announce-idle-timer-display {
-        font-size: 36px;
+    .announce-timer-floating-label {
+        font-size: 10.5px;
+        color: #64748b;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+    }
+    .announce-timer-floating-display {
+        font-size: 32px;
         font-weight: 900;
         color: #004ac6;
-        letter-spacing: 0.03em;
+        letter-spacing: 0.02em;
         font-variant-numeric: tabular-nums;
         line-height: 1;
     }
-    .announce-idle-timer-block .announce-idle-timer-label {
-        font-size: 11px;
-        color: #64748b;
-        font-weight: 600;
-        letter-spacing: 0.02em;
-    }
-    .announce-idle-timer {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        margin-top: 10px;
-        padding: 6px 14px;
-        border-radius: 999px;
-        background: rgba(0, 74, 198, 0.08);
-        color: #004ac6;
-        font-size: 12px;
-        font-weight: 700;
-    }
-    .announce-idle-timer .material-symbols-outlined {
-        font-size: 16px;
-        font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 20;
+    .announce-panel.is-active .announce-timer-floating,
+    .announce-panel.is-finished .announce-timer-floating {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.92);
+        top: 56%;
     }
     .announce-panel.is-active .announce-slot-idle,
     .announce-panel.is-finished .announce-slot-idle {
@@ -1180,18 +1181,11 @@
                                 <div class="announce-chip is-edge">@campus_star</div>
                             </div>
                             <div class="announce-slot-idle" id="announceSlotIdle">
-                                <div class="announce-slot-idle-icon">
+                                <div class="announce-slot-idle-icon" id="announceSlotIdleIcon">
                                     <span class="material-symbols-outlined">hourglass_top</span>
                                 </div>
-                                {% if giveaway_state and giveaway_state.show_timer and giveaway_state.timer_end_time %}
-                                <div class="announce-idle-timer-block" id="announceIdleTimer">
-                                    <div class="announce-idle-timer-display" id="announceIdleTimerDisplay">0:00</div>
-                                    <div class="announce-idle-timer-label">Draw starts in</div>
-                                </div>
-                                {% else %}
                                 <div class="announce-slot-idle-title">Standby</div>
                                 <div class="announce-slot-idle-sub">Live draw hasn't started yet</div>
-                                {% endif %}
                             </div>
                         </div>
 
@@ -1213,6 +1207,12 @@
                         </a>
                     </div>
                 </div>
+                {% if giveaway_state and giveaway_state.show_timer and giveaway_state.timer_end_time %}
+                <div class="announce-timer-floating" id="announceIdleTimer">
+                    <div class="announce-timer-floating-label">Draw starts in</div>
+                    <div class="announce-timer-floating-display" id="announceIdleTimerDisplay">0:00:00:00</div>
+                </div>
+                {% endif %}
             </div>
 
             <!-- Prize cards -->
@@ -1653,11 +1653,13 @@
 
         function updateTimer() {
             var diff = endTime - new Date().getTime();
-            if (diff <= 0) { display.textContent = '0:00'; return; }
+            if (diff <= 0) { display.textContent = '0:00:00:00'; return; }
             var totalSec = Math.floor(diff / 1000);
-            var m = Math.floor(totalSec / 60);
+            var d = Math.floor(totalSec / 86400);
+            var h = Math.floor((totalSec % 86400) / 3600);
+            var m = Math.floor((totalSec % 3600) / 60);
             var s = totalSec % 60;
-            display.textContent = String(m) + ':' + String(s).padStart(2, '0');
+            display.textContent = d + ':' + String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
         }
         updateTimer();
         setInterval(updateTimer, 1000);

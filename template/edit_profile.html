@@ -930,26 +930,90 @@
     border-radius: 50%;
     animation: ep-spin 0.7s linear infinite;
   }
+  .ep-overlay.is-done .ep-spinner { display: none; }
+  .ep-overlay.is-done .ep-done-check { display: flex; }
   @keyframes ep-spin { to { transform: rotate(360deg); } }
-  .ep-overlay-text { font-size: 14px; font-weight: 600; color: #334155; }
-
-  .ep-toast {
+  .ep-overlay-text { font-size: 14px; font-weight: 600; color: #334155; text-align: center; min-height: 18px; }
+  .ep-done-check {
     display: none;
-    position: fixed;
-    top: calc(var(--ep-header) + env(safe-area-inset-top) + 8px);
-    left: 50%;
-    transform: translateX(-50%);
-    max-width: 90%;
-    padding: 10px 16px;
-    background: #fef2f2;
-    color: #b91c1c;
-    border: 1px solid #fecaca;
-    border-radius: 12px;
-    font-size: 13px;
-    font-weight: 600;
-    z-index: 4000;
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #fff;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 12px 30px rgba(16, 185, 129, 0.32);
+    animation: ep-done-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
+  .ep-done-check .material-symbols-outlined { font-size: 32px; font-variation-settings: 'FILL' 1; }
+  @keyframes ep-done-pop {
+    from { transform: scale(0.4); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .ep-loading-steps {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 260px;
+    max-width: 320px;
+  }
+  .ep-loading-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #94a3b8;
+    background: transparent;
+    transition: color 0.25s ease, background 0.25s ease;
+  }
+  .ep-loading-step .step-icon {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: #e2e8f0;
+    color: #94a3b8;
+    font-size: 13px;
+    transition: background 0.25s ease, color 0.25s ease;
+  }
+  .ep-loading-step .step-icon .material-symbols-outlined { font-size: 13px; }
+  .ep-loading-step.is-active {
+    color: #1e40af;
+    background: rgba(0, 74, 198, 0.08);
+  }
+  .ep-loading-step.is-active .step-icon {
+    background: #004ac6;
+    color: #fff;
+  }
+  .ep-loading-step.is-active .step-icon .ep-step-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #fff;
+    animation: ep-pulse 1s ease-in-out infinite;
+  }
+  @keyframes ep-pulse {
+    0%, 100% { opacity: 0.5; transform: scale(0.85); }
+    50% { opacity: 1; transform: scale(1.1); }
+  }
+  .ep-loading-step.is-done {
+    color: #047857;
+  }
+  .ep-loading-step.is-done .step-icon {
+    background: #10b981;
+    color: #fff;
+  }
+  .ep-loading-step.is-done .step-icon .material-symbols-outlined { font-variation-settings: 'FILL' 1; }
 
   .ep-hint { font-size: 12px; color: #64748b; line-height: 1.45; margin-bottom: 10px; }
 
@@ -1351,10 +1415,32 @@
   <input type="file" name="profile_pic_file" id="id_pfp_instant" accept="image/*">
 </form>
 
-<div id="pfp-face-status" class="ep-toast"></div>
 <div id="upload-overlay" class="ep-overlay">
   <div class="ep-spinner"></div>
+  <div class="ep-done-check"><span class="material-symbols-outlined">check</span></div>
   <p class="ep-overlay-text" id="upload-text">Uploading…</p>
+  <ul class="ep-loading-steps" id="upload-steps">
+    <li class="ep-loading-step" data-step="init">
+      <span class="step-icon"><span class="ep-step-dot"></span></span>
+      <span class="step-label">Initialising AI model</span>
+    </li>
+    <li class="ep-loading-step" data-step="load">
+      <span class="step-icon"><span class="ep-step-dot"></span></span>
+      <span class="step-label">Loading AI model</span>
+    </li>
+    <li class="ep-loading-step" data-step="analyse">
+      <span class="step-icon"><span class="ep-step-dot"></span></span>
+      <span class="step-label">Analysing the image for verification</span>
+    </li>
+    <li class="ep-loading-step" data-step="upload">
+      <span class="step-icon"><span class="ep-step-dot"></span></span>
+      <span class="step-label">Uploading</span>
+    </li>
+    <li class="ep-loading-step" data-step="done">
+      <span class="step-icon"><span class="ep-step-dot"></span></span>
+      <span class="step-label">Done</span>
+    </li>
+  </ul>
 </div>
 
 <script>
@@ -1448,12 +1534,87 @@
   }
 
   function showOverlay(text) {
-    document.getElementById('upload-text').textContent = text;
-    document.getElementById('upload-overlay').classList.add('is-show');
+    const overlay = document.getElementById('upload-overlay');
+    const textEl = document.getElementById('upload-text');
+    if (textEl) textEl.textContent = text;
+    if (overlay) {
+      overlay.classList.remove('is-done');
+      overlay.classList.add('is-show');
+    }
+    resetLoadingSteps();
   }
   window.hideOverlay = function() {
-    document.getElementById('upload-overlay').classList.remove('is-show');
+    const overlay = document.getElementById('upload-overlay');
+    if (overlay) {
+      overlay.classList.remove('is-show', 'is-done');
+    }
+    resetLoadingSteps();
   };
+
+  function resetLoadingSteps() {
+    const steps = document.querySelectorAll('#upload-steps .ep-loading-step');
+    steps.forEach(function(s) {
+      s.classList.remove('is-active', 'is-done');
+      const icon = s.querySelector('.step-icon');
+      if (icon) {
+        icon.innerHTML = '<span class="ep-step-dot"></span>';
+      }
+    });
+  }
+  function setLoadingStep(stepName) {
+    const steps = document.querySelectorAll('#upload-steps .ep-loading-step');
+    let foundActive = false;
+    steps.forEach(function(s) {
+      const key = s.getAttribute('data-step');
+      const icon = s.querySelector('.step-icon');
+      if (key === stepName) {
+        s.classList.add('is-active');
+        s.classList.remove('is-done');
+        if (icon) icon.innerHTML = '<span class="ep-step-dot"></span>';
+        foundActive = true;
+      } else if (!foundActive) {
+        // Earlier step — mark as done
+        s.classList.remove('is-active');
+        s.classList.add('is-done');
+        if (icon) icon.innerHTML = '<span class="material-symbols-outlined">check</span>';
+      } else {
+        // Later step — pending
+        s.classList.remove('is-active', 'is-done');
+        if (icon) icon.innerHTML = '<span class="ep-step-dot"></span>';
+      }
+    });
+  }
+  function markLoadingDone() {
+    const steps = document.querySelectorAll('#upload-steps .ep-loading-step');
+    steps.forEach(function(s) {
+      s.classList.remove('is-active');
+      s.classList.add('is-done');
+      const icon = s.querySelector('.step-icon');
+      if (icon) icon.innerHTML = '<span class="material-symbols-outlined">check</span>';
+    });
+  }
+
+  // Helper: show a step for at least `minMs` milliseconds so the user can read it
+  function setStepWithMinDuration(stepName, minMs, promise) {
+    setLoadingStep(stepName);
+    const textEl = document.getElementById('upload-text');
+    const labelMap = {
+      init: 'Initialising AI model…',
+      load: 'Loading AI model…',
+      analyse: 'Analysing the image for verification…',
+      upload: 'Uploading…',
+      done: 'Done'
+    };
+    if (textEl && labelMap[stepName]) textEl.textContent = labelMap[stepName];
+    const start = Date.now();
+    return Promise.all([
+      promise,
+      new Promise(function(res) { setTimeout(res, minMs); })
+    ]).then(function() {
+      const elapsed = Date.now() - start;
+      if (elapsed < minMs) return new Promise(function(res) { setTimeout(res, minMs - elapsed); });
+    });
+  }
 
   function compressImage(file, quality, maxWidth) {
     quality = quality || 0.75; maxWidth = maxWidth || 1080;
@@ -2021,7 +2182,6 @@
   /* ── PFP + face verify ── */
   const pfpInput = document.getElementById('id_pfp_instant');
   const pfpForm = document.getElementById('pfp-instant-form');
-  const faceToast = document.getElementById('pfp-face-status');
   const isAdminEdit = {{ is_admin_editing|yesno:"true,false" }};
 
   async function checkHumanPhoto(imageElement) {
@@ -2094,7 +2254,7 @@
     pfpInput.addEventListener('change', async function() {
       if (!this.files || !this.files[0]) return;
       const file = this.files[0];
-      showOverlay('Processing…');
+      showOverlay('Initialising AI model…');
 
       async function submitCompressed() {
         try {
@@ -2104,10 +2264,43 @@
         pfpForm.submit();
       }
 
-      if (isAdminEdit) { await submitCompressed(); return; }
+      if (isAdminEdit) {
+        // Admin edit: skip AI check, just compress + submit. Show upload/done steps.
+        try {
+          setLoadingStep('upload');
+          document.getElementById('upload-text').textContent = 'Uploading…';
+          await new Promise(function(res) { setTimeout(res, 500); });
+          setLoadingStep('done');
+          markLoadingDone();
+          document.getElementById('upload-text').textContent = 'Done';
+          document.getElementById('upload-overlay').classList.add('is-done');
+          await new Promise(function(res) { setTimeout(res, 600); });
+          await submitCompressed();
+        } catch (e) {
+          hideOverlay();
+          customAlert(e.message || 'Upload failed.', 'Error');
+          this.value = '';
+        }
+        return;
+      }
 
+      // ── Step 1: Initialising AI model (short, ensures user sees the message) ──
       try {
-        await loadHumanOnce();
+        await setStepWithMinDuration('init', 600, Promise.resolve());
+      } catch (e) {}
+
+      // ── Step 2: Loading AI model (may take a long time on first run) ──
+      try {
+        if (!humanModelsLoaded) {
+          setLoadingStep('load');
+          document.getElementById('upload-text').textContent = 'Loading AI model…';
+          await human.load();
+          await human.warmup();
+          humanModelsLoaded = true;
+        } else {
+          // Already loaded — show briefly so the user sees the step
+          await setStepWithMinDuration('load', 400, Promise.resolve());
+        }
       } catch (e) {
         hideOverlay();
         customAlert("Failed to load human detection modules: " + e.message, "Error");
@@ -2115,23 +2308,45 @@
         return;
       }
 
+      // ── Step 3: Analysing the image for verification ──
       try {
         const pfpImg = new Image();
         pfpImg.src = URL.createObjectURL(file);
         await new Promise((res, rej) => { pfpImg.onload = res; pfpImg.onerror = rej; });
 
-        const isHuman = await checkHumanPhoto(pfpImg);
-        if (isHuman) {
-          faceToast.style.display = 'none';
-          showOverlay('Updating photo…');
-          await submitCompressed();
-        } else {
+        const analysisPromise = checkHumanPhoto(pfpImg);
+        await setStepWithMinDuration('analyse', 700, analysisPromise);
+        const isHuman = await analysisPromise;
+
+        if (!isHuman) {
           hideOverlay();
-          faceToast.textContent = 'Screenshot or invalid photo detected';
-          faceToast.style.display = 'block';
+          if (typeof showGlobalToast === 'function') {
+            showGlobalToast('Screenshot or invalid photo detected', null);
+          }
           this.value = '';
           customAlert("Screenshots and downloaded images are not allowed. Please upload a real photo where a person (or body part) is clearly visible.", 'Invalid Photo');
+          return;
         }
+
+        // ── Step 4: Uploading ──
+        setLoadingStep('upload');
+        document.getElementById('upload-text').textContent = 'Uploading…';
+        // Brief pause so user reads the step
+        await new Promise(function(res) { setTimeout(res, 400); });
+
+        // ── Step 5: Done (shown briefly before page navigation) ──
+        setLoadingStep('done');
+        markLoadingDone();
+        document.getElementById('upload-text').textContent = 'Done';
+        document.getElementById('upload-overlay').classList.add('is-done');
+        await new Promise(function(res) { setTimeout(res, 700); });
+
+        // Submit the form (full page navigation)
+        try {
+          const c = await compressImage(file, 0.7, 800);
+          const dt = new DataTransfer(); dt.items.add(c); pfpInput.files = dt.files;
+        } catch (e) {}
+        pfpForm.submit();
       } catch (err) {
         hideOverlay();
         customAlert(err.message || 'Verification failed.', 'Error');

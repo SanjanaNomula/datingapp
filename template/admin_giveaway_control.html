@@ -379,6 +379,152 @@
     .entries-stat .text { font-size: 12.5px; color: #1e40af; font-weight: 700; }
     .entries-stat .text strong { color: #0f172a; font-size: 14px; display: block; }
 
+    /* ── Participants ── */
+    .participants-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        padding: 14px 16px;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 16px;
+        background: white;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 14px;
+        font-weight: 800;
+        color: #0f172a;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        box-sizing: border-box;
+    }
+    .participants-toggle:active { transform: scale(0.99); }
+    .participants-toggle.open { border-color: var(--primary, #004ac6); }
+    .participants-toggle .material-symbols-outlined {
+        font-size: 20px;
+        transition: transform 0.25s ease;
+    }
+    .participants-toggle.open .material-symbols-outlined {
+        transform: rotate(180deg);
+    }
+    .participants-body { display: none; padding-top: 14px; }
+    .participants-body.open { display: block; }
+    .participants-search {
+        width: 100%;
+        padding: 11px 14px 11px 38px;
+        border-radius: 12px;
+        border: 1.5px solid #e2e8f0;
+        outline: none;
+        margin-bottom: 12px;
+        box-sizing: border-box;
+        font-family: inherit;
+        font-size: 13.5px;
+        font-weight: 600;
+        color: #0f172a;
+        background: #f8fafc url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E") 12px 50% no-repeat;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .participants-search:focus {
+        border-color: var(--primary, #004ac6);
+        background-color: white;
+        box-shadow: 0 0 0 3px rgba(0, 74, 198, 0.12);
+    }
+    .participants-list {
+        max-height: 360px;
+        overflow-y: auto;
+        border: 1px solid #eef2f6;
+        border-radius: 12px;
+        background: white;
+    }
+    .participants-list::-webkit-scrollbar { width: 4px; }
+    .participants-list::-webkit-scrollbar-thumb { background: #d1d9e6; border-radius: 4px; }
+    .participant-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 11px 14px;
+        border-bottom: 1px solid #f1f5f9;
+        text-decoration: none;
+        color: inherit;
+        transition: background 0.15s ease;
+        cursor: pointer;
+    }
+    .participant-row:last-child { border-bottom: none; }
+    .participant-row:hover { background: #f8fafc; }
+    .participant-row:active { background: #f1f5f9; }
+    .participant-info { flex: 1; min-width: 0; }
+    .participant-name {
+        font-size: 13.5px;
+        font-weight: 800;
+        color: #0f172a;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .participant-name .no-name { color: #94a3b8; font-weight: 600; }
+    .participant-meta {
+        font-size: 11.5px;
+        color: #64748b;
+        font-weight: 600;
+        margin-top: 1px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+    .participant-meta .tag {
+        font-size: 10px;
+        padding: 2px 7px;
+        border-radius: 999px;
+        background: #eef3fb;
+        color: #496179;
+        flex-shrink: 0;
+    }
+    .participant-arrow {
+        color: #94a3b8;
+        flex-shrink: 0;
+    }
+    .participant-arrow .material-symbols-outlined { font-size: 18px; }
+    .participants-empty {
+        padding: 24px 16px;
+        text-align: center;
+        font-size: 13px;
+        color: #94a3b8;
+        font-weight: 600;
+    }
+    .participants-loading {
+        padding: 24px 16px;
+        text-align: center;
+        font-size: 13px;
+        color: #94a3b8;
+        font-weight: 600;
+    }
+    .participants-pagination {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 4px 0;
+        font-size: 12px;
+        color: #64748b;
+        font-weight: 600;
+    }
+    .participants-pagination button {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--primary, #004ac6);
+        font-weight: 800;
+        font-size: 12.5px;
+        font-family: inherit;
+        padding: 4px 10px;
+        border-radius: 8px;
+        transition: background 0.2s ease;
+    }
+    .participants-pagination button:hover { background: #eef3fb; }
+    .participants-pagination button:disabled { color: #cbd5e1; cursor: default; }
+    .participants-pagination button:disabled:hover { background: none; }
+
     /* ── Form inputs / modal ── */
     .form-input {
         width: 100%;
@@ -640,6 +786,28 @@
                 Reset All Data
             </button>
             {% endif %}
+        </div>
+
+        <!-- Participants -->
+        <div class="admin-gw-card">
+            <button type="button" class="participants-toggle" id="participantsToggle" onclick="toggleParticipants()">
+                <span>
+                    <span class="material-symbols-outlined" style="font-size:18px; vertical-align:middle; margin-right:6px; color:var(--primary);">group</span>
+                    Participants (<strong id="participantsTotal">{{ entry_count }}</strong>)
+                </span>
+                <span class="material-symbols-outlined">expand_more</span>
+            </button>
+            <div class="participants-body" id="participantsBody">
+                <input type="text" class="participants-search" id="participantsSearch" placeholder="Search by name, email, campus or IG…" autocomplete="off">
+                <div class="participants-list" id="participantsList">
+                    <div class="participants-loading">Open the section to load participants</div>
+                </div>
+                <div class="participants-pagination" id="participantsPagination" style="display:none">
+                    <button type="button" id="participantsPrev" onclick="loadParticipants(-1)">← Prev</button>
+                    <span id="participantsPageInfo"></span>
+                    <button type="button" id="participantsNext" onclick="loadParticipants(1)">Next →</button>
+                </div>
+            </div>
         </div>
     </div>
 </section>
@@ -950,15 +1118,111 @@
         var endTime = new Date(endTimeStr).getTime();
         function tick() {
             var diff = endTime - new Date().getTime();
-            if (diff <= 0) { el.textContent = '0:00'; return; }
+            if (diff <= 0) { el.textContent = '0:00:00:00'; return; }
             var totalSec = Math.floor(diff / 1000);
-            var m = Math.floor(totalSec / 60);
+            var d = Math.floor(totalSec / 86400);
+            var h = Math.floor((totalSec % 86400) / 3600);
+            var m = Math.floor((totalSec % 3600) / 60);
             var s = totalSec % 60;
-            el.textContent = String(m) + ':' + String(s).padStart(2, '0');
+            el.textContent = d + ':' + String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
         }
         tick();
         setInterval(tick, 1000);
     })();
+
+    // ── Participants ─────────────────────────────────────────
+    var participantsPage = 1;
+    var participantsSearchTimer = null;
+
+    window.toggleParticipants = function() {
+        var toggle = document.getElementById('participantsToggle');
+        var body = document.getElementById('participantsBody');
+        var isOpen = body.classList.contains('open');
+        if (isOpen) {
+            body.classList.remove('open');
+            toggle.classList.remove('open');
+        } else {
+            body.classList.add('open');
+            toggle.classList.add('open');
+            loadParticipants(0);
+        }
+    };
+
+    function loadParticipants(delta) {
+        participantsPage = Math.max(1, participantsPage + delta);
+        var list = document.getElementById('participantsList');
+        var pagination = document.getElementById('participantsPagination');
+        var prevBtn = document.getElementById('participantsPrev');
+        var nextBtn = document.getElementById('participantsNext');
+        var pageInfo = document.getElementById('participantsPageInfo');
+        var q = (document.getElementById('participantsSearch').value || '').trim();
+
+        list.innerHTML = '<div class="participants-loading">Loading…</div>';
+
+        var url = window.location.pathname + '?participants=1&page=' + participantsPage;
+        if (q) url += '&q=' + encodeURIComponent(q);
+
+        fetch(url)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data.entries || data.entries.length === 0) {
+                    list.innerHTML = '<div class="participants-empty">No participants found</div>';
+                    pagination.style.display = 'none';
+                    return;
+                }
+                var html = '';
+                for (var i = 0; i < data.entries.length; i++) {
+                    var e = data.entries[i];
+                    var nameHtml = e.name
+                        ? escapeHtml(e.name)
+                        : '<span class="no-name">—</span>';
+                    var campusHtml = e.campus
+                        ? '<span class="tag">' + escapeHtml(e.campus) + '</span>'
+                        : '';
+                    var igHtml = e.instagram_username
+                        ? '@' + escapeHtml(e.instagram_username)
+                        : '';
+                    html += '' +
+                        '<a href="/master/user/' + e.id + '/" class="participant-row">' +
+                            '<div class="participant-info">' +
+                                '<div class="participant-name">' + nameHtml + '</div>' +
+                                '<div class="participant-meta">' +
+                                    '<span>' + escapeHtml(e.email) + '</span>' +
+                                    campusHtml +
+                                    (igHtml ? '<span>' + igHtml + '</span>' : '') +
+                                '</div>' +
+                            '</div>' +
+                            '<div class="participant-arrow">' +
+                                '<span class="material-symbols-outlined">chevron_right</span>' +
+                            '</div>' +
+                        '</a>';
+                }
+                list.innerHTML = html;
+
+                if (data.pages > 1) {
+                    pagination.style.display = 'flex';
+                    prevBtn.disabled = !data.has_prev;
+                    nextBtn.disabled = !data.has_next;
+                    pageInfo.textContent = 'Page ' + data.page + ' of ' + data.pages;
+                } else {
+                    pagination.style.display = 'none';
+                }
+            })
+            .catch(function() {
+                list.innerHTML = '<div class="participants-empty">Failed to load. Try again.</div>';
+            });
+    }
+
+    var searchInput = document.getElementById('participantsSearch');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            clearTimeout(participantsSearchTimer);
+            participantsSearchTimer = setTimeout(function() {
+                participantsPage = 1;
+                loadParticipants(0);
+            }, 300);
+        });
+    }
 
     // ── Close modals on backdrop click ────────────────────────
     document.addEventListener('click', function(e) {
