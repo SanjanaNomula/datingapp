@@ -28,3 +28,4 @@ python manage.py makemigrations home
 python manage.py migrate
 ```
 If using Vercel, ensuring your `vercel.json` or build settings includes a migration command is recommended.
+Project setup
