@@ -188,14 +188,13 @@ STATICFILES_DIRS = [
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Django 5.2 uses STORAGES dict (STATICFILES_STORAGE is removed)
+# Using StaticFilesStorage to avoid ValueError crashes on Vercel
+# when the staticfiles manifest is missing or not deployed
 STORAGES = {
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
     },
 }
-
-# Prevent 500 errors when a manifest entry is missing on serverless cold starts
-WHITENOISE_MANIFEST_STRICT = False
 
 # Serve root-level files (favicon.ico, robots.txt) from project root
 WHITENOISE_ROOT = os.path.join(BASE_DIR, 'static_root')
