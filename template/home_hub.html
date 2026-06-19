@@ -738,6 +738,32 @@
         overflow: hidden;
     }
 
+    .voice-p-avatar-wrap {
+        position: relative;
+        flex-shrink: 0;
+    }
+
+    .vad-dot {
+        position: absolute;
+        bottom: -2px;
+        right: -2px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #94a3b8;
+        border: 2px solid #fff;
+        z-index: 2;
+    }
+
+    .vad-dot.speaking {
+        background: #22c55e;
+        box-shadow: 0 0 6px rgba(34,197,94,0.5);
+    }
+
+    .vad-dot.muted {
+        background: #ef4444;
+    }
+
     .voice-participant-avatar img {
         width: 100%;
         height: 100%;
@@ -1506,6 +1532,11 @@
         _removePart: function(roomId, userId) {
             var parts = this._getParts(roomId).filter(function(p){return p.id!==userId});
             this._setPartsRaw(roomId, parts);
+            // Clean up stale audio element & VAD analyser
+            var el = document.getElementById(userId+'-audio');
+            if (el) { try { el.pause(); el.srcObject = null; } catch(e){} el.remove(); }
+            if (this._remoteVans) { delete this._remoteVans[userId]; }
+            if (this._remoteVadArrs) { delete this._remoteVadArrs[userId]; }
         },
 
         _updatePart: function(roomId, userId, updates) {
@@ -1728,6 +1759,9 @@
             var self = this;
             try {
                 var ac = new (window.AudioContext || window.webkitAudioContext)();
+                self._vadCtx = ac;
+                self._remoteVans = {};
+                self._remoteVadArrs = {};
                 navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(function(stream) {
                     var src = ac.createMediaStreamSource(stream);
                     var an = ac.createAnalyser(); an.fftSize = 256;
@@ -1736,30 +1770,53 @@
                     self._vadArr = new Uint8Array(an.frequencyBinCount);
                     self.mic = stream;
                     self._vad = setInterval(function() {
-                        if (!self._van || !self._vadArr) return;
-                        self._van.getByteFrequencyData(self._vadArr);
-                        var sum=0; for(var i=0;i<self._vadArr.length;i++) sum+=self._vadArr[i];
-                        var sp = (sum/self._vadArr.length) > 15;
-                        var dot = document.getElementById('sdot_'+ME.id);
-                        var lbl = document.getElementById('slbl_'+ME.id);
-                        if (dot && lbl) {
-                            if (self.muted) { dot.className='dot muted'; lbl.textContent='Muted'; }
-                            else if (sp) { dot.className='dot speaking'; lbl.textContent='Speaking'; }
-                            else { dot.className='dot silent'; lbl.textContent='Silent'; }
-                        }
-                        var ava = document.getElementById('pava_'+ME.id);
-                        if (ava) { ava.classList.toggle('speaking', sp && !self.muted); }
-                        var pe = document.querySelector('.voice-participant[data-peer="'+ME.id+'"]');
-                        if (pe) { pe.classList.toggle('speaking', sp && !self.muted); }
+                        var parts = self.curId ? self._getParts(self.curId) : [];
+                        parts.forEach(function(p) {
+                            var isMe = p.id === ME.id;
+                            // Set up remote VAD for this peer if not yet done
+                            if (!isMe && !self._remoteVans[p.id]) {
+                                var audioEl = document.getElementById(p.id+'-audio');
+                                if (audioEl && audioEl.srcObject) {
+                                    try {
+                                        var rsrc = ac.createMediaStreamSource(audioEl.srcObject);
+                                        var ran = ac.createAnalyser(); ran.fftSize = 256;
+                                        rsrc.connect(ran);
+                                        self._remoteVans[p.id] = ran;
+                                        self._remoteVadArrs[p.id] = new Uint8Array(ran.frequencyBinCount);
+                                    } catch(e) {}
+                                }
+                            }
+                            var arr = isMe ? self._vadArr : self._remoteVadArrs[p.id];
+                            var anl = isMe ? self._van : self._remoteVans[p.id];
+                            if (!arr || !anl) return;
+                            anl.getByteFrequencyData(arr);
+                            var sum = 0; for (var i=0; i<arr.length; i++) sum+=arr[i];
+                            var speaking = (sum/arr.length) > 15;
+                            // Update dot on avatar
+                            var dot = document.getElementById('sdot_'+p.id);
+                            if (dot) {
+                                if (p.muted) { dot.className = 'vad-dot muted'; }
+                                else if (speaking) { dot.className = 'vad-dot speaking'; }
+                                else { dot.className = 'vad-dot silent'; }
+                            }
+                            // Update avatar green ring
+                            var ava = document.getElementById('pava_'+p.id);
+                            if (ava) { ava.classList.toggle('speaking', speaking && !p.muted); }
+                            // Update participant row highlight
+                            var pe = document.querySelector('.voice-participant[data-peer="'+p.id+'"]');
+                            if (pe) { pe.classList.toggle('speaking', speaking && !p.muted); }
+                        });
                     }, 200);
-                    LOG('vad', 'started');
+                    LOG('vad', 'started with remote detection');
                 }).catch(function(e){ LOG('vad mic err', e); });
             } catch(e) { LOG('vad err', e); }
         },
 
         _stopVAD: function() {
             if (this._vad) { clearInterval(this._vad); this._vad=null; }
+            if (this._vadCtx) { try { this._vadCtx.close(); } catch(e) {} this._vadCtx = null; }
             this._van = null; this._vadArr = null;
+            this._remoteVans = null; this._remoteVadArrs = null;
         },
 
         /* ── HEARTBEAT ── */
@@ -1868,10 +1925,10 @@
                 var me = p.id === ME.id;
                 var muteIcon = p.muted ? ' <span class="material-symbols-outlined" style="font-size:14px;color:#ef4444;vertical-align:middle;">mic_off</span>' : '';
                 html += '<div class="voice-participant" data-peer="'+p.id+'" onclick="VRS.toggleVol(this)">';
-                html += '<div class="voice-participant-avatar" id="pava_'+p.id+'">'+img+'<span'+(img?' style="display:none"':'')+'>'+init+'</span></div>';
+                html += '<div class="voice-p-avatar-wrap"><div class="voice-participant-avatar" id="pava_'+p.id+'">'+img+'<span'+(img?' style="display:none"':'')+'>'+init+'</span></div><span class="vad-dot silent" id="sdot_'+p.id+'"></span></div>';
                 html += '<div class="voice-participant-info">';
                 html += '<div class="voice-participant-name">'+(p.name||'User')+muteIcon+(me?' <span style="font-size:11px;color:#94a3b8;font-weight:600;">(you)</span>':'')+'</div>';
-                html += '<div class="voice-participant-status"><span class="dot '+(p.muted?'muted':'silent')+'" id="sdot_'+p.id+'"></span><span id="slbl_'+p.id+'">'+(p.muted?'Muted':'Silent')+'</span></div>';
+                html += '<div class="voice-participant-status" id="sstat_'+p.id+'">&nbsp;</div>';
                 html += '</div>';
                 html += '<div class="voice-participant-vol"><span class="vol-icon material-symbols-outlined">volume_up</span></div>';
                 html += '</div>';
