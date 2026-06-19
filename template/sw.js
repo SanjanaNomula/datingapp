@@ -1,7 +1,7 @@
-const CACHE_NAME = 'srm-match-v2.0'; // v2: cleaned icons, removed root-level icon paths
+const CACHE_NAME = 'srm-match-v2.1';
 const STATIC_ASSETS = [
   '/manifest.json',
-  '/static/favicon.png'
+  'https://raw.githubusercontent.com/Arunmohankml/datingapp/master/static/favicon.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -92,8 +92,8 @@ self.addEventListener('push', function(event) {
 
     const options = {
         body: body,
-        icon: '/static/favicon.png',
-        badge: '/static/favicon.png',
+        icon: 'https://raw.githubusercontent.com/Arunmohankml/datingapp/master/static/favicon.png',
+        badge: 'https://raw.githubusercontent.com/Arunmohankml/datingapp/master/static/favicon.png',
         vibrate: [100, 50, 100],
         data: { url: url }
     };
