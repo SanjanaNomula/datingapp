@@ -1473,6 +1473,7 @@
 
                     self._pch.bind('user_left', function(d) {
                         LOG('user_left', d.user_id);
+                        if (d.user_id !== ME.id) { self._playSound('/static/leave.mp3'); }
                         self._removePart(roomId, d.user_id);
                         self._updateRoomAvatar(roomId);
                         if (self._getParts(roomId).length === 0 && self.curId === roomId) {
