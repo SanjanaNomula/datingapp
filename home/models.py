@@ -736,6 +736,7 @@ class VoiceParticipant(models.Model):
     room = models.ForeignKey(VoiceRoom, on_delete=models.CASCADE, related_name='participants')
     joined_at = models.DateTimeField(auto_now_add=True)
     is_muted = models.BooleanField(default=False)
+    last_heartbeat = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         unique_together = ('user', 'room')

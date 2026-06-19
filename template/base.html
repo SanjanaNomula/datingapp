@@ -593,7 +593,8 @@
         }
 
         if (PUSHER_KEY && USER_ID) {
-            const pusher = new Pusher(PUSHER_KEY, { cluster: PUSHER_CLUSTER });
+            window.pusher = new Pusher(PUSHER_KEY, { cluster: PUSHER_CLUSTER });
+            const pusher = window.pusher;
             const userChannel = pusher.subscribe(`chat_${USER_ID}`);
             
             userChannel.bind('new_message', (data) => {
