@@ -5,6 +5,7 @@
     { "src": "index.py", "use": "@vercel/python" }
   ],
   "routes": [
+    { "src": "/firebase-messaging-sw.js", "dest": "/firebase-messaging-sw.js" },
     { "src": "/(.*)", "dest": "index.py" }
   ]
 }
