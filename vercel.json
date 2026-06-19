@@ -17,6 +17,18 @@
       "dest": "/static/favicon.png"
     },
     {
+      "src": "/icon-192x192.png",
+      "dest": "/static/favicon.png"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "dest": "/static/favicon.png"
+    },
+    {
+      "src": "/icon-maskable.png",
+      "dest": "/static/favicon.png"
+    },
+    {
       "src": "/(.*)",
       "dest": "index.py"
     }
