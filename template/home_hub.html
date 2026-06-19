@@ -1454,6 +1454,7 @@
 
                     self._pch.bind('user_joined', function(d) {
                         var uid = d.id || d.user_id;
+                        if (uid !== ME.id) { self._playSound('/static/join.mp3'); }
                         LOG('user_joined', d.name+'('+uid+')');
                         self._upsertPart(roomId, uid, {
                             id: uid, name: d.name, pic: d.profile_pic||'', muted: d.is_muted||false
@@ -1656,6 +1657,7 @@
         /* ── MUTE ── */
         toggleMic: function() {
             this.muted = !this.muted;
+            this._playSound(this.muted ? '/static/mute.mp3' : '/static/unmute.mp3');
             if (this.pwOk && window.PW.setMyVolume) {
                 try { window.PW.setMyVolume(this.muted ? 0 : 1); } catch(e) {}
             }
@@ -1663,6 +1665,15 @@
             this._post('/api/voice/mute/', { is_muted: this.muted }).catch(function(){});
             this._renderMicBtn();
             LOG('mute', this.muted ? 'muted' : 'unmuted');
+        },
+
+        /* ── SOUND ── */
+        _playSound: function(url) {
+            try {
+                var a = new Audio(url);
+                a.volume = 0.4;
+                a.play().catch(function(){});
+            } catch(e) {}
         },
 
         /* ── VOLUME ── */
