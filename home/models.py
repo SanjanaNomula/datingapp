@@ -746,3 +746,112 @@ class VoiceParticipant(models.Model):
 
     def __str__(self):
         return f"{self.user.username} in {self.room.name}"
+
+
+class BugReport(models.Model):
+    BUG_CATEGORIES = [
+        ('login', 'Login/Auth'), ('profile', 'Profile'), ('matching', 'Matching'),
+        ('chat', 'Chat'), ('voice', 'Voice Room'), ('roomfinder', 'Room Finder'),
+        ('confessions', 'Confessions'), ('other', 'Other'),
+    ]
+    STATUS_CHOICES = [
+        ('pending', 'Pending'), ('reviewing', 'Reviewing'),
+        ('fixed', 'Fixed'), ('closed', 'Closed'),
+    ]
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bug_reports')
+    category = models.CharField(max_length=20, choices=BUG_CATEGORIES)
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    screenshot = models.URLField(blank=True, null=True)
+    device_info = models.JSONField(blank=True, null=True)
+    page_url = models.URLField(blank=True, max_length=500)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    admin_reply = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"[{self.get_category_display()}] {self.title[:60]}"
+
+
+class FeatureSuggestion(models.Model):
+    SUGGESTION_CATEGORIES = [
+        ('matching', 'Matching'), ('social', 'Social'), ('chat', 'Chat'),
+        ('profile', 'Profile'), ('other', 'Other'),
+    ]
+    PRIORITY_CHOICES = [('low', 'Low'), ('medium', 'Medium'), ('high', 'High')]
+    STATUS_CHOICES = [
+        ('pending', 'Pending'), ('under_review', 'Under Review'),
+        ('accepted', 'Accepted'), ('rejected', 'Rejected'),
+    ]
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='suggestions')
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    category = models.CharField(max_length=20, choices=SUGGESTION_CATEGORIES)
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    votes = models.IntegerField(default=0)
+    admin_reply = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-votes', '-created_at']
+
+    def __str__(self):
+        return f"[{self.get_category_display()}] {self.title[:60]}"
+
+
+class SupportTicket(models.Model):
+    TICKET_CATEGORIES = [
+        ('account', 'Account Issue'), ('verification', 'Verification Issue'),
+        ('report_user', 'Report User'), ('technical', 'Technical Issue'),
+        ('other', 'Other'),
+    ]
+    STATUS_CHOICES = [
+        ('open', 'Open'), ('in_progress', 'In Progress'),
+        ('closed', 'Closed'),
+    ]
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='support_tickets')
+    subject = models.CharField(max_length=200)
+    category = models.CharField(max_length=20, choices=TICKET_CATEGORIES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
+    unread = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        return f"[{self.get_category_display()}] {self.subject[:60]}"
+
+
+class TicketMessage(models.Model):
+    ticket = models.ForeignKey(SupportTicket, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE)
+    message = models.TextField()
+    is_admin = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Msg by {self.sender.username} on {self.ticket.subject[:40]}"
+
+
+class FeedbackNotification(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='feedback_notifications')
+    message = models.CharField(max_length=300)
+    link = models.CharField(max_length=200, blank=True)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Notif for {self.user.username}: {self.message[:50]}"

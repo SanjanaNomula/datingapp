@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Suggestion #{{ s.id }} | SRM Match{% endblock %}
+
+{% block head %}
+<style>
+html, body { height:100dvh; overflow:hidden; position:fixed; width:100%; background:#f7f9fb; padding:0!important; margin:0!important; }
+.container { max-width:100%!important; width:100%!important; padding:0!important; margin:0!important; height:100%; box-sizing:border-box; background:transparent!important; border:none!important; box-shadow:none!important; }
+.adm-wrapper { display:flex; flex-direction:column; position:fixed; top:0; left:0; right:0; bottom:0; width:100%; max-width:900px; margin:0 auto; background:linear-gradient(180deg,#fbfcff 0%,#f7f9fb 58%,#eff4fb 100%); z-index:10; }
+.adm-header { flex-shrink:0; padding:calc(10px + env(safe-area-inset-top)) 20px 16px; background:rgba(247,249,251,0.85); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border-bottom:1px solid rgba(0,74,198,0.08); display:flex; align-items:center; gap:12px; z-index:20; }
+.adm-header-main { display:flex; align-items:center; gap:12px; flex:1; }
+.adm-back-btn { width:44px; height:44px; border-radius:16px; background:#fff; display:flex; align-items:center; justify-content:center; text-decoration:none; color:#2563eb; border:1px solid rgba(0,74,198,0.08); box-shadow:0 10px 24px rgba(15,23,42,0.06); transition:0.2s; cursor:pointer; }
+.adm-back-btn:active { transform:scale(0.94); }
+.adm-header h2 { margin:0; font-size:19px; font-weight:800; color:#0f172a; letter-spacing:-0.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.adm-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:20px 16px 110px; }
+.adm-card { background:#fff; border:1px solid rgba(0,74,198,0.08); border-radius:20px; padding:20px; box-shadow:0 10px 30px rgba(15,23,42,0.04); margin-bottom:16px; }
+.adm-card h3 { margin:0 0 12px; font-size:15px; font-weight:700; color:#0f172a; }
+.adm-badge { font-size:10px; font-weight:800; padding:3px 8px; border-radius:8px; text-transform:uppercase; letter-spacing:0.3px; display:inline-block; }
+.adm-status-pending { background:#fef3c7; color:#d97706; }
+.adm-status-under_review { background:#dbeafe; color:#2563eb; }
+.adm-status-accepted { background:#d1fae5; color:#16a34a; }
+.adm-status-rejected { background:#fee2e2; color:#ef4444; }
+.adm-label { font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
+.adm-value { font-size:14px; color:#0f172a; margin-bottom:12px; font-weight:600; }
+.adm-select, .adm-textarea { width:100%; padding:10px 14px; border:1px solid #e2e8f0; border-radius:12px; font-size:14px; font-family:inherit; outline:none; box-sizing:border-box; }
+.adm-select:focus, .adm-textarea:focus { border-color:#2563eb; }
+.adm-textarea { min-height:100px; resize:vertical; }
+.adm-btn { padding:10px 20px; border:none; border-radius:12px; font-weight:700; font-size:13px; cursor:pointer; font-family:inherit; transition:0.2s; }
+.adm-btn:active { transform:scale(0.97); }
+.adm-btn-primary { background:#2563eb; color:#fff; }
+.adm-btn-primary:hover { background:#1d4ed8; }
+.adm-success { padding:12px; background:#d1fae5; color:#16a34a; border-radius:12px; font-weight:700; text-align:center; display:none; }
+</style>
+{% endblock %}
+
+{% block body %}
+<section class="adm-wrapper">
+    <div class="adm-header">
+        <div class="adm-header-main">
+            <a href="{% url 'admin_feedback' %}?tab=suggestions" class="adm-back-btn"><span class="material-symbols-outlined">arrow_back</span></a>
+            <h2>Suggestion #{{ s.id }}</h2>
+        </div>
+        <span class="adm-badge adm-status-{{ s.status }}">{{ s.get_status_display }}</span>
+    </div>
+
+    <div class="adm-body">
+        <div class="adm-card">
+            <h3>Suggestion Details</h3>
+            <div class="adm-label">User</div>
+            <div class="adm-value">{{ s.user.username }} ({{ s.user.email }})</div>
+            <div class="adm-label">Category</div>
+            <div class="adm-value">{{ s.get_category_display }}</div>
+            <div class="adm-label">Priority</div>
+            <div class="adm-value">{{ s.get_priority_display }}</div>
+            <div class="adm-label">Votes</div>
+            <div class="adm-value">{{ s.votes }}</div>
+            <div class="adm-label">Title</div>
+            <div class="adm-value">{{ s.title }}</div>
+            <div class="adm-label">Description</div>
+            <div class="adm-value" style="white-space:pre-wrap;">{{ s.description }}</div>
+            <div class="adm-label">Created</div>
+            <div class="adm-value">{{ s.created_at|date:"M d, Y H:i" }}</div>
+        </div>
+
+        <div class="adm-card">
+            <h3>Admin Actions</h3>
+            <div class="adm-label">Change Status</div>
+            <select class="adm-select" id="sugStatus" style="margin-bottom:12px;">
+                <option value="pending" {% if s.status == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="under_review" {% if s.status == 'under_review' %}selected{% endif %}>Under Review</option>
+                <option value="accepted" {% if s.status == 'accepted' %}selected{% endif %}>Accepted</option>
+                <option value="rejected" {% if s.status == 'rejected' %}selected{% endif %}>Rejected</option>
+            </select>
+            <div class="adm-label">Admin Reply</div>
+            <textarea class="adm-textarea" id="sugReply" placeholder="Reply to the user...">{{ s.admin_reply }}</textarea>
+            <div id="sugSuccess" class="adm-success" style="margin-top:12px;">Updated successfully</div>
+            <button class="adm-btn adm-btn-primary" style="margin-top:12px;" onclick="updateSuggestion()">Update Suggestion</button>
+        </div>
+    </div>
+</section>
+
+<script>
+async function updateSuggestion() {
+    const res = await fetch(window.location.href, {
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-CSRFToken':'{{ csrf_token }}'},
+        body: JSON.stringify({
+            status: document.getElementById('sugStatus').value,
+            admin_reply: document.getElementById('sugReply').value,
+        })
+    });
+    const d = await res.json();
+    if (d.success) {
+        document.getElementById('sugSuccess').style.display = 'block';
+        setTimeout(() => document.getElementById('sugSuccess').style.display = 'none', 3000);
+    }
+}
+</script>
+{% endblock %}

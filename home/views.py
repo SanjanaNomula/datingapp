@@ -90,7 +90,7 @@ import base64
 import math
 from django.utils import timezone
 
-from .models import Profile, Question, Option, UserAnswer, MatchRequest, Message, ProfileImage, WallStroke, WallImage, Confession, ConfessionComment, ConfessionLike, ConfessionReport, UserReport, Spark, BlockedUser, Announcement, FavoriteMovie, FavoriteSong, FCMToken, BannedIdentifier, Conversation, RoomRequest, StaffMember, VoiceRoom, VoiceParticipant
+from .models import Profile, Question, Option, UserAnswer, MatchRequest, Message, ProfileImage, WallStroke, WallImage, Confession, ConfessionComment, ConfessionLike, ConfessionReport, UserReport, Spark, BlockedUser, Announcement, FavoriteMovie, FavoriteSong, FCMToken, BannedIdentifier, Conversation, RoomRequest, StaffMember, VoiceRoom, VoiceParticipant, BugReport, FeatureSuggestion, SupportTicket, TicketMessage, FeedbackNotification
 from .forms import ProfileForm, ProfileEditForm, ProfileImageForm, ProfileInitForm
 from .supabase_utils import delete_from_supabase_by_url
 from .cloudinary_utils import upload_to_cloudinary, upload_base64_to_cloudinary
@@ -449,9 +449,9 @@ def match_feed(request):
     answered_ids = list(UserAnswer.objects.filter(user=user).values_list("question_id", flat=True))
     ans_count = len(answered_ids)
 
-    # ── 10-question round break ──
-    # Round number = how many complete 10-question rounds the user has finished
-    current_round = ans_count // 10  # 10→1, 20→2, 30→3 ...
+    # ── Quiz round break (6 for girls, 10 for guys) ──
+    round_size = quiz_round_size(user)
+    current_round = ans_count // round_size
 
     if 'rounds_shown' not in request.session:
         request.session['rounds_shown'] = current_round
@@ -493,7 +493,8 @@ def match_feed(request):
             "all_done": True, 
             "progress": 100,
             "matches": [],
-            "profile": profile
+            "profile": profile,
+            "quiz_round_size": round_size,
         })
 
     question = Question.objects.exclude(id__in=answered_ids).first()
@@ -570,14 +571,15 @@ def match_feed(request):
             "progress": 100,
             "matches": matches_list[:20],  # Show top 20
             "sparked_ids": sparked_ids,
-            "profile": profile
+            "profile": profile,
+            "quiz_round_size": round_size,
         })
 
     total_q_db = Question.objects.count()
     progress = int((ans_count / total_q_db) * 100) if total_q_db > 0 else 0
     sparked_ids = list(Spark.objects.filter(sender=user).values_list('receiver_id', flat=True))
 
-    return render(request, "home.html", {"question": question, "progress": progress, "sparked_ids": sparked_ids})
+    return render(request, "home.html", {"question": question, "progress": progress, "sparked_ids": sparked_ids, "quiz_round_size": round_size})
 
 
 import math
@@ -2118,9 +2120,10 @@ def answer_question(request, question_id):
 
 @login_required
 def get_quiz_batch(request):
-    """Returns 10 unanswered questions for the Fast Fire quiz."""
+    """Returns unanswered questions for the Fast Fire quiz (6 for girls, 10 for guys)."""
     answered_ids = UserAnswer.objects.filter(user=request.user).values_list('question_id', flat=True)
-    questions = Question.objects.exclude(id__in=answered_ids)[:10]
+    limit = quiz_round_size(request.user)
+    questions = Question.objects.exclude(id__in=answered_ids)[:limit]
     
     data = []
     for q in questions:
@@ -2158,7 +2161,8 @@ def save_quiz_batch(request):
             
             # Reset rounds_shown to trigger 'check_match' redirect on next home load
             ans_count = UserAnswer.objects.filter(user=request.user).count()
-            request.session['rounds_shown'] = (ans_count // 10) - 1
+            size = quiz_round_size(request.user)
+            request.session['rounds_shown'] = (ans_count // size) - 1
             
             return JsonResponse({'success': True})
         except Exception as e:
@@ -2177,6 +2181,12 @@ def is_staff_check(user):
     if is_admin_check(user):
         return True
     return StaffMember.objects.filter(email=user.email).exists()
+
+def quiz_round_size(user):
+    profile = getattr(user, 'profile', None)
+    if profile and profile.gender == 'female':
+        return 6
+    return 10
 
 @login_required
 def admin_giveaway_control(request):
@@ -4138,3 +4148,258 @@ def voice_js(request):
             return HttpResponse(f.read(), content_type='application/javascript')
     except FileNotFoundError:
         return HttpResponse('/* voice.js not found */', content_type='application/javascript', status=404)
+
+
+# ═══════════════════════════════════════════════
+#  FEEDBACK SYSTEM
+# ═══════════════════════════════════════════════
+
+@login_required
+def feedback_home(request):
+    profile = getattr(request.user, 'profile', None)
+    recent_bugs = BugReport.objects.filter(user=request.user)[:5]
+    recent_suggestions = FeatureSuggestion.objects.filter(user=request.user)[:5]
+    open_tickets = SupportTicket.objects.filter(user=request.user).exclude(status='closed')[:5]
+    return render(request, 'feedback.html', {
+        'profile': profile,
+        'recent_bugs': recent_bugs,
+        'recent_suggestions': recent_suggestions,
+        'open_tickets': open_tickets,
+    })
+
+
+@login_required
+def submit_bug(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'})
+    try:
+        data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+        screenshot_url = ''
+        if 'screenshot' in request.FILES:
+            from .cloudinary_utils import upload_to_cloudinary
+            screenshot_url = upload_to_cloudinary(request.FILES['screenshot'], folder='srm_match/bug_reports') or ''
+        bug = BugReport.objects.create(
+            user=request.user,
+            category=data.get('category', 'other'),
+            title=data.get('title', ''),
+            description=data.get('description', ''),
+            screenshot=screenshot_url,
+            device_info={'browser': data.get('browser',''), 'device': data.get('device','')},
+            page_url=data.get('page_url', ''),
+        )
+        return JsonResponse({'success': True, 'id': bug.id, 'message': 'Bug submitted successfully'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def submit_suggestion(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'})
+    try:
+        data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+        s = FeatureSuggestion.objects.create(
+            user=request.user,
+            title=data.get('title', ''),
+            description=data.get('description', ''),
+            category=data.get('category', 'other'),
+            priority=data.get('priority', 'medium'),
+        )
+        return JsonResponse({'success': True, 'id': s.id, 'message': 'Suggestion submitted successfully'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def submit_ticket(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'})
+    try:
+        data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+        ticket = SupportTicket.objects.create(
+            user=request.user,
+            subject=data.get('subject', ''),
+            category=data.get('category', 'other'),
+        )
+        TicketMessage.objects.create(
+            ticket=ticket,
+            sender=request.user,
+            message=data.get('message', ''),
+            is_admin=False,
+        )
+        return JsonResponse({'success': True, 'id': ticket.id, 'message': 'Ticket submitted successfully'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def feedback_history(request):
+    page_num = request.GET.get('page', 1)
+    bugs = BugReport.objects.filter(user=request.user).values('id', 'title', 'description', 'status', 'category', 'created_at', 'admin_reply')
+    for b in bugs:
+        b['type'] = 'bug'
+    suggs = FeatureSuggestion.objects.filter(user=request.user).values('id', 'title', 'description', 'status', 'category', 'created_at', 'admin_reply')
+    for s in suggs:
+        s['type'] = 'suggestion'
+    tickets = SupportTicket.objects.filter(user=request.user).values('id', 'subject', 'status', 'category', 'created_at', 'unread')
+    for t in tickets:
+        t['type'] = 'ticket'
+        t['title'] = t.pop('subject')
+    combined = sorted(list(bugs) + list(suggs) + list(tickets), key=lambda x: x['created_at'], reverse=True)
+    paginator = Paginator(combined, 20)
+    page_obj = paginator.get_page(page_num)
+    return render(request, 'feedback_history.html', {
+        'page_obj': page_obj,
+        'profile': getattr(request.user, 'profile', None),
+    })
+
+
+@login_required
+def ticket_detail(request, id):
+    ticket = get_object_or_404(SupportTicket, id=id, user=request.user)
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+            if 'status' in data:
+                ticket.status = data['status']
+                ticket.save(update_fields=['status', 'updated_at'])
+                return JsonResponse({'success': True})
+            msg = data.get('message', '').strip()
+            if msg:
+                new_msg = TicketMessage.objects.create(ticket=ticket, sender=request.user, message=msg, is_admin=False)
+                return JsonResponse({'success': True, 'msg_id': new_msg.id})
+            return JsonResponse({'success': False, 'error': 'Message is empty'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    if request.GET.get('since'):
+        since_id = int(request.GET.get('since'))
+        new_msgs = ticket.messages.filter(id__gt=since_id).values('id', 'message', 'is_admin', 'sender__username', 'created_at')
+        return JsonResponse({'messages': list(new_msgs)})
+    ticket.unread = 0
+    ticket.save(update_fields=['unread'])
+    ticket_msgs = ticket.messages.all()
+    return render(request, 'feedback_ticket_detail.html', {
+        'ticket': ticket,
+        'ticket_msgs': ticket_msgs,
+        'profile': getattr(request.user, 'profile', None),
+    })
+
+
+# ─── ADMIN FEEDBACK VIEWS ───
+
+@login_required
+def admin_feedback(request):
+    if not is_staff_check(request.user):
+        return HttpResponse("Not authorized", status=403)
+    tab = request.GET.get('tab', 'bugs')
+    is_admin = is_admin_check(request.user)
+
+    if tab == 'bugs':
+        items = BugReport.objects.all()
+        paginator = Paginator(items, 20)
+        page_obj = paginator.get_page(request.GET.get('page', 1))
+        template_data = {'tab': 'bugs', 'page_obj': page_obj}
+    elif tab == 'suggestions':
+        sort = request.GET.get('sort', '-votes')
+        if sort not in ('-votes', 'created_at', '-created_at', 'priority', '-priority'):
+            sort = '-votes'
+        items = FeatureSuggestion.objects.all().order_by(sort)
+        paginator = Paginator(items, 20)
+        page_obj = paginator.get_page(request.GET.get('page', 1))
+        template_data = {'tab': 'suggestions', 'page_obj': page_obj, 'current_sort': sort}
+    else:
+        items = SupportTicket.objects.all()
+        paginator = Paginator(items, 20)
+        page_obj = paginator.get_page(request.GET.get('page', 1))
+        template_data = {'tab': 'tickets', 'page_obj': page_obj}
+
+    template_data['is_admin'] = is_admin
+    template_data['is_staff'] = True
+    return render(request, 'admin_feedback.html', template_data)
+
+
+@login_required
+def admin_bug_detail(request, id):
+    if not is_staff_check(request.user):
+        return HttpResponse("Not authorized", status=403)
+    bug = get_object_or_404(BugReport, id=id)
+    is_admin = is_admin_check(request.user)
+
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+            if 'status' in data:
+                bug.status = data['status']
+            if 'admin_reply' in data:
+                bug.admin_reply = data['admin_reply']
+            bug.save(update_fields=['status', 'admin_reply', 'updated_at'] if 'admin_reply' in data else ['status', 'updated_at'])
+            _notify_user(bug.user, f'Your bug report "{bug.title[:60]}" updated to {bug.get_status_display()}',
+                         '/feedback/')
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+
+    return render(request, 'admin_bug_detail.html', {'bug': bug, 'is_admin': is_admin, 'is_staff': True})
+
+
+@login_required
+def admin_suggestion_detail(request, id):
+    if not is_staff_check(request.user):
+        return HttpResponse("Not authorized", status=403)
+    s = get_object_or_404(FeatureSuggestion, id=id)
+    is_admin = is_admin_check(request.user)
+
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+            if 'status' in data:
+                s.status = data['status']
+            if 'admin_reply' in data:
+                s.admin_reply = data['admin_reply']
+            s.save(update_fields=['status', 'admin_reply'] if 'admin_reply' in data else ['status'])
+            _notify_user(s.user, f'Your suggestion "{s.title[:60]}" updated to {s.get_status_display()}',
+                         '/feedback/')
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+
+    return render(request, 'admin_suggestion_detail.html', {'s': s, 'is_admin': is_admin, 'is_staff': True})
+
+
+@login_required
+def admin_ticket_detail(request, id):
+    if not is_staff_check(request.user):
+        return HttpResponse("Not authorized", status=403)
+    ticket = get_object_or_404(SupportTicket, id=id)
+    is_admin = is_admin_check(request.user)
+
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+            if 'message' in data and data['message'].strip():
+                new_msg = TicketMessage.objects.create(ticket=ticket, sender=request.user, message=data['message'], is_admin=True)
+                ticket.status = 'in_progress'
+                ticket.unread += 1
+                ticket.save(update_fields=['status', 'unread', 'updated_at'])
+                return JsonResponse({'success': True, 'msg_id': new_msg.id})
+            if 'status' in data:
+                ticket.status = data['status']
+                ticket.save(update_fields=['status', 'updated_at'])
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+
+    if request.GET.get('since'):
+        since_id = int(request.GET.get('since'))
+        new_msgs = ticket.messages.filter(id__gt=since_id).values('id', 'message', 'is_admin', 'sender__username', 'created_at')
+        return JsonResponse({'messages': list(new_msgs)})
+
+    ticket_msgs = ticket.messages.all()
+    return render(request, 'admin_ticket_detail.html', {
+        'ticket': ticket, 'ticket_msgs': ticket_msgs,
+        'is_admin': is_admin, 'is_staff': True,
+    })
+
+
+def _notify_user(user, message, link=''):
+    FeedbackNotification.objects.create(user=user, message=message, link=link)
