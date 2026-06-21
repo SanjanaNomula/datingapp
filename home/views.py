@@ -90,7 +90,7 @@ import base64
 import math
 from django.utils import timezone
 
-from .models import Profile, Question, Option, UserAnswer, MatchRequest, Message, ProfileImage, WallStroke, WallImage, Confession, ConfessionComment, ConfessionLike, ConfessionReport, UserReport, Spark, BlockedUser, Announcement, FavoriteMovie, FavoriteSong, FCMToken, BannedIdentifier, Conversation, RoomRequest, StaffMember, VoiceRoom, VoiceParticipant, BugReport, FeatureSuggestion, SupportTicket, TicketMessage, FeedbackNotification
+from .models import Profile, Question, Option, UserAnswer, MatchRequest, Message, ProfileImage, WallStroke, WallImage, Confession, ConfessionComment, ConfessionLike, ConfessionReport, UserReport, Spark, BlockedUser, Announcement, FavoriteMovie, FavoriteSong, FCMToken, BannedIdentifier, Conversation, RoomRequest, StaffMember, VoiceRoom, VoiceParticipant, BugReport, FeatureSuggestion, SupportTicket, TicketMessage, FeedbackNotification, Advertisement, CampusSpotlight
 from .forms import ProfileForm, ProfileEditForm, ProfileImageForm, ProfileInitForm
 from .supabase_utils import delete_from_supabase_by_url
 from .cloudinary_utils import upload_to_cloudinary, upload_base64_to_cloudinary
@@ -258,7 +258,7 @@ def home_hub(request):
     if not profile.is_face_verified and not request.session.get('skipped_verification'):
         return redirect('verify')
 
-    from .models import Confession, Announcement, GiveawayEntry, GiveawayState
+    from .models import Confession, Announcement, GiveawayEntry, GiveawayState, Advertisement, CampusSpotlight
     latest_confession = Confession.objects.filter(moderation_status='approved', is_flagged=False).order_by('-created_at').first()
     latest_update = Announcement.objects.order_by('-created_at').first()
     total_users = User.objects.count() + 50
@@ -282,6 +282,9 @@ def home_hub(request):
     except GiveawayState.DoesNotExist:
         pass
     
+    ads = Advertisement.objects.filter(is_active=True)[:10]
+    spotlights = CampusSpotlight.objects.filter(is_active=True)[:15]
+    
     return render(request, "home_hub.html", {
         "profile": profile,
         "latest_confession": latest_confession,
@@ -296,6 +299,8 @@ def home_hub(request):
         "giveaway_count": display_giveaway_count,
         "show_giveaway": show_giveaway,
         "giveaway_state": giveaway_state,
+        "ads": ads,
+        "spotlights": spotlights,
     })
 
 
@@ -4399,6 +4404,150 @@ def admin_ticket_detail(request, id):
         'ticket': ticket, 'ticket_msgs': ticket_msgs,
         'is_admin': is_admin, 'is_staff': True,
     })
+
+
+@login_required
+def admin_ads(request):
+    if not is_staff_check(request.user):
+        return HttpResponse("Not authorized", status=403)
+    if request.method == 'POST':
+        try:
+            import json
+            data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+            if 'delete' in data:
+                Advertisement.objects.filter(id=data['delete']).delete()
+                return JsonResponse({'success': True})
+            if 'reorder' in data:
+                for item in data['reorder']:
+                    Advertisement.objects.filter(id=item['id']).update(order=item['order'])
+                return JsonResponse({'success': True})
+            title = data.get('title', '')
+            image_url = data.get('image_url', '').strip()
+            link_url = data.get('link_url', '').strip()
+            ad_id = data.get('id')
+            
+            # Handle file upload
+            if request.FILES.get('image'):
+                uploaded = upload_to_cloudinary(request.FILES['image'], folder='srm_match/ads')
+                if uploaded:
+                    image_url = uploaded
+            
+            if not image_url or not link_url:
+                return JsonResponse({'success': False, 'error': 'Image and Link URL are required'})
+            if ad_id:
+                Advertisement.objects.filter(id=ad_id).update(title=title, image_url=image_url, link_url=link_url)
+            else:
+                Advertisement.objects.create(title=title, image_url=image_url, link_url=link_url)
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    ads = Advertisement.objects.all()
+    is_admin = is_admin_check(request.user)
+    return render(request, 'admin_ads.html', {'ads': ads, 'is_admin': is_admin, 'is_staff': True})
+
+
+def admin_spotlights(request):
+    if not is_staff_check(request.user):
+        return HttpResponse("Not authorized", status=403)
+    if request.method == 'POST':
+        try:
+            import json
+            data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+            if 'delete' in data:
+                CampusSpotlight.objects.filter(id=data['delete']).delete()
+                return JsonResponse({'success': True})
+            if 'reorder' in data:
+                for item in data['reorder']:
+                    CampusSpotlight.objects.filter(id=item['id']).update(order=item['order'])
+                return JsonResponse({'success': True})
+            if 'activate' in data:
+                CampusSpotlight.objects.filter(id=data['activate']).update(is_active=True)
+                return JsonResponse({'success': True})
+            if 'deactivate' in data:
+                CampusSpotlight.objects.filter(id=data['deactivate']).update(is_active=False)
+                return JsonResponse({'success': True})
+            spot_id = data.get('id')
+            user_id = data.get('user_id')
+            link_type = data.get('link_type', 'instagram')
+            ig_handle = data.get('instagram_handle', '').strip()
+            website = data.get('website_url', '').strip()
+            ctype = data.get('content_type', 'other')
+            if ctype == '__custom__':
+                ctype = data.get('custom_type', '').strip() or 'other'
+            note = data.get('note', '').strip()
+            cover_image = data.get('cover_image', '').strip()
+            if link_type == 'instagram':
+                if not ig_handle:
+                    return JsonResponse({'success': False, 'error': 'Instagram handle is required'})
+                value = ig_handle
+            else:
+                if not website:
+                    return JsonResponse({'success': False, 'error': 'Website URL is required'})
+                value = website
+            if request.FILES.get('cover_image'):
+                uploaded = upload_to_cloudinary(request.FILES['cover_image'], folder='srm_match/spotlights')
+                if uploaded:
+                    cover_image = uploaded
+            if spot_id:
+                upd = {'instagram_handle': value, 'content_type': ctype, 'note': note}
+                if cover_image:
+                    upd['cover_image'] = cover_image
+                CampusSpotlight.objects.filter(id=spot_id).update(**upd)
+            else:
+                if user_id:
+                    u = User.objects.filter(id=user_id).first()
+                    if u:
+                        CampusSpotlight.objects.create(user=u, instagram_handle=value, content_type=ctype, note=note, cover_image=cover_image)
+                    else:
+                        return JsonResponse({'success': False, 'error': 'User not found'})
+                else:
+                    return JsonResponse({'success': False, 'error': 'User is required'})
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    spotlights = CampusSpotlight.objects.select_related('user__profile').all()
+    users = User.objects.select_related('profile').filter(is_active=True)
+    is_admin = is_admin_check(request.user)
+    return render(request, 'admin_spotlights.html', {'spotlights': spotlights, 'users': users, 'is_admin': is_admin, 'is_staff': True})
+
+
+def submit_spotlight(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Login required'}, status=403)
+    if request.method == 'POST':
+        link_type = request.POST.get('link_type', 'instagram')
+        handle = request.POST.get('instagram_handle', '').strip()
+        website = request.POST.get('website_url', '').strip()
+        ctype = request.POST.get('content_type', 'other')
+        if ctype == '__custom__':
+            ctype = request.POST.get('custom_type', '').strip() or 'other'
+        note = request.POST.get('note', '').strip()
+        if link_type == 'instagram':
+            if not handle:
+                return JsonResponse({'success': False, 'error': 'Instagram handle is required'})
+            value = handle
+        else:
+            if not website:
+                return JsonResponse({'success': False, 'error': 'Website URL is required'})
+            value = website
+        if CampusSpotlight.objects.filter(user=request.user).exists():
+            return JsonResponse({'success': False, 'error': 'You already have a spotlight'})
+        cover_image = ''
+        if request.FILES.get('cover_image'):
+            uploaded = upload_to_cloudinary(request.FILES['cover_image'], folder='srm_match/spotlights')
+            if uploaded:
+                cover_image = uploaded
+        CampusSpotlight.objects.create(user=request.user, instagram_handle=value, content_type=ctype, note=note, cover_image=cover_image)
+        return JsonResponse({'success': True, 'message': 'Submitted for review!'})
+    return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
+
+
+def spotlight_page(request):
+    qs = CampusSpotlight.objects.filter(is_active=True).select_related('user__profile')
+    paginator = Paginator(qs, 10)
+    page = request.GET.get('page', 1)
+    spotlights = paginator.get_page(page)
+    return render(request, 'spotlight_page.html', {'spotlights': spotlights, 'paginator': paginator})
 
 
 def _notify_user(user, message, link=''):

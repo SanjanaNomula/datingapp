@@ -855,3 +855,47 @@ class FeedbackNotification(models.Model):
 
     def __str__(self):
         return f"Notif for {self.user.username}: {self.message[:50]}"
+
+
+CONTENT_TYPE_CHOICES = [
+    ('vlog', 'Vlog'),
+    ('blog', 'Blog'),
+    ('photography', 'Photography'),
+    ('art', 'Art'),
+    ('music', 'Music'),
+    ('fitness', 'Fitness'),
+    ('tech', 'Tech'),
+    ('fashion', 'Fashion'),
+    ('other', 'Other'),
+]
+
+class CampusSpotlight(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='spotlights')
+    instagram_handle = models.CharField(max_length=100)
+    content_type = models.CharField(max_length=50, choices=CONTENT_TYPE_CHOICES)
+    note = models.TextField(max_length=200, blank=True)
+    cover_image = models.URLField(max_length=500, blank=True)
+    is_active = models.BooleanField(default=True)
+    order = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order', '-created_at']
+
+    def __str__(self):
+        return f"{self.user.profile.name} (@{self.instagram_handle})"
+
+
+class Advertisement(models.Model):
+    title = models.CharField(max_length=200, blank=True)
+    image_url = models.URLField(max_length=500)
+    link_url = models.URLField(max_length=500)
+    order = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order', '-created_at']
+
+    def __str__(self):
+        return self.title or f"Ad #{self.id}"

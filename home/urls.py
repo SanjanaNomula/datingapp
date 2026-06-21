@@ -100,8 +100,12 @@ urlpatterns = [
     path("feedback/submit/ticket/", views.submit_ticket, name="submit_ticket"),
     path("feedback/history/", views.feedback_history, name="feedback_history"),
     path("feedback/ticket/<int:id>/", views.ticket_detail, name="ticket_detail"),
+    path("spotlights/", views.spotlight_page, name="spotlight_page"),
     path("master/feedback/", views.admin_feedback, name="admin_feedback"),
     path("master/feedback/bug/<int:id>/", views.admin_bug_detail, name="admin_bug_detail"),
     path("master/feedback/suggestion/<int:id>/", views.admin_suggestion_detail, name="admin_suggestion_detail"),
     path("master/feedback/ticket/<int:id>/", views.admin_ticket_detail, name="admin_ticket_detail"),
+    path("master/ads/", views.admin_ads, name="admin_ads"),
+    path("master/spotlights/", views.admin_spotlights, name="admin_spotlights"),
+    path("api/spotlights/submit/", views.submit_spotlight, name="submit_spotlight"),
 ]
