@@ -1,3 +1,4 @@
+from django import forms
 from django.contrib import admin
 from .models import Profile, Question, Option, UserAnswer, RoomRequest, Conversation
 
@@ -8,11 +9,38 @@ class OptionInline(admin.TabularInline):  # or admin.StackedInline
     extra = 2  # show 2 blank options by default
 
 
+class ProfileAdminForm(forms.ModelForm):
+    class Meta:
+        model = Profile
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        verify = {'verification_image', 'verification_status', 'is_face_verified'}
+        for field_name in self.fields:
+            if field_name not in verify:
+                self.fields[field_name].required = False
+
+
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
-    list_display = ('name', 'user', 'age', 'gender', 'campus', 'clg_year')
+    form = ProfileAdminForm
+    list_display = ('name', 'user', 'age', 'gender', 'campus', 'clg_year', 'verification_status', 'is_face_verified')
     search_fields = ('name', 'user__username', 'campus')
-    list_filter = ('campus', 'gender', 'clg_year', 'looking_for')
+    list_filter = ('campus', 'gender', 'clg_year', 'looking_for', 'verification_status')
+    fieldsets = (
+        ('Verification', {
+            'fields': ('verification_image', 'verification_status', 'is_face_verified'),
+            'classes': ('wide',),
+        }),
+        ('Profile Info', {
+            'fields': ('name', 'gender', 'profile_pic', 'age', 'clg_year', 'campus', 'course',
+                       'living_place', 'native_place', 'languages', 'mother_tongues',
+                       'bio', 'liked_songs', 'liked_movies', 'fav_shows', 'interest_tags',
+                       'looking_for', 'pref_age_min', 'pref_age_max', 'pref_gender',
+                       'pref_languages', 'pref_campus', 'is_banned', 'is_discoverable'),
+        }),
+    )
 
 
 @admin.register(Question)
