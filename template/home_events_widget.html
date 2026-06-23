@@ -1,7 +1,7 @@
 {% load static %}
 {% load cloudinary_tags %}
 
-{% if events %}
+{% if upcoming_events %}
 <div class="hew-panel">
     <div class="hew-head">
         <h2 class="hew-title">
@@ -12,7 +12,7 @@
         </a>
     </div>
     <div class="hew-scroll" id="hewScroll">
-        {% for e in events %}
+        {% for e in upcoming_events %}
         <a href="{% url 'event_detail' e.id %}" class="hew-card">
             <div class="hew-card-img-wrap">
                 {% if e.poster %}
@@ -32,8 +32,8 @@
                     <span class="material-symbols-outlined">location_on</span>
                     <span>{{ e.campus|default:"All Campuses" }}</span>
                 </div>
-                <div class="hew-card-badge {% if e.fee == 0 %}hew-badge-free{% else %}hew-badge-paid{% endif %}">
-                    {% if e.fee == 0 %}Free{% else %}&#8377;{{ e.fee }}{% endif %}
+                <div class="hew-card-badge {% if e.fee_type == 'free' %}hew-badge-free{% else %}hew-badge-paid{% endif %}">
+                    {% if e.fee_type == 'free' %}Free{% else %}&#8377;{{ e.fee_amount }}{% endif %}
                 </div>
             </div>
         </a>
