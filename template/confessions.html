@@ -724,7 +724,7 @@
             <a href="{% url 'confession_detail' c.id %}" class="conf-card">
                 <div class="conf-card-header">
                     <div class="conf-identity">
-                        <img src="{{ c.display_pic }}" alt="Avatar" class="conf-avatar">
+                        <img src="{{ c.display_pic }}" alt="Avatar" class="conf-avatar" loading="lazy" decoding="async">
                         <div>
                             <p class="conf-name">{{ c.display_name }}</p>
                             <p class="conf-meta">{{ c.created_at|timesince }} ago</p>
@@ -749,7 +749,7 @@
                 <p class="conf-content">{{ c.content|truncatechars:200|linebreaksbr }}</p>
 
                 {% if c.image %}
-                <img src="{{ c.image }}" alt="Attachment" class="conf-image">
+                <img src="{{ c.image }}" alt="Attachment" class="conf-image" loading="lazy" decoding="async">
                 {% endif %}
 
                 <div class="conf-footer">

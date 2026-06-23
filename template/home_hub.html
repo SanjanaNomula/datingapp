@@ -1238,7 +1238,7 @@
         <div class="spotlight-stack" id="spotlightStack">
             {% for s in spotlights %}
             <a class="spot-card" href="https://instagram.com/{{ s.instagram_handle }}" target="_blank" rel="noopener">
-                <img class="spot-card-av" src="{{ s.user.profile.profile_pic|default:'https://res.cloudinary.com/dq9vbhbcj/image/upload/v1/srm_match/default_avatar' }}" alt="">
+                <img class="spot-card-av" src="{{ s.user.profile.profile_pic|default:'https://res.cloudinary.com/dq9vbhbcj/image/upload/v1/srm_match/default_avatar' }}" alt="" loading="lazy" decoding="async">
                 <div class="spot-card-body">
                     <div class="spot-card-name">{{ s.user.profile.name }}</div>
                     <div class="spot-card-handle">@{{ s.instagram_handle }}</div>
@@ -1341,7 +1341,7 @@
         <div class="spotlight-carousel" id="spotlightCarousel">
             {% for ad in ads %}
             <a href="{{ ad.link_url }}" class="spotlight-card{% if forloop.first %} pos-center{% elif forloop.counter0 == 1 %} pos-right{% else %} pos-hidden{% endif %}" target="_blank" rel="noopener" data-index="{{ forloop.counter0 }}">
-                <img src="{{ ad.image_url }}" alt="{{ ad.title }}">
+                <img src="{{ ad.image_url }}" alt="{{ ad.title }}" loading="lazy" decoding="async">
             </a>
             {% endfor %}
         </div>

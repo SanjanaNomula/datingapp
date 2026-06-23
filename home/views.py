@@ -84,7 +84,7 @@ def get_firebase_app():
             raise e
     return firebase_admin.get_app()
 from django.views.decorators.csrf import csrf_exempt
-from django.db.models import Q
+from django.db.models import Q, Prefetch
 from django.core.files.base import ContentFile
 import base64
 import math
@@ -783,7 +783,7 @@ def check_match(request):
     best_reasons = []
 
     for attempt in range(2):
-        candidates = Profile.objects.filter(
+        candidates = Profile.objects.select_related('user').filter(
             is_discoverable=True,
             is_face_verified=True
         ).exclude(user=user).exclude(user__id__in=interacted_user_ids).exclude(user__id__in=blocked_user_ids).exclude(user__id__in=seen_ids)
@@ -1298,7 +1298,7 @@ def chat_view(request, partner_id):
     chat_messages = Message.objects.filter(
         (Q(sender=request.user, receiver=partner, sender_deleted=False)) |
         (Q(sender=partner, receiver=request.user, receiver_deleted=False))
-    ).exclude(text__startswith='__SPIN__:') .order_by('timestamp')
+    ).exclude(text__startswith='__SPIN__:').select_related('reply_to__sender__profile').order_by('timestamp')
     
     # Mark messages as read
     Message.objects.filter(sender=partner, receiver=request.user, is_read=False).update(is_read=True)
@@ -1356,7 +1356,7 @@ def chat_api_messages(request, partner_id):
         (Q(sender=partner, receiver=request.user, receiver_deleted=False))
     ).exclude(
         Q(text__startswith='__SPIN__:') & Q(timestamp__lt=recent_cutoff)
-    ).order_by('timestamp')
+    ).select_related('reply_to__sender__profile').order_by('timestamp')
     
     # Mark incoming unread messages as read
     Message.objects.filter(sender=partner, receiver=request.user, is_read=False).update(is_read=True)
@@ -1382,8 +1382,8 @@ def chat_api_messages(request, partner_id):
 
 @login_required
 def view_profile(request, user_id):
-    target_user = get_object_or_404(User, id=user_id)
-    profile = get_object_or_404(Profile, user=target_user)
+    profile = get_object_or_404(Profile.objects.select_related('user'), user__id=user_id)
+    target_user = profile.user
     
     # Matching logic (simplified)
     my_profile = request.user.profile
@@ -2128,12 +2128,11 @@ def get_quiz_batch(request):
     """Returns unanswered questions for the Fast Fire quiz (6 for girls, 10 for guys)."""
     answered_ids = UserAnswer.objects.filter(user=request.user).values_list('question_id', flat=True)
     limit = quiz_round_size(request.user)
-    questions = Question.objects.exclude(id__in=answered_ids)[:limit]
+    questions = Question.objects.prefetch_related('options').exclude(id__in=answered_ids)[:limit]
     
     data = []
     for q in questions:
-        options = []
-        for opt in q.options.all():
+        options = [{'id': opt.id, 'text': opt.text} for opt in q.options.all()]
             options.append({'id': opt.id, 'text': opt.text})
         data.append({
             'id': q.id,
@@ -2693,8 +2692,14 @@ def admin_analytics_export(request):
 def admin_all_users(request):
     if not is_staff_check(request.user):
         return HttpResponse("Not authorized", status=403)
-    profiles = Profile.objects.all().order_by('name')
-    return render(request, 'admin_all_users.html', {'profiles': profiles})
+    page = request.GET.get('page', 1)
+    profiles = Profile.objects.select_related('user').all().order_by('name')
+    paginator = Paginator(profiles, 50)
+    try:
+        profiles_page = paginator.get_page(page)
+    except:
+        profiles_page = paginator.get_page(1)
+    return render(request, 'admin_all_users.html', {'profiles': profiles_page})
 
 @login_required
 def admin_manual_verification(request):
@@ -3229,7 +3234,7 @@ def roomfinder_detail(request, id):
 def api_toggle_save_room(request, id):
     if request.method == 'POST':
         try:
-            listing = RoomListing.objects.get(id=id, is_active=True)
+        listing = RoomListing.objects.select_related('user__profile').prefetch_related('images').get(id=id, is_active=True)
             saved_item, created = SavedRoomListing.objects.get_or_create(user=request.user, listing=listing)
             if not created:
                 saved_item.delete()
@@ -3380,7 +3385,7 @@ def api_create_room(request):
 def api_get_rooms(request):
     if request.method == 'GET':
         try:
-            listings = RoomListing.objects.filter(is_active=True).order_by('-created_at')
+            listings = RoomListing.objects.filter(is_active=True).select_related('user__profile').prefetch_related('images').order_by('-created_at')
             saved_ids = set()
             
             if request.user.is_authenticated:
@@ -3628,7 +3633,7 @@ def api_create_room_request(request):
 def api_get_room_requests(request):
     if request.method == 'GET':
         try:
-            reqs = RoomRequest.objects.filter(is_active=True).order_by('-created_at')
+            reqs = RoomRequest.objects.filter(is_active=True).select_related('user__profile').order_by('-created_at')
             
             if request.user.is_authenticated:
                 # Exclude blocked users for safety
@@ -3943,22 +3948,20 @@ def _build_participant_dict(participant):
 
 
 def _broadcast_room_counts(target_room_id=None):
-    rooms = VoiceRoom.objects.all()
+    rooms = VoiceRoom.objects.prefetch_related(
+        Prefetch('participants', queryset=VoiceParticipant.objects.select_related('user__profile').order_by('joined_at'))
+    ).all()
     data = []
     for room in rooms:
-        entries = VoiceParticipant.objects.filter(room=room).select_related('user__profile').order_by('joined_at')
-        count = entries.count()
-        avatars = []
-        for p in entries:
-            d = _build_participant_dict(p)
-            avatars.append(d)
+        entries = list(room.participants.all())
+        avatars = [_build_participant_dict(p) for p in entries]
         data.append({
             'id': room.id,
             'name': room.name,
             'slug': room.slug,
-            'count': count,
+            'count': len(entries),
             'max': room.max_capacity,
-            'is_full': count >= room.max_capacity,
+            'is_full': len(entries) >= room.max_capacity,
             'avatars': avatars,
         })
     broadcast_event('voice_counts', 'update', {'rooms': data})
@@ -4000,12 +4003,14 @@ def _get_user_friend_ids(user):
 @login_required
 def api_voice_rooms(request):
     _clean_stale_participants()
-    rooms = VoiceRoom.objects.all()
+    rooms = VoiceRoom.objects.prefetch_related(
+        Prefetch('participants', queryset=VoiceParticipant.objects.select_related('user__profile').order_by('joined_at'))
+    ).all()
     friend_ids = _get_user_friend_ids(request.user)
     data = []
     for room in rooms:
-        entries = VoiceParticipant.objects.filter(room=room).select_related('user__profile').order_by('joined_at')
-        count = entries.count()
+        entries = list(room.participants.all())
+        count = len(entries)
         avatars = []
         friends_in_room = []
         for p in entries:
