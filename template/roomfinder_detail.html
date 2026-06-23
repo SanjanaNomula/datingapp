@@ -1,9 +1,9 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ listing.get_room_type_display }} in {{ listing.location }} Near SRM {{ listing.campus }} | SRM Match{% endblock %}
+{% block title %}{{ listing.get_room_type_display }} in {{ listing.location }} Near SRM {{ listing.campus }} | KnotSpot{% endblock %}
 
-{% block meta_description %}Find {{ listing.get_room_type_display|lower }} in {{ listing.location }} near SRM {{ listing.campus }} for ₹{{ listing.rent }} on SRM Match.{% endblock %}
+{% block meta_description %}Find {{ listing.get_room_type_display|lower }} in {{ listing.location }} near SRM {{ listing.campus }} for ₹{{ listing.rent }} on KnotSpot.{% endblock %}
 
 {% block json_ld %}
 <script type="application/ld+json">
@@ -11,20 +11,20 @@
   "@context": "https://schema.org",
   "@type": "Article",
   "headline": "{{ listing.get_room_type_display }} in {{ listing.location }} Near SRM {{ listing.campus }}",
-  "description": "Find {{ listing.get_room_type_display|lower }} in {{ listing.location }} near SRM {{ listing.campus }} for ₹{{ listing.rent }} on SRM Match.",
+  "description": "Find {{ listing.get_room_type_display|lower }} in {{ listing.location }} near SRM {{ listing.campus }} for ₹{{ listing.rent }} on KnotSpot.",
   {% if listing.images.all %}
   "image": "{{ request.scheme }}://{{ request.get_host }}{{ listing.images.first.image_url }}",
   {% endif %}
   "author": {
     "@type": "Person",
-    "name": "SRM Match User"
+    "name": "KnotSpot User"
   },
   "publisher": {
     "@type": "Organization",
-    "name": "SRM Match",
+    "name": "KnotSpot",
     "logo": {
       "@type": "ImageObject",
-      "url": "https://srm-match.vercel.app/static/favicon.png"
+      "url": "https://knotspot.vercel.app/static/favicon.png"
     }
   },
   "datePublished": "{{ listing.created_at|date:'c' }}"
@@ -33,8 +33,8 @@
 {% endblock %}
 
 {% block head %}
-<meta property="og:title" content="{{ listing.get_room_type_display }} in {{ listing.location }} Near SRM {{ listing.campus }} | SRM Match">
-<meta property="og:description" content="Find {{ listing.get_room_type_display|lower }} in {{ listing.location }} near SRM {{ listing.campus }} for ₹{{ listing.rent }} on SRM Match.">
+<meta property="og:title" content="{{ listing.get_room_type_display }} in {{ listing.location }} Near SRM {{ listing.campus }} | KnotSpot">
+<meta property="og:description" content="Find {{ listing.get_room_type_display|lower }} in {{ listing.location }} near SRM {{ listing.campus }} for ₹{{ listing.rent }} on KnotSpot.">
 {% if listing.images.all %}
 <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ listing.images.first.image_url }}">
 {% endif %}

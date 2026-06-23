@@ -961,7 +961,7 @@ def send_push_to_user(user, title, body, url='/'):
     # Construct absolute HTTPS URL as required by Firebase WebpushFCMOptions.link
     domain = os.environ.get('VERCEL_URL')
     if not domain:
-        domain = 'srmmatch.vercel.app' # fallback
+        domain = 'knotspot.vercel.app' # fallback
     
     if not domain.startswith('http'):
         domain = f"https://{domain}"
@@ -984,8 +984,8 @@ def send_push_to_user(user, title, body, url='/'):
         webpush=messaging.WebpushConfig(
             headers={'Urgency': 'high'},
             notification=messaging.WebpushNotification(
-                icon='https://srm-match.vercel.app/favicon.ico',
-                badge='https://srm-match.vercel.app/favicon.ico',
+                icon='https://knotspot.vercel.app/favicon.ico',
+                badge='https://knotspot.vercel.app/favicon.ico',
                 tag='chat-msg',
                 renotify=True
             ),
@@ -3834,7 +3834,7 @@ def roomrequest_detail(request, id):
 from django.http import HttpResponse
 
 def sitemap_view(request):
-    base_url = "https://srm-match.vercel.app"
+    base_url = "https://knotspot.vercel.app"
     
     pages = [
         {"loc": "/", "changefreq": "daily", "priority": "1.0"},
@@ -3889,7 +3889,7 @@ def sitemap_view(request):
     return HttpResponse(xml, content_type='application/xml')
 
 def robots_txt_view(request):
-    text = "User-agent: *\nAllow: /\n\nSitemap: https://srm-match.vercel.app/sitemap.xml\n"
+    text = "User-agent: *\nAllow: /\n\nSitemap: https://knotspot.vercel.app/sitemap.xml\n"
     return HttpResponse(text, content_type='text/plain')
 
 def privacy_policy_view(request):

@@ -1,6 +1,6 @@
 {
-  "name": "SRM Match",
-  "short_name": "SRM Match",
+  "name": "KnotSpot",
+  "short_name": "KnotSpot",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

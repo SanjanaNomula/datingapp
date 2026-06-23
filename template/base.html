@@ -6,12 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <meta name="google-site-verification" content="X4viSHKffVA_JGTZMiKQlf-ugS7MBoGgyMrrwF_xmwQ" />
-    <meta name="description" content="{% block meta_description %}SRM Match is a student social platform for SRM campuses to make friends, post anonymous confessions, find roommates, and connect with students across SRM campuses.{% endblock %}">
-    <meta name="keywords" content="{% block meta_keywords %}SRM Match, SRM students, SRM confessions, SRM roommate finder, SRM social app, SRM KTR, SRM Ramapuram, SRM NCR, SRM AP, SRM Vadapalani{% endblock %}">
-    <meta property="og:site_name" content="SRM Match">
-    <meta property="og:title" content="{% block og_title %}SRM Match{% endblock %}">
-    <meta property="og:description" content="{% block og_description %}SRM Match is a student social platform for SRM campuses to make friends, post anonymous confessions, find roommates, and connect with students across SRM campuses.{% endblock %}">
-    <meta property="og:image" content="{% block og_image %}https://srm-match.vercel.app/static/favicon.png{% endblock %}">
+    <meta name="description" content="{% block meta_description %}KnotSpot is a student social platform for SRM campuses to make friends, post anonymous confessions, find roommates, and connect with students across SRM campuses.{% endblock %}">
+    <meta name="keywords" content="{% block meta_keywords %}KnotSpot, SRM students, SRM confessions, SRM roommate finder, SRM social app, SRM KTR, SRM Ramapuram, SRM NCR, SRM AP, SRM Vadapalani{% endblock %}">
+    <meta property="og:site_name" content="KnotSpot">
+    <meta property="og:title" content="{% block og_title %}KnotSpot{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}KnotSpot is a student social platform for SRM campuses to make friends, post anonymous confessions, find roommates, and connect with students across SRM campuses.{% endblock %}">
+    <meta property="og:image" content="{% block og_image %}https://knotspot.vercel.app/static/favicon.png{% endblock %}">
     <meta property="og:url" content="{{ request.build_absolute_uri }}">
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
@@ -19,7 +19,7 @@
     {% block robots_tag %}
     <meta name="robots" content="{% if user.is_authenticated %}noindex, nofollow{% else %}index, follow{% endif %}">
     {% endblock %}
-    <title>{% block title %}SRM Match{% endblock %}</title>
+    <title>{% block title %}KnotSpot{% endblock %}</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="icon" type="image/png" href="/static/favicon.png">
     <link rel="apple-touch-icon" href="/static/favicon.png">
@@ -31,7 +31,7 @@
     <meta name="theme-color" content="#6366f1">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="SRM Match">
+    <meta name="apple-mobile-web-app-title" content="KnotSpot">
     
     <!-- AI & ML Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js"></script>
@@ -474,11 +474,11 @@
     {
       "@context": "https://schema.org",
       "@type": "WebSite",
-      "name": "SRM Match",
-      "url": "https://srm-match.vercel.app/",
+      "name": "KnotSpot",
+      "url": "https://knotspot.vercel.app/",
       "potentialAction": {
         "@type": "SearchAction",
-        "target": "https://srm-match.vercel.app/roomfinder/?q={search_term_string}",
+        "target": "https://knotspot.vercel.app/roomfinder/?q={search_term_string}",
         "query-input": "required name=search_term_string"
       }
     }
@@ -487,11 +487,11 @@
     {
       "@context": "https://schema.org",
       "@type": "Organization",
-      "name": "SRM Match",
-      "url": "https://srm-match.vercel.app/",
-      "logo": "https://srm-match.vercel.app/static/favicon.png",
+      "name": "KnotSpot",
+      "url": "https://knotspot.vercel.app/",
+      "logo": "https://knotspot.vercel.app/static/favicon.png",
       "sameAs": [
-        "https://www.instagram.com/srm.match/"
+        "https://www.instagram.com/knotspott/"
       ]
     }
     </script>
