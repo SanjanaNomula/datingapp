@@ -52,6 +52,9 @@ html, body {
 .req-footer { display:flex; align-items:center; justify-content:space-between; font-size:11px; color:#94a3b8; padding-left:14px; }
 .req-footer a { color:#2563eb; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:3px; }
 .req-footer .sep { color:#d1d5db; margin:0 4px; }
+.admin-reply { margin:6px 0 6px 14px; padding:10px 12px; background:#f8faff; border-left:3px solid #2563eb; border-radius:8px; }
+.admin-reply-head { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:#2563eb; margin-bottom:4px; }
+.admin-reply-text { font-size:13px; color:#1e293b; line-height:1.5; white-space:pre-wrap; }
 
 .fb-empty { text-align:center; padding:40px 20px; color:#94a3b8; font-size:13px; }
 .fb-empty a { color:#2563eb; font-weight:700; text-decoration:none; }
@@ -84,13 +87,17 @@ html, body {
             {% if item.description %}
             <div class="req-desc">{{ item.description|truncatechars:120 }}</div>
             {% endif %}
+            {% if item.admin_reply and item.type != 'ticket' %}
+            <div class="admin-reply">
+                <div class="admin-reply-head">Admin reply</div>
+                <div class="admin-reply-text">{{ item.admin_reply }}</div>
+            </div>
+            {% endif %}
             <div class="req-footer">
                 <span>
                     {% if item.category %}{{ item.category|capfirst }}<span class="sep">&middot;</span>{% endif %}
                     {{ item.created_at|date:"M d, Y" }}
-                    {% if item.admin_reply and item.type != 'ticket' %}
-                    <span class="sep">&middot;</span> <span style="color:#2563eb;">&#x21A9; Admin</span>
-                    {% endif %}
+
                 </span>
                 {% if item.type == 'ticket' %}
                 <a href="{% url 'ticket_detail' item.id %}">View Ticket &rarr;</a>
