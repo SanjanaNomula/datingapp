@@ -108,4 +108,6 @@ urlpatterns = [
     path("master/ads/", views.admin_ads, name="admin_ads"),
     path("master/spotlights/", views.admin_spotlights, name="admin_spotlights"),
     path("api/spotlights/submit/", views.submit_spotlight, name="submit_spotlight"),
+    path("api/spotlights/edit/", views.edit_spotlight, name="edit_spotlight"),
+    path("api/spotlights/delete/", views.delete_spotlight, name="delete_spotlight"),
 ]

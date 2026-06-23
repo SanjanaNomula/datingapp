@@ -220,6 +220,37 @@
     }
     .sp-go-btn:active { transform: scale(0.96); }
 
+    /* ---- Owner Actions ---- */
+    .sp-owner-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+    }
+    .sp-owner-actions button {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 7px 14px;
+        border-radius: 100px;
+        font-size: 11px;
+        font-weight: 700;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+    }
+    .sp-owner-actions button:active { transform: scale(0.96); }
+    .sp-edit-btn {
+        background: #f1f5f9;
+        color: #475569;
+    }
+    .sp-edit-btn:hover { background: #e2e8f0; }
+    .sp-delete-btn {
+        background: #fef2f2;
+        color: #dc2626;
+    }
+    .sp-delete-btn:hover { background: #fee2e2; }
+
     /* ---- Empty State ---- */
     .sp-empty {
         text-align: center;
@@ -553,6 +584,16 @@
                         <span class="material-symbols-outlined" style="font-size:16px;">open_in_new</span> Go to page
                     </a>
                     {% endif %}
+                    {% if user.is_authenticated and s.user == user %}
+                    <div class="sp-owner-actions">
+                        <button class="sp-edit-btn" onclick="editSpotlight({{ s.id }}, '{{ s.instagram_handle|escapejs }}', '{{ s.content_type|escapejs }}', '{{ s.note|escapejs }}', '{{ s.cover_image|escapejs }}')">
+                            <span class="material-symbols-outlined" style="font-size:14px;">edit</span> Edit
+                        </button>
+                        <button class="sp-delete-btn" onclick="deleteSpotlight({{ s.id }})">
+                            <span class="material-symbols-outlined" style="font-size:14px;">delete</span> Delete
+                        </button>
+                    </div>
+                    {% endif %}
                     {% endwith %}
                 </div>
             </div>
@@ -590,14 +631,15 @@
 <div class="sp-modal-overlay" id="spotlightFormModal" onclick="if(event.target===this)closeSpotlightForm()">
     <div class="sp-modal">
         <div class="sp-modal-header">
-            <h2>Showcase your skill</h2>
+            <h2 id="spotlightFormTitle">Showcase your skill</h2>
             <button class="sp-modal-close" onclick="closeSpotlightForm()">
                 <span class="material-symbols-outlined">close</span>
             </button>
         </div>
-        <div class="sp-modal-subtitle">Share your page with the campus</div>
+        <div class="sp-modal-subtitle" id="spotlightFormSubtitle">Share your page with the campus</div>
         <form id="spotlightForm" method="post" action="{% url 'submit_spotlight' %}" enctype="multipart/form-data">
             {% csrf_token %}
+            <input type="hidden" name="spot_id" id="editSpotId" value="">
             <div class="sp-form-group">
                 <label>Cover Image</label>
                 <input type="file" name="cover_image" accept="image/*">
@@ -644,7 +686,7 @@
             </div>
             <div class="sp-form-group">
                 <label>Note</label>
-                <textarea name="note" maxlength="200" placeholder="What kind of content do you create?"></textarea>
+                <textarea name="note" id="note" maxlength="200" placeholder="What kind of content do you create?"></textarea>
             </div>
             <div id="spotlightFormMsg"></div>
             <div class="sp-form-actions">
@@ -671,11 +713,60 @@ function toggleCustomType(sel) {
 }
 
 function openSpotlightForm() {
-    document.getElementById('spotlightFormModal').classList.add('open');
-    switchLinkType('instagram');
+    document.getElementById('spotlightFormTitle').textContent = 'Showcase your skill';
+    document.getElementById('spotlightFormSubtitle').textContent = 'Share your page with the campus';
+    document.getElementById('editSpotId').value = '';
+    document.getElementById('spotlightForm').action = "{% url 'submit_spotlight' %}";
+    document.getElementById('spotlightFormMsg').style.display = 'none';
+    document.getElementById('spotlightForm').reset();
     document.getElementById('customTypeInput').style.display = 'none';
     document.getElementById('contentTypeSelect').value = 'vlog';
+    switchLinkType('instagram');
+    document.getElementById('spotlightFormModal').classList.add('open');
 }
+
+function editSpotlight(id, handle, ctype, note, cover) {
+    document.getElementById('spotlightFormTitle').textContent = 'Edit your spotlight';
+    document.getElementById('spotlightFormSubtitle').textContent = 'Update your page details';
+    document.getElementById('editSpotId').value = id;
+    document.getElementById('spotlightForm').action = "{% url 'edit_spotlight' %}";
+    document.getElementById('spotlightFormMsg').style.display = 'none';
+    document.getElementById('spotlightForm').reset();
+    var isWeb = handle.substring(0,4) === 'http';
+    switchLinkType(isWeb ? 'website' : 'instagram');
+    if (isWeb) {
+        document.getElementById('websiteUrlInput').value = handle;
+    } else {
+        document.getElementById('instagramHandleInput').value = handle;
+    }
+    document.getElementById('note').value = note;
+    var found = false;
+    var sel = document.getElementById('contentTypeSelect');
+    for (var i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value === ctype) {
+            sel.value = ctype; found = true; break;
+        }
+    }
+    if (!found) {
+        sel.value = '__custom__';
+        document.getElementById('customTypeInput').value = ctype;
+        document.getElementById('customTypeInput').style.display = 'block';
+    }
+    document.getElementById('spotlightFormModal').classList.add('open');
+}
+
+function deleteSpotlight(id) {
+    if (!confirm('Delete your spotlight?')) return;
+    var fd = new FormData();
+    fd.append('id', id);
+    fetch("{% url 'delete_spotlight' %}", {
+        method:'POST', body:fd, headers:{'X-CSRFToken':document.querySelector('[name=csrfmiddlewaretoken]').value}
+    }).then(function(r){return r.json()}).then(function(d){
+        if (d.success) location.reload();
+        else alert(d.error);
+    });
+}
+
 function closeSpotlightForm() { document.getElementById('spotlightFormModal').classList.remove('open'); }
 document.getElementById('spotlightForm')?.addEventListener('submit', function(e) {
     e.preventDefault();
@@ -684,7 +775,7 @@ document.getElementById('spotlightForm')?.addEventListener('submit', function(e)
     var fd = new FormData(f);
     fetch(f.action, {method:'POST', body:fd, headers:{'X-CSRFToken':fd.get('csrfmiddlewaretoken')}})
     .then(function(r){return r.json()}).then(function(d){
-        if (d.success) { msg.style.display='block'; msg.style.color='#059669'; msg.textContent=d.message||'Submitted!'; f.reset(); setTimeout(closeSpotlightForm, 1500); }
+        if (d.success) { msg.style.display='block'; msg.style.color='#059669'; msg.textContent=d.message||'Submitted!'; if (!document.getElementById('editSpotId').value) f.reset(); setTimeout(closeSpotlightForm, 1500); }
         else { msg.style.display='block'; msg.style.color='#dc2626'; msg.textContent=d.error; }
     }).catch(function(){ msg.style.display='block'; msg.style.color='#dc2626'; msg.textContent='Something went wrong'; });
 });

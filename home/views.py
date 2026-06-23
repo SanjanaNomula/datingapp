@@ -4542,6 +4542,58 @@ def submit_spotlight(request):
     return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
 
 
+def edit_spotlight(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Login required'}, status=403)
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
+    spot_id = request.POST.get('id')
+    try:
+        spot = CampusSpotlight.objects.get(id=spot_id, user=request.user)
+    except CampusSpotlight.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Spotlight not found or not yours'})
+    link_type = request.POST.get('link_type', 'instagram')
+    ig_handle = request.POST.get('instagram_handle', '').strip()
+    website = request.POST.get('website_url', '').strip()
+    ctype = request.POST.get('content_type', 'other')
+    if ctype == '__custom__':
+        ctype = request.POST.get('custom_type', '').strip() or 'other'
+    note = request.POST.get('note', '').strip()
+    if link_type == 'instagram':
+        if not ig_handle:
+            return JsonResponse({'success': False, 'error': 'Instagram handle is required'})
+        value = ig_handle
+    else:
+        if not website:
+            return JsonResponse({'success': False, 'error': 'Website URL is required'})
+        value = website
+    cover_image = spot.cover_image
+    if request.FILES.get('cover_image'):
+        uploaded = upload_to_cloudinary(request.FILES['cover_image'], folder='srm_match/spotlights')
+        if uploaded:
+            cover_image = uploaded
+    spot.instagram_handle = value
+    spot.content_type = ctype
+    spot.note = note
+    spot.cover_image = cover_image
+    spot.save()
+    return JsonResponse({'success': True, 'message': 'Updated!'})
+
+def delete_spotlight(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Login required'}, status=403)
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
+    import json
+    data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+    spot_id = data.get('id')
+    try:
+        spot = CampusSpotlight.objects.get(id=spot_id, user=request.user)
+    except CampusSpotlight.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Spotlight not found or not yours'})
+    spot.delete()
+    return JsonResponse({'success': True, 'message': 'Deleted!'})
+
 def spotlight_page(request):
     qs = CampusSpotlight.objects.filter(is_active=True).select_related('user__profile')
     paginator = Paginator(qs, 10)
