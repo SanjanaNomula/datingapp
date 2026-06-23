@@ -4469,13 +4469,12 @@ def admin_spotlights(request):
             spot_id = data.get('id')
             user_id = data.get('user_id')
             link_type = data.get('link_type', 'instagram')
-            ig_handle = data.get('instagram_handle', '').strip()
+            ig_handle = data.get('instagram_handle', '').strip().lstrip('@')
             website = data.get('website_url', '').strip()
             ctype = data.get('content_type', 'other')
             if ctype == '__custom__':
                 ctype = data.get('custom_type', '').strip() or 'other'
             note = data.get('note', '').strip()
-            cover_image = data.get('cover_image', '').strip()
             if link_type == 'instagram':
                 if not ig_handle:
                     return JsonResponse({'success': False, 'error': 'Instagram handle is required'})
@@ -4516,7 +4515,7 @@ def submit_spotlight(request):
         return JsonResponse({'success': False, 'error': 'Login required'}, status=403)
     if request.method == 'POST':
         link_type = request.POST.get('link_type', 'instagram')
-        handle = request.POST.get('instagram_handle', '').strip()
+        handle = request.POST.get('instagram_handle', '').strip().lstrip('@')
         website = request.POST.get('website_url', '').strip()
         ctype = request.POST.get('content_type', 'other')
         if ctype == '__custom__':

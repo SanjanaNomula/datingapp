@@ -539,6 +539,7 @@
         .sp-modal { border-radius: 24px; margin-bottom: 40px; }
         .sp-modal-overlay { align-items: center; }
     }
+    @keyframes sp-spin { to { transform: rotate(360deg); } }
 </style>
 {% endblock %}
 
@@ -771,13 +772,17 @@ function closeSpotlightForm() { document.getElementById('spotlightFormModal').cl
 document.getElementById('spotlightForm')?.addEventListener('submit', function(e) {
     e.preventDefault();
     var f = this, msg = document.getElementById('spotlightFormMsg');
+    var btn = f.querySelector('.sp-btn-submit');
+    var origText = btn.innerHTML;
     msg.style.display = 'none';
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner" style="display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:sp-spin 0.6s linear infinite;vertical-align:middle;margin-right:6px;"></span> Saving...';
     var fd = new FormData(f);
     fetch(f.action, {method:'POST', body:fd, headers:{'X-CSRFToken':fd.get('csrfmiddlewaretoken')}})
     .then(function(r){return r.json()}).then(function(d){
-        if (d.success) { msg.style.display='block'; msg.style.color='#059669'; msg.textContent=d.message||'Submitted!'; if (!document.getElementById('editSpotId').value) f.reset(); setTimeout(closeSpotlightForm, 1500); }
-        else { msg.style.display='block'; msg.style.color='#dc2626'; msg.textContent=d.error; }
-    }).catch(function(){ msg.style.display='block'; msg.style.color='#dc2626'; msg.textContent='Something went wrong'; });
+        if (d.success) { btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;">check</span> Saved!'; setTimeout(function(){ location.reload(); }, 600); }
+        else { btn.disabled = false; btn.innerHTML = origText; msg.style.display='block'; msg.style.color='#dc2626'; msg.textContent=d.error; }
+    }).catch(function(){ btn.disabled = false; btn.innerHTML = origText; msg.style.display='block'; msg.style.color='#dc2626'; msg.textContent='Something went wrong'; });
 });
 </script>
 {% endblock %}
