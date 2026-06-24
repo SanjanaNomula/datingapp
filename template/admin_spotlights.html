@@ -1,0 +1,340 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Campus Spotlights | KnotSpot{% endblock %}
+
+{% block head %}
+<style>
+nav { display: none !important; }
+html, body { height:100dvh; overflow:hidden; position:fixed; width:100%; background:#f7f9fb; padding:0!important; margin:0!important; }
+.container { max-width:100%!important; width:100%!important; padding:0!important; margin:0!important; height:100%; box-sizing:border-box; background:transparent!important; border:none!important; box-shadow:none!important; }
+.adm-wrapper { display:flex; flex-direction:column; position:fixed; top:0; left:0; right:0; bottom:0; width:100%; max-width:900px; margin:0 auto; background:linear-gradient(180deg,#fbfcff 0%,#f7f9fb 58%,#eff4fb 100%); z-index:10; }
+.adm-header { flex-shrink:0; padding:calc(10px + env(safe-area-inset-top)) 20px 16px; background:rgba(247,249,251,0.85); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border-bottom:1px solid rgba(0,74,198,0.08); display:flex; align-items:center; gap:12px; z-index:20; }
+.adm-back-btn { width:44px; height:44px; border-radius:16px; background:#fff; display:flex; align-items:center; justify-content:center; text-decoration:none; color:#2563eb; border:1px solid rgba(0,74,198,0.08); box-shadow:0 10px 24px rgba(15,23,42,0.06); transition:0.2s; cursor:pointer; flex-shrink:0; }
+.adm-back-btn:active { transform:scale(0.94); }
+.adm-header h2 { margin:0; font-size:18px; font-weight:800; color:#0f172a; flex:1; }
+.adm-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:20px; }
+.adm-card { background:#fff; border-radius:20px; padding:20px; box-shadow:0 8px 24px rgba(15,23,42,0.04); border:1px solid rgba(0,74,198,0.06); margin-bottom:16px; }
+.adm-card h3 { margin:0 0 16px; font-size:15px; font-weight:800; color:#0f172a; }
+.form-group { margin-bottom:8px; }
+.form-group label { display:block; font-size:10px; font-weight:700; color:#475569; margin-bottom:3px; text-transform:uppercase; letter-spacing:0.3px; }
+.form-group input, .form-group select, .form-group textarea { width:100%; padding:7px 10px; border-radius:10px; border:1.5px solid #e2e8f0; font-size:12px; font-weight:600; color:#1e293b; outline:none; font-family:inherit; box-sizing:border-box; transition:0.2s; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,0.1); }
+.form-group textarea { resize:vertical; min-height:50px; }
+.btn { padding:10px 20px; border-radius:12px; border:none; font-size:13px; font-weight:700; cursor:pointer; transition:0.2s; font-family:inherit; }
+.btn:active { transform:scale(0.96); }
+.btn-primary { background:#2563eb; color:#fff; }
+.btn-danger { background:#ef4444; color:#fff; }
+.btn-outline { background:transparent; border:1.5px solid #e2e8f0; color:#475569; }
+.btn-sm { padding:6px 8px; font-size:11px; border-radius:8px; line-height:1; }
+.spot-item { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid #f1f5f9; }
+.spot-item:last-child { border-bottom:none; }
+.spot-item-avatar { width:44px; height:44px; border-radius:50%; object-fit:cover; background:#e2e8f0; flex-shrink:0; }
+.spot-item-info { flex:1; min-width:0; }
+.spot-item-name { font-size:13px; font-weight:700; color:#0f172a; }
+.spot-item-handle { font-size:11px; color:#2563eb; }
+.spot-item-meta { font-size:11px; color:#94a3b8; margin-top:2px; }
+.spot-item-status { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; }
+.spot-item-actions { display:flex; gap:4px; flex-shrink:0; align-items:center; }
+.spot-order { font-size:11px; font-weight:700; color:#94a3b8; min-width:20px; text-align:center; }
+.empty-state { text-align:center; padding:30px 20px; color:#94a3b8; font-size:13px; }
+.btn-icon { width:32px; height:32px; border-radius:8px; border:none; cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center; transition:0.15s; }
+.btn-icon:active { transform:scale(0.88); }
+.btn-approve { background:#dcfce7; color:#16a34a; }
+.btn-reject { background:#fef2f2; color:#dc2626; }
+.btn-delete { background:#fef2f2; color:#dc2626; }
+.user-search-input { width:100%; padding:8px 12px; border-radius:10px; border:1.5px solid #e2e8f0; font-size:12px; font-weight:600; color:#1e293b; outline:none; font-family:inherit; box-sizing:border-box; margin-bottom:6px; transition:0.2s; }
+.user-search-input:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,0.1); }
+.user-select-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:4px; max-height:140px; overflow-y:auto; padding:4px 0; }
+@media (min-height:800px) { .user-select-grid { max-height:200px; } }
+.user-select-item { display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:10px; border:1.5px solid #e2e8f0; cursor:pointer; transition:0.2s; }
+.user-select-item:hover { border-color:#2563eb; background:#f8faff; }
+.user-select-item.selected { border-color:#2563eb; background:#eef4ff; }
+.user-select-item img { width:28px; height:28px; border-radius:50%; object-fit:cover; background:#e2e8f0; }
+.user-select-item span { font-size:12px; font-weight:600; color:#1e293b; }
+.file-preview { max-width:100%; max-height:120px; border-radius:12px; margin-top:6px; display:none; object-fit:contain; background:#f8fafc; }
+.sp-link-toggle { display:flex; background:#f1f5f9; padding:3px; border-radius:100px; gap:3px; margin-bottom:10px; }
+.sp-link-toggle button { flex:1; border:none; background:none; padding:7px 12px; border-radius:100px; font-size:11px; font-weight:700; color:#64748b; cursor:pointer; transition:all 0.3s; display:flex; align-items:center; justify-content:center; gap:4px; font-family:'Plus Jakarta Sans',sans-serif; }
+.sp-link-toggle button.active { background:#ffffff; color:#2563eb; box-shadow:0 2px 8px rgba(0,0,0,0.08); }
+.sp-link-toggle button .material-symbols-outlined { font-size:16px; }
+.sp-link-input-wrap { transition:opacity 0.2s ease, transform 0.2s ease; }
+.sp-link-input-wrap.hidden { display:none; }
+.hidden { display:none !important; }
+</style>
+{% endblock %}
+
+{% block body %}
+<section class="adm-wrapper">
+    <div class="adm-header">
+        <a href="{% url 'admin_dashboard' %}" class="adm-back-btn"><span class="material-symbols-outlined">arrow_back</span></a>
+        <h2>Campus Spotlights</h2>
+        <button class="btn btn-primary" onclick="showAddForm()">+ Add New</button>
+    </div>
+    <div class="adm-body">
+        <div class="adm-card">
+            <h3>Student Spotlights</h3>
+            {% if spotlights %}
+            <div id="spotList">
+                {% for s in spotlights %}
+                <div class="spot-item" data-id="{{ s.id }}">
+                    <span class="spot-order">#{{ forloop.counter }}</span>
+                    <img class="spot-item-avatar" src="{{ s.user.profile.profile_pic|default:'https://res.cloudinary.com/dq9vbhbcj/image/upload/v1/srm_match/default_avatar' }}" alt="">
+                    <div class="spot-item-info">
+                        <div class="spot-item-name">
+                            <span class="spot-item-status" style="background:{{ s.is_active|yesno:'#16a34a,#94a3b8' }}"></span>
+                            {{ s.user.profile.name }}
+                        </div>
+                        {% with is_website=s.instagram_handle|slice:':4' %}
+                        {% if is_website == 'http' %}
+                        <div class="spot-item-handle" style="font-size:10px;">{{ s.instagram_handle }}</div>
+                        {% else %}
+                        <div class="spot-item-handle">@{{ s.instagram_handle }}</div>
+                        {% endif %}
+                        {% endwith %}
+                        <div class="spot-item-meta">{{ s.get_content_type_display }} &middot; {{ s.note|truncatechars:60 }}</div>
+                    </div>
+                    <div class="spot-item-actions">
+                        <button class="btn btn-outline btn-sm" onclick="editSpot({{ s.id }}, {{ s.user.id }}, '{{ s.instagram_handle|escapejs }}', '{{ s.content_type|escapejs }}', '{{ s.note|escapejs }}', '{{ s.cover_image|escapejs }}', '{{ s.instagram_handle|slice:":4"|escapejs }}')">Edit</button>
+                        <button class="btn-icon btn-delete" onclick="deleteSpot({{ s.id }})" title="Delete">&#128465;</button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">No spotlights yet. Add your first one above.</div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<div class="modal-overlay" id="spotModal" onclick="if(event.target===this)hideModal()" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);z-index:9999;align-items:flex-start;justify-content:center;padding:12px 0;overflow-y:auto;">
+    <form id="spotForm" method="post" enctype="multipart/form-data" style="background:#fff;border-radius:24px;padding:20px 20px 16px;max-width:400px;width:90%;margin:auto;box-shadow:0 24px 64px rgba(0,0,0,0.2);animation:modalIn 0.2s ease;">
+        {% csrf_token %}
+        <div style="font-size:16px;font-weight:800;color:#0f172a;margin:0 0 12px;" id="modalTitle">Add Spotlight</div>
+        <input type="hidden" name="id" id="spotId" value="">
+        <input type="hidden" name="user_id" id="spotUserId" value="">
+        <input type="hidden" name="cover_image" id="spotCoverUrl" value="">
+        <div class="form-group">
+            <label>Select User</label>
+            <input type="text" class="user-search-input" id="userSearch" placeholder="Search users..." oninput="filterUsers(this.value)">
+            <div class="user-select-grid" id="userGrid">
+                {% for u in users %}
+                <div class="user-select-item{% if forloop.counter0 >= 15 %} hidden{% endif %}" data-user-id="{{ u.id }}" data-name="{{ u.profile.name|lower }}" onclick="selectUser(this)">
+                    <img src="{{ u.profile.profile_pic|default:'https://res.cloudinary.com/dq9vbhbcj/image/upload/v1/srm_match/default_avatar' }}" alt="">
+                    <span>{{ u.profile.name }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Cover Image</label>
+            <input type="file" name="cover_image" id="spotCoverFile" accept="image/*" onchange="previewSpotCover(event)">
+            <img class="file-preview" id="coverPreview" style="max-width:100%;max-height:80px;border-radius:10px;margin-top:4px;display:none;object-fit:contain;background:#f8fafc;">
+        </div>
+        <div class="sp-link-toggle">
+            <button type="button" class="active" data-link="instagram" onclick="adminSwitchLink('instagram')">
+                <span class="material-symbols-outlined" style="font-size:16px;">camera</span> Instagram
+            </button>
+            <button type="button" data-link="website" onclick="adminSwitchLink('website')">
+                <span class="material-symbols-outlined" style="font-size:16px;">language</span> Website
+            </button>
+        </div>
+        <input type="hidden" name="link_type" id="adminLinkType" value="instagram">
+        <div class="sp-link-input-wrap" id="adminLinkInputInstagram">
+            <div class="form-group">
+                <label>Instagram Handle</label>
+                <input type="text" name="instagram_handle" id="spotHandle" placeholder="@username" required>
+            </div>
+        </div>
+        <div class="sp-link-input-wrap hidden" id="adminLinkInputWebsite">
+            <div class="form-group">
+                <label>Website URL</label>
+                <input type="url" name="website_url" id="spotWebsite" placeholder="https://example.com">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Content Type</label>
+            <select name="content_type" id="spotType" onchange="adminToggleCustomType(this)">
+                <option value="vlog">Vlog</option>
+                <option value="blog">Blog</option>
+                <option value="photography">Photography</option>
+                <option value="art">Art</option>
+                <option value="music">Music</option>
+                <option value="fitness">Fitness</option>
+                <option value="tech">Tech</option>
+                <option value="fashion">Fashion</option>
+                <option value="other">Other</option>
+                <option value="__custom__">Custom</option>
+            </select>
+            <input type="text" name="custom_type" id="adminCustomType" placeholder="Enter your own type" style="display:none;margin-top:6px;">
+        </div>
+        <div class="form-group">
+            <label>Note</label>
+            <textarea name="note" id="spotNote" placeholder="Short note about their content..." maxlength="200"></textarea>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px;">
+            <button type="button" class="btn btn-outline" onclick="hideModal()" style="flex:1;padding:8px 16px;font-size:12px;">Cancel</button>
+            <button type="submit" class="btn btn-primary" style="flex:1;padding:8px 16px;font-size:12px;">Save</button>
+        </div>
+    </form>
+</div>
+
+<script>
+var csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+function adminToggleCustomType(sel) {
+    document.getElementById('adminCustomType').style.display = sel.value === '__custom__' ? 'block' : 'none';
+}
+
+function adminSwitchLink(type) {
+    document.querySelectorAll('.sp-link-toggle button').forEach(function(b) { b.classList.toggle('active', b.dataset.link === type); });
+    document.getElementById('adminLinkType').value = type;
+    document.getElementById('adminLinkInputInstagram').classList.toggle('hidden', type !== 'instagram');
+    document.getElementById('adminLinkInputWebsite').classList.toggle('hidden', type !== 'website');
+    document.getElementById('spotHandle').required = type === 'instagram';
+    document.getElementById('spotWebsite').required = type === 'website';
+}
+
+function filterUsers(q) {
+    var items = document.querySelectorAll('#userGrid .user-select-item');
+    var visible = 0;
+    q = q.toLowerCase().trim();
+    items.forEach(function(el) {
+        var name = el.dataset.name;
+        var match = !q || name.indexOf(q) !== -1;
+        if (match && (!q && visible >= 15)) { el.classList.add('hidden'); return; }
+        if (match && (!q && visible < 15)) { el.classList.remove('hidden'); visible++; }
+        else if (match) { el.classList.remove('hidden'); }
+        else { el.classList.add('hidden'); }
+    });
+}
+
+function previewSpotCover(e) {
+    var f = e.target.files && e.target.files[0];
+    if (!f) return;
+    var r = new FileReader();
+    r.onload = function(ev) { var p = document.getElementById('coverPreview'); p.src = ev.target.result; p.style.display = 'block'; };
+    r.readAsDataURL(f);
+}
+
+function showAddForm() {
+    document.getElementById('modalTitle').textContent = 'Add Spotlight';
+    document.getElementById('spotId').value = '';
+    document.getElementById('spotUserId').value = '';
+    document.getElementById('spotHandle').value = '';
+    document.getElementById('spotWebsite').value = '';
+    document.getElementById('spotType').value = 'vlog';
+    document.getElementById('spotNote').value = '';
+    document.getElementById('spotCoverUrl').value = '';
+    document.getElementById('spotCoverFile').value = '';
+    document.getElementById('coverPreview').style.display = 'none';
+    document.getElementById('userSearch').value = '';
+    document.querySelectorAll('.user-select-item').forEach(function(el) { el.classList.remove('selected'); el.classList.remove('hidden'); });
+    document.querySelectorAll('#userGrid .user-select-item:nth-child(n+16)').forEach(function(el) { el.classList.add('hidden'); });
+    adminSwitchLink('instagram');
+    document.getElementById('spotModal').style.display = 'flex';
+}
+
+function hideModal() {
+    document.getElementById('spotModal').style.display = 'none';
+}
+
+function selectUser(el) {
+    document.querySelectorAll('.user-select-item').forEach(function(e) { e.classList.remove('selected'); });
+    el.classList.add('selected');
+    document.getElementById('spotUserId').value = el.dataset.userId;
+}
+
+function editSpot(id, userId, handle, ctype, note, cover) {
+    document.getElementById('modalTitle').textContent = 'Edit Spotlight';
+    document.getElementById('spotId').value = id;
+    document.getElementById('spotUserId').value = userId;
+    document.getElementById('spotHandle').value = handle;
+    document.getElementById('spotWebsite').value = handle;
+    document.getElementById('spotType').value = ctype;
+    document.getElementById('spotNote').value = note;
+    document.getElementById('spotCoverUrl').value = cover || '';
+    document.getElementById('spotCoverFile').value = '';
+    var isWeb = handle.substring(0,4) === 'http';
+    adminSwitchLink(isWeb ? 'website' : 'instagram');
+    var p = document.getElementById('coverPreview');
+    if (cover) { p.src = cover; p.style.display = 'block'; }
+    else p.style.display = 'none';
+    document.querySelectorAll('.user-select-item').forEach(function(el) {
+        el.classList.toggle('selected', parseInt(el.dataset.userId) === userId);
+    });
+    document.getElementById('spotModal').style.display = 'flex';
+}
+
+function toggleActive(id, active) {
+    var key = active ? 'activate' : 'deactivate';
+    fetch('{% url "admin_spotlights" %}', {
+        method: 'POST', headers: {'Content-Type':'application/json','X-CSRFToken':csrf},
+        body: JSON.stringify({[key]: id})
+    }).then(function(r){return r.json()}).then(function(d){
+        if(d.success) location.reload();
+        else alert(d.error);
+    });
+}
+
+function deleteSpot(id) {
+    if (!confirm('Delete this spotlight?')) return;
+    fetch('{% url "admin_spotlights" %}', {
+        method: 'POST', headers: {'Content-Type':'application/json','X-CSRFToken':csrf},
+        body: JSON.stringify({delete: id})
+    }).then(function(r){return r.json()}).then(function(d){
+        if(d.success) location.reload();
+        else alert(d.error);
+    });
+}
+
+function moveSpot(id, dir) {
+    var items = document.querySelectorAll('.spot-item');
+    var order = [];
+    items.forEach(function(el,i){ order.push({id: parseInt(el.dataset.id), order: i}); });
+    var idx = -1;
+    order.forEach(function(o,i){ if(o.id===id) idx=i; });
+    if(dir==='up' && idx>0) { var tmp=order[idx].order; order[idx].order=order[idx-1].order; order[idx-1].order=tmp; }
+    else if(dir==='down' && idx<order.length-1) { var tmp=order[idx].order; order[idx].order=order[idx+1].order; order[idx+1].order=tmp; }
+    else return;
+    fetch('{% url "admin_spotlights" %}', {
+        method: 'POST', headers: {'Content-Type':'application/json','X-CSRFToken':csrf},
+        body: JSON.stringify({reorder: order})
+    }).then(function(r){return r.json()}).then(function(d){
+        if(d.success) location.reload();
+    });
+}
+
+document.getElementById('spotForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var userId = document.getElementById('spotUserId').value;
+    if (!userId) { alert('Please select a user'); return; }
+    var fd = new FormData();
+    fd.append('id', document.getElementById('spotId').value);
+    fd.append('user_id', userId);
+    fd.append('link_type', document.getElementById('adminLinkType').value);
+    fd.append('instagram_handle', document.getElementById('spotHandle').value);
+    fd.append('website_url', document.getElementById('spotWebsite').value);
+    fd.append('content_type', document.getElementById('spotType').value);
+    fd.append('custom_type', document.getElementById('adminCustomType').value);
+    fd.append('note', document.getElementById('spotNote').value);
+    var fileInput = document.getElementById('spotCoverFile');
+    if (fileInput.files && fileInput.files[0]) fd.append('cover_image', fileInput.files[0]);
+    else {
+        var coverUrl = document.getElementById('spotCoverUrl').value;
+        if (coverUrl) fd.append('cover_image', coverUrl);
+    }
+    fd.append('csrfmiddlewaretoken', csrf);
+    fetch('{% url "admin_spotlights" %}', {
+        method: 'POST', body: fd
+    }).then(function(r){return r.json()}).then(function(d){
+        if(d.success) location.reload();
+        else alert(d.error);
+    });
+});
+
+document.getElementById('spotModal').addEventListener('click', function(e) {
+    if(e.target === this) hideModal();
+});
+</script>
+{% endblock %}

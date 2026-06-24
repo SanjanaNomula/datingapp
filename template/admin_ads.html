@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Ad Management | KnotSpot{% endblock %}
+
+{% block head %}
+<style>
+nav { display: none !important; }
+html, body { height:100dvh; overflow:hidden; position:fixed; width:100%; background:#f7f9fb; padding:0!important; margin:0!important; }
+.container { max-width:100%!important; width:100%!important; padding:0!important; margin:0!important; height:100%; box-sizing:border-box; background:transparent!important; border:none!important; box-shadow:none!important; }
+.adm-wrapper { display:flex; flex-direction:column; position:fixed; top:0; left:0; right:0; bottom:0; width:100%; max-width:900px; margin:0 auto; background:linear-gradient(180deg,#fbfcff 0%,#f7f9fb 58%,#eff4fb 100%); z-index:10; }
+.adm-header { flex-shrink:0; padding:calc(10px + env(safe-area-inset-top)) 20px 16px; background:rgba(247,249,251,0.85); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border-bottom:1px solid rgba(0,74,198,0.08); display:flex; align-items:center; gap:12px; z-index:20; }
+.adm-back-btn { width:44px; height:44px; border-radius:16px; background:#fff; display:flex; align-items:center; justify-content:center; text-decoration:none; color:#2563eb; border:1px solid rgba(0,74,198,0.08); box-shadow:0 10px 24px rgba(15,23,42,0.06); transition:0.2s; cursor:pointer; flex-shrink:0; }
+.adm-back-btn:active { transform:scale(0.94); }
+.adm-header h2 { margin:0; font-size:18px; font-weight:800; color:#0f172a; flex:1; }
+.adm-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:20px; }
+.adm-card { background:#fff; border-radius:20px; padding:20px; box-shadow:0 8px 24px rgba(15,23,42,0.04); border:1px solid rgba(0,74,198,0.06); margin-bottom:16px; }
+.adm-card h3 { margin:0 0 16px; font-size:15px; font-weight:800; color:#0f172a; }
+.form-group { margin-bottom:12px; }
+.form-group label { display:block; font-size:11px; font-weight:700; color:#475569; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.3px; }
+.form-group input, .form-group input[type="file"] { width:100%; padding:10px 14px; border-radius:12px; border:1.5px solid #e2e8f0; font-size:13px; font-weight:600; color:#1e293b; outline:none; font-family:inherit; box-sizing:border-box; transition:0.2s; }
+.form-group input:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,0.1); }
+.form-group input[type="file"] { padding:8px 14px; font-size:12px; color:#64748b; }
+.btn { padding:10px 20px; border-radius:12px; border:none; font-size:13px; font-weight:700; cursor:pointer; transition:0.2s; font-family:inherit; }
+.btn:active { transform:scale(0.96); }
+.btn-primary { background:#2563eb; color:#fff; }
+.btn-danger { background:#ef4444; color:#fff; }
+.btn-outline { background:transparent; border:1.5px solid #e2e8f0; color:#475569; }
+.btn-sm { padding:6px 12px; font-size:11px; border-radius:8px; }
+.ad-item { display:flex; align-items:center; gap:14px; padding:12px 0; border-bottom:1px solid #f1f5f9; }
+.ad-item:last-child { border-bottom:none; }
+.ad-item-thumb { width:40px; height:56px; border-radius:8px; object-fit:cover; background:#f1f5f9; flex-shrink:0; }
+.ad-item-info { flex:1; min-width:0; }
+.ad-item-title { font-size:13px; font-weight:700; color:#0f172a; }
+.ad-item-url { font-size:11px; color:#94a3b8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ad-item-actions { display:flex; gap:6px; flex-shrink:0; }
+.ad-order { font-size:11px; font-weight:700; color:#94a3b8; min-width:20px; text-align:center; }
+.empty-state { text-align:center; padding:30px 20px; color:#94a3b8; font-size:13px; }
+.file-preview { max-width:100%; max-height:160px; border-radius:12px; margin-top:8px; display:none; object-fit:contain; background:#f8fafc; }
+</style>
+{% endblock %}
+
+{% block body %}
+<section class="adm-wrapper">
+    <div class="adm-header">
+        <a href="{% url 'admin_dashboard' %}" class="adm-back-btn"><span class="material-symbols-outlined">arrow_back</span></a>
+        <h2>Ad Management</h2>
+        <button class="btn btn-primary" onclick="showAddForm()">+ Add New</button>
+    </div>
+    <div class="adm-body">
+        <div class="adm-card">
+            <h3>Current Posters</h3>
+            {% if ads %}
+            <div id="adList">
+                {% for ad in ads %}
+                <div class="ad-item" data-id="{{ ad.id }}">
+                    <span class="ad-order">#{{ forloop.counter }}</span>
+                    {% if ad.image_url %}
+                    <img class="ad-item-thumb" src="{{ ad.image_url }}" alt="{{ ad.title }}" onerror="this.style.display='none'">
+                    {% else %}
+                    <div class="ad-item-thumb" style="background:#f1f5f9;"></div>
+                    {% endif %}
+                    <div class="ad-item-info">
+                        <div class="ad-item-title">{{ ad.title|default:"(no title)" }}</div>
+                        <div class="ad-item-url">{{ ad.link_url|truncatechars:50 }}</div>
+                    </div>
+                    <div class="ad-item-actions">
+                        <button class="btn btn-outline btn-sm" onclick="moveAd({{ ad.id }}, 'up')" {% if forloop.first %}disabled style="opacity:0.4"{% endif %}>&uarr;</button>
+                        <button class="btn btn-outline btn-sm" onclick="moveAd({{ ad.id }}, 'down')" {% if forloop.last %}disabled style="opacity:0.4"{% endif %}>&darr;</button>
+                        <button class="btn btn-outline btn-sm" onclick="editAd({{ ad.id }}, '{{ ad.title|escapejs }}', '{{ ad.image_url|escapejs }}', '{{ ad.link_url|escapejs }}')">Edit</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteAd({{ ad.id }})">Del</button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">No posters yet. Add your first one above.</div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<div class="modal-overlay" id="adModal" onclick="if(event.target===this)hideModal()" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);z-index:9999;align-items:center;justify-content:center;">
+    <form id="adForm" method="post" enctype="multipart/form-data" style="background:#fff;border-radius:24px;padding:28px 24px 20px;max-width:400px;width:90%;box-shadow:0 24px 64px rgba(0,0,0,0.2);animation:modalIn 0.2s ease;">
+        {% csrf_token %}
+        <div style="font-size:17px;font-weight:800;color:#0f172a;margin:0 0 16px;" id="modalTitle">Add Poster</div>
+        <input type="hidden" name="id" id="adId" value="">
+        <div class="form-group">
+            <label>Title (optional)</label>
+            <input type="text" name="title" id="adTitle" placeholder="eg. Spring Sale">
+        </div>
+        <div class="form-group">
+            <label>Upload Image</label>
+            <input type="file" name="image" id="adImageFile" accept="image/*" onchange="previewFile(event)">
+            <img class="file-preview" id="filePreview">
+        </div>
+        <div class="form-group">
+            <label>Or paste Image URL</label>
+            <input type="url" name="image_url" id="adImageUrl" placeholder="https://..." oninput="document.getElementById('filePreview').style.display='none'">
+        </div>
+        <div class="form-group">
+            <label>Link URL *</label>
+            <input type="url" name="link_url" id="adLink" placeholder="https://...">
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px;">
+            <button type="button" class="btn btn-outline" style="flex:1;" onclick="hideModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary" style="flex:1;">Save</button>
+        </div>
+    </form>
+</div>
+
+<style>
+.modal-overlay.show { display:flex !important; }
+@keyframes modalIn { from { opacity:0; transform:scale(0.92) translateY(12px); } to { opacity:1; transform:scale(1) translateY(0); } }
+</style>
+
+<script>
+let editingId = null;
+
+function showAddForm() {
+    editingId = null;
+    document.getElementById('adId').value = '';
+    document.getElementById('adTitle').value = '';
+    document.getElementById('adImageUrl').value = '';
+    document.getElementById('adLink').value = '';
+    document.getElementById('adImageFile').value = '';
+    document.getElementById('filePreview').style.display = 'none';
+    document.getElementById('modalTitle').textContent = 'Add Poster';
+    document.getElementById('adModal').classList.add('show');
+}
+function hideModal() { document.getElementById('adModal').classList.remove('show'); }
+
+function editAd(id, title, img, link) {
+    editingId = id;
+    document.getElementById('adId').value = id;
+    document.getElementById('adTitle').value = title;
+    document.getElementById('adImageUrl').value = img;
+    document.getElementById('adLink').value = link;
+    document.getElementById('adImageFile').value = '';
+    document.getElementById('filePreview').style.display = 'none';
+    document.getElementById('modalTitle').textContent = 'Edit Poster';
+    document.getElementById('adModal').classList.add('show');
+}
+
+function previewFile(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+        var preview = document.getElementById('filePreview');
+        preview.src = ev.target.result;
+        preview.style.display = 'block';
+        document.getElementById('adImageUrl').value = '';
+    };
+    reader.readAsDataURL(file);
+}
+
+document.getElementById('adForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    var fd = new FormData(this);
+    if (editingId) fd.set('id', editingId);
+    var file = fd.get('image');
+    if (file && file.size && file.size > 0) {
+        // has file, fine
+    } else {
+        fd.delete('image');
+        var imgUrl = document.getElementById('adImageUrl').value.trim();
+        if (!imgUrl) { alert('Upload an image or paste a URL'); return; }
+        fd.set('image_url', imgUrl);
+    }
+    var linkUrl = document.getElementById('adLink').value.trim();
+    if (!linkUrl) { alert('Link URL is required'); return; }
+    fd.set('link_url', linkUrl);
+    try {
+        var res = await fetch("{% url 'admin_ads' %}", { method:'POST', body: fd, headers:{'X-CSRFToken':'{{ csrf_token }}'} });
+        var d = await res.json();
+        if (d.success) location.reload();
+        else alert(d.error || 'Failed');
+    } catch(e) { alert('Error'); }
+});
+
+async function deleteAd(id) {
+    if (!confirm('Delete this poster?')) return;
+    try {
+        var res = await fetch("{% url 'admin_ads' %}", { method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':'{{ csrf_token }}'}, body: JSON.stringify({delete: id}) });
+        var d = await res.json();
+        if (d.success) location.reload();
+    } catch(e) { console.error(e); }
+}
+
+async function moveAd(id, dir) {
+    var items = document.querySelectorAll('.ad-item');
+    var reorder = [];
+    var ids = Array.from(items).map(function(el) { return parseInt(el.dataset.id); });
+    var idx = ids.indexOf(id);
+    if (dir === 'up' && idx > 0) { var t = ids[idx-1]; ids[idx-1] = ids[idx]; ids[idx] = t; }
+    else if (dir === 'down' && idx < ids.length-1) { var t = ids[idx]; ids[idx] = ids[idx+1]; ids[idx+1] = t; }
+    else return;
+    ids.forEach(function(id, i) { reorder.push({id: id, order: i}); });
+    try {
+        var res = await fetch("{% url 'admin_ads' %}", { method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':'{{ csrf_token }}'}, body: JSON.stringify({reorder: reorder}) });
+        var d = await res.json();
+        if (d.success) location.reload();
+    } catch(e) { console.error(e); }
+}
+</script>
+{% endblock %}

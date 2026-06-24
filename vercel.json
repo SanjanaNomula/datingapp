@@ -1,20 +1,11 @@
 {
   "version": 2,
-  "buildCommand": "python manage.py collectstatic --noinput",
+  "buildCommand": "python manage.py migrate",
   "builds": [
-    {
-      "src": "index.py",
-      "use": "@vercel/python"
-    }
+    { "src": "index.py", "use": "@vercel/python" }
   ],
   "routes": [
-    {
-      "src": "/static/(.*)",
-      "dest": "/staticfiles/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "index.py"
-    }
+    { "src": "/firebase-messaging-sw.js", "dest": "/firebase-messaging-sw.js" },
+    { "src": "/(.*)", "dest": "index.py" }
   ]
 }

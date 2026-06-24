@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils.text import slugify
 from django.contrib.auth.models import User
 
 class Profile(models.Model):
@@ -715,3 +716,239 @@ class GiveawayWinner(models.Model):
     class Meta:
         verbose_name = "Giveaway Winner"
         verbose_name_plural = "Giveaway Winners"
+
+
+class VoiceRoom(models.Model):
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(unique=True)
+    max_capacity = models.PositiveIntegerField(default=8)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = "Voice Room"
+        verbose_name_plural = "Voice Rooms"
+
+
+class VoiceParticipant(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    room = models.ForeignKey(VoiceRoom, on_delete=models.CASCADE, related_name='participants')
+    joined_at = models.DateTimeField(auto_now_add=True)
+    is_muted = models.BooleanField(default=False)
+    last_heartbeat = models.DateTimeField(null=True, blank=True)
+    session_peer_id = models.CharField(max_length=50, blank=True, null=True)
+
+    class Meta:
+        unique_together = ('user', 'room')
+        verbose_name = "Voice Participant"
+        verbose_name_plural = "Voice Participants"
+
+    def __str__(self):
+        return f"{self.user.username} in {self.room.name}"
+
+
+class BugReport(models.Model):
+    BUG_CATEGORIES = [
+        ('login', 'Login/Auth'), ('profile', 'Profile'), ('matching', 'Matching'),
+        ('chat', 'Chat'), ('voice', 'Voice Room'), ('roomfinder', 'Room Finder'),
+        ('confessions', 'Confessions'), ('other', 'Other'),
+    ]
+    STATUS_CHOICES = [
+        ('pending', 'Pending'), ('reviewing', 'Reviewing'),
+        ('fixed', 'Fixed'), ('closed', 'Closed'),
+    ]
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bug_reports')
+    category = models.CharField(max_length=20, choices=BUG_CATEGORIES)
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    screenshot = models.URLField(blank=True, null=True)
+    device_info = models.JSONField(blank=True, null=True)
+    page_url = models.URLField(blank=True, max_length=500)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    admin_reply = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"[{self.get_category_display()}] {self.title[:60]}"
+
+
+class FeatureSuggestion(models.Model):
+    SUGGESTION_CATEGORIES = [
+        ('matching', 'Matching'), ('social', 'Social'), ('chat', 'Chat'),
+        ('profile', 'Profile'), ('other', 'Other'),
+    ]
+    PRIORITY_CHOICES = [('low', 'Low'), ('medium', 'Medium'), ('high', 'High')]
+    STATUS_CHOICES = [
+        ('pending', 'Pending'), ('under_review', 'Under Review'),
+        ('accepted', 'Accepted'), ('rejected', 'Rejected'),
+    ]
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='suggestions')
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    category = models.CharField(max_length=20, choices=SUGGESTION_CATEGORIES)
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    votes = models.IntegerField(default=0)
+    admin_reply = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-votes', '-created_at']
+
+    def __str__(self):
+        return f"[{self.get_category_display()}] {self.title[:60]}"
+
+
+class SupportTicket(models.Model):
+    TICKET_CATEGORIES = [
+        ('account', 'Account Issue'), ('verification', 'Verification Issue'),
+        ('report_user', 'Report User'), ('technical', 'Technical Issue'),
+        ('other', 'Other'),
+    ]
+    STATUS_CHOICES = [
+        ('open', 'Open'), ('in_progress', 'In Progress'),
+        ('closed', 'Closed'),
+    ]
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='support_tickets')
+    subject = models.CharField(max_length=200)
+    category = models.CharField(max_length=20, choices=TICKET_CATEGORIES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
+    unread = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        return f"[{self.get_category_display()}] {self.subject[:60]}"
+
+
+class TicketMessage(models.Model):
+    ticket = models.ForeignKey(SupportTicket, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE)
+    message = models.TextField()
+    is_admin = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Msg by {self.sender.username} on {self.ticket.subject[:40]}"
+
+
+class FeedbackNotification(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='feedback_notifications')
+    message = models.CharField(max_length=300)
+    link = models.CharField(max_length=200, blank=True)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Notif for {self.user.username}: {self.message[:50]}"
+
+
+CONTENT_TYPE_CHOICES = [
+    ('vlog', 'Vlog'),
+    ('blog', 'Blog'),
+    ('photography', 'Photography'),
+    ('art', 'Art'),
+    ('music', 'Music'),
+    ('fitness', 'Fitness'),
+    ('tech', 'Tech'),
+    ('fashion', 'Fashion'),
+    ('other', 'Other'),
+]
+
+class CampusSpotlight(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='spotlights')
+    instagram_handle = models.CharField(max_length=100)
+    content_type = models.CharField(max_length=50, choices=CONTENT_TYPE_CHOICES)
+    note = models.TextField(max_length=200, blank=True)
+    cover_image = models.URLField(max_length=500, blank=True)
+    is_active = models.BooleanField(default=True)
+    order = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order', '-created_at']
+
+    def __str__(self):
+        return f"{self.user.profile.name} (@{self.instagram_handle})"
+
+
+class Event(models.Model):
+    EVENT_STATUS = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+    FEE_TYPE = [
+        ('free', 'Free'),
+        ('paid', 'Paid'),
+    ]
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='events')
+    title = models.CharField(max_length=200)
+    poster = models.URLField(max_length=500, blank=True)
+    description = models.TextField()
+    campus = models.CharField(max_length=100, blank=True)
+    event_date = models.DateField()
+    last_reg_date = models.DateField(blank=True, null=True)
+    fee_type = models.CharField(max_length=10, choices=FEE_TYPE, default='free')
+    fee_amount = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    reg_link = models.URLField(max_length=500, blank=True)
+    page_link = models.URLField(max_length=500, blank=True)
+    status = models.CharField(max_length=10, choices=EVENT_STATUS, default='pending')
+    slug = models.SlugField(max_length=255, unique=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-event_date', '-created_at']
+
+    def __str__(self):
+        return self.title
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base = slugify(f"{self.campus} {self.title}") if self.campus else slugify(self.title)
+            if not base:
+                base = f"event-{self.id or 'new'}"
+            self.slug = base
+            # ensure uniqueness
+            qs = Event.objects.filter(slug=self.slug)
+            if self.pk:
+                qs = qs.exclude(pk=self.pk)
+            if qs.exists():
+                import time
+                self.slug = f"{base}-{int(time.time())}"
+        super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        from django.urls import reverse
+        return reverse('event_detail', args=[self.slug])
+
+
+class Advertisement(models.Model):
+    title = models.CharField(max_length=200, blank=True)
+    image_url = models.URLField(max_length=500)
+    link_url = models.URLField(max_length=500)
+    order = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order', '-created_at']
+
+    def __str__(self):
+        return self.title or f"Ad #{self.id}"

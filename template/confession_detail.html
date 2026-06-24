@@ -1,7 +1,9 @@
 {% extends 'base.html' %}
 
-{% block title %}SRM Confession #{{ confession.id }} | SRM Match{% endblock %}
-{% block meta_description %}{% if confession.content %}{{ confession.content|truncatechars:150 }}{% else %}Read anonymous student confession posted on SRM Match.{% endif %}{% endblock %}
+{% block title %}SRM Confession #{{ confession.id }} | KnotSpot{% endblock %}
+{% block meta_description %}{% if confession.content %}{{ confession.content|truncatechars:150 }}{% else %}Read anonymous student confession posted on KnotSpot.{% endif %}{% endblock %}
+{% block og_title %}SRM Confession #{{ confession.id }} | KnotSpot{% endblock %}
+{% block og_description %}{% if confession.content %}{{ confession.content|truncatechars:150 }}{% else %}Read anonymous student confession posted on KnotSpot.{% endif %}{% endblock %}
 
 {% block json_ld %}
 <script type="application/ld+json">
@@ -9,7 +11,7 @@
   "@context": "https://schema.org",
   "@type": "Article",
   "headline": "SRM Confession #{{ confession.id }}",
-  "description": "{% if confession.content %}{{ confession.content|truncatechars:150|escapejs }}{% else %}Read anonymous student confession posted on SRM Match.{% endif %}",
+  "description": "{% if confession.content %}{{ confession.content|truncatechars:150|escapejs }}{% else %}Read anonymous student confession posted on KnotSpot.{% endif %}",
   {% if confession.image %}
   "image": "{{ request.scheme }}://{{ request.get_host }}{{ confession.image.url|default:confession.image }}",
   {% endif %}
@@ -19,10 +21,10 @@
   },
   "publisher": {
     "@type": "Organization",
-    "name": "SRM Match",
+    "name": "KnotSpot",
     "logo": {
       "@type": "ImageObject",
-      "url": "https://srm-match.vercel.app/icon-512x512.png"
+      "url": "https://knotspot.online/static/favicon.png"
     }
   },
   "datePublished": "{{ confession.created_at|date:'c' }}"
@@ -31,8 +33,6 @@
 {% endblock %}
 
 {% block head %}
-<meta property="og:title" content="SRM Confession #{{ confession.id }} | SRM Match">
-<meta property="og:description" content="{% if confession.content %}{{ confession.content|truncatechars:150 }}{% else %}Read anonymous student confession posted on SRM Match.{% endif %}">
 {% if confession.image %}
 <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ confession.image.url|default:confession.image }}">
 {% endif %}

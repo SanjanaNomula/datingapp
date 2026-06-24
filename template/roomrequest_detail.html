@@ -1,9 +1,11 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ req.title }} | Room Request | SRM Match{% endblock %}
+{% block title %}{{ req.title }} | Room Request | KnotSpot{% endblock %}
 
-{% block meta_description %}Student looking for {{ req.preferred_room_type }} near {{ req.looking_near }} around SRM {{ req.campus }} campus. Connect on SRM Match.{% endblock %}
+{% block meta_description %}Student looking for {{ req.preferred_room_type }} near {{ req.looking_near }} around SRM {{ req.campus }} campus. Connect on KnotSpot.{% endblock %}
+{% block og_title %}{{ req.title }} | Room Request | KnotSpot{% endblock %}
+{% block og_description %}Student looking for {{ req.preferred_room_type }} near {{ req.looking_near }} around SRM {{ req.campus }} campus. Connect on KnotSpot.{% endblock %}
 
 {% block json_ld %}
 <script type="application/ld+json">
@@ -11,17 +13,17 @@
   "@context": "https://schema.org",
   "@type": "Article",
   "headline": "{{ req.title|escapejs }}",
-  "description": "Student looking for {{ req.preferred_room_type|escapejs }} near {{ req.looking_near|escapejs }} around SRM {{ req.campus }} campus. Connect on SRM Match.",
+  "description": "Student looking for {{ req.preferred_room_type|escapejs }} near {{ req.looking_near|escapejs }} around SRM {{ req.campus }} campus. Connect on KnotSpot.",
   "author": {
     "@type": "Person",
-    "name": "SRM Match User"
+    "name": "KnotSpot User"
   },
   "publisher": {
     "@type": "Organization",
-    "name": "SRM Match",
+    "name": "KnotSpot",
     "logo": {
       "@type": "ImageObject",
-      "url": "https://srm-match.vercel.app/icon-512x512.png"
+      "url": "https://knotspot.online/static/favicon.png"
     }
   },
   "datePublished": "{{ req.created_at|date:'c' }}"
@@ -30,8 +32,6 @@
 {% endblock %}
 
 {% block head %}
-<meta property="og:title" content="{{ req.title }} | Room Request | SRM Match">
-<meta property="og:description" content="Student looking for {{ req.preferred_room_type }} near {{ req.looking_near }} around SRM {{ req.campus }} campus. Connect on SRM Match.">
 <style>
 body > .container {
     padding: 0 !important;

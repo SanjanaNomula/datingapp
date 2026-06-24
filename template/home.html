@@ -515,7 +515,7 @@
 
                     <div class="progress-container">
                         <div class="progress-label">
-                            <span id="progress-text">0 / 10 answered</span>
+                            <span id="progress-text">0 / {{ quiz_round_size|default:"10" }} answered</span>
                             <span id="progress-percent">0%</span>
                         </div>
                         <div class="progress-track">
@@ -585,6 +585,7 @@ document.addEventListener("DOMContentLoaded", function() {
 let quizBatch = [];
 let currentIndex = 0;
 let answers = [];
+const QUIZ_SIZE = parseInt('{{ quiz_round_size|default:"10" }}');
 
 async function initQuiz() {
     const container = document.getElementById('quiz-container');
@@ -610,9 +611,9 @@ function renderQuestion() {
     const optContainer = document.getElementById('options-container');
 
     // Update Progress
-    const progress = Math.round((currentIndex / 10) * 100);
+    const progress = Math.round((currentIndex / QUIZ_SIZE) * 100);
     document.getElementById('progress-bar').style.width = `${progress}%`;
-    document.getElementById('progress-text').innerText = `${currentIndex} / 10 answered`;
+    document.getElementById('progress-text').innerText = `${currentIndex} / ${QUIZ_SIZE} answered`;
     document.getElementById('progress-percent').innerText = `${progress}%`;
 
     // Animation
@@ -638,9 +639,9 @@ async function handleOptionSelect(qId, optId, btn) {
     currentIndex++;
 
     // 3. Update progress immediately for feedback
-    const progress = Math.round((currentIndex / 10) * 100);
+    const progress = Math.round((currentIndex / QUIZ_SIZE) * 100);
     document.getElementById('progress-bar').style.width = `${progress}%`;
-    document.getElementById('progress-text').innerText = `${currentIndex} / 10 answered`;
+    document.getElementById('progress-text').innerText = `${currentIndex} / ${QUIZ_SIZE} answered`;
     document.getElementById('progress-percent').innerText = `${progress}%`;
 
     // 4. Wait 1 second (per user request)
@@ -651,7 +652,7 @@ async function handleOptionSelect(qId, optId, btn) {
     qArea.classList.add('q-fade-out');
 
     setTimeout(async () => {
-        if (currentIndex < quizBatch.length && currentIndex < 10) {
+        if (currentIndex < quizBatch.length && currentIndex < QUIZ_SIZE) {
             qArea.classList.remove('q-fade-out');
             qArea.style.opacity = '0';
             qArea.style.transform = 'translateX(10px)';

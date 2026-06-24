@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Edit Profile — SRM Match{% endblock %}
+{% block title %}Edit Profile — KnotSpot{% endblock %}
 
 {% block head %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1342,7 +1342,7 @@
             <label class="ep-label">Verification image</label>
             {% if profile.verification_image %}
             <div style="position:relative;">
-              <img src="{{ profile.verification_image }}" class="ep-admin-img" alt="Verification">
+              <img src="{{ profile.verification_image }}" class="ep-admin-img" alt="Verification" loading="lazy" decoding="async">
               <span class="ep-admin-tag">CURRENT</span>
             </div>
             {% else %}
@@ -1382,7 +1382,7 @@
         <div class="ep-gallery-grid">
           {% for img in gallery %}
           <div class="ep-gallery-slot">
-            <img src="{{ img.get_image_url }}" alt="">
+            <img src="{{ img.get_image_url }}" alt="" loading="lazy" decoding="async">
             <a href="{% url 'delete_profile_image' img.id %}" class="ep-gallery-del" onclick="handleDeletePhoto(event, this.href)"><span class="material-symbols-outlined" style="font-size:14px;">close</span></a>
           </div>
           {% endfor %}

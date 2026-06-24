@@ -3,22 +3,41 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>SRM Match – Student Social Platform for SRM Campuses</title>
-<meta name="description" content="Meet SRM students, post anonymous confessions, find roommates, and connect with campus communities across SRM campuses.">
-<meta name="keywords" content="SRM Match, SRM social app, SRM confessions, SRM roommate finder, SRM student app">
-<meta property="og:site_name" content="SRM Match">
-<meta property="og:title" content="SRM Match – Student Social Platform for SRM Campuses">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google-site-verification" content="X4viSHKffVA_JGTZMiKQlf-ugS7MBoGgyMrrwF_xmwQ" />
+<title>KnotSpot – SRM Student Social Platform | Confessions, Roommate Finder & Events</title>
+<meta name="description" content="KnotSpot connects SRM students across KTR, Ramapuram, Vadapalani, NCR, AP & Chennai. Post anonymous confessions, find roommates, discover campus events, and build meaningful friendships.">
+<meta name="keywords" content="KnotSpot, SRM social app, SRM confessions, SRM roommate finder, SRM student app, SRM KTR, SRM Ramapuram, SRM Vadapalani, SRM NCR, SRM AP, SRM Chennai, SRM university social network, student platform India">
+<meta property="og:site_name" content="KnotSpot">
+<meta property="og:title" content="KnotSpot – Student Social Platform for SRM Campuses">
 <meta property="og:description" content="Meet SRM students, post anonymous confessions, find roommates, and connect with campus communities across SRM campuses.">
-<meta property="og:image" content="https://srm-match.vercel.app/banner.png">
+<meta property="og:image" content="https://knotspot.online/static/favicon.png">
 <meta property="og:url" content="{{ request.build_absolute_uri }}">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="{{ request.build_absolute_uri }}">
 <meta name="robots" content="index, follow">
-<script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" media="print" onload="this.media='all'">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "KnotSpot",
+  "url": "https://knotspot.online",
+  "description": "Student social platform for SRM campuses — anonymous confessions, roommate finder, events, and matching.",
+  "inLanguage": "en-IN",
+  "audience": {
+    "@type": "Audience",
+    "audienceType": "SRM University Students"
+  },
+  "about": {
+    "@type": "Thing",
+    "name": "SRM Student Community",
+    "description": "Social platform connecting students across SRM KTR, Ramapuram, Vadapalani, NCR, AP, and Chennai campuses."
+  }
+}
+</script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { height: 100%; }
@@ -28,7 +47,7 @@ body {
     background-color: #f7f9fb;
     background-image: radial-gradient(ellipse at 50% -10%, #dbe1ff 0%, #f7f9fb 60%);
     background-repeat: no-repeat;
-    background-attachment: fixed;
+    background-attachment: scroll;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -38,10 +57,9 @@ body {
 body::before {
     content: '';
     position: fixed;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     background: radial-gradient(circle at 30% 20%, rgba(0,74,198,0.03) 0%, transparent 50%),
                 radial-gradient(circle at 70% 80%, rgba(37,99,235,0.03) 0%, transparent 50%);
     pointer-events: none;
@@ -57,7 +75,6 @@ body::before {
     display: flex;
     flex-direction: column;
     align-items: center;
-    flex: 1;
     position: relative;
     z-index: 1;
 }
@@ -68,12 +85,15 @@ body::before {
     flex-direction: column;
     align-items: center;
     width: 100%;
+    order: 1;
 }
 .action-section {
     display: flex;
     flex-direction: column;
     align-items: center;
     width: 100%;
+    order: 3;
+    margin-top: 24px;
 }
 
 .hero-pill {
@@ -235,15 +255,17 @@ body::before {
 /* ── SEO Content Section (Mobile Base) ── */
 .seo-section {
     width: 100%;
-    margin-top: 32px;
-    padding-top: 28px;
+    margin-top: 8px;
+    padding-top: 16px;
     border-top: 1px solid rgba(0,74,198,0.08);
+    order: 2;
 }
 .seo-tagline {
     font-size: 13px;
     font-weight: 600;
     color: #334155;
     line-height: 1.6;
+    margin-top: 24px;
     margin-bottom: 6px;
     text-align: center;
 }
@@ -306,13 +328,14 @@ body::before {
     to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
     body {
         background-image: radial-gradient(ellipse at 30% 0%, #dbe1ff 0%, #eef4ff 40%, #f7f9fb 80%);
-        padding: 40px 24px;
+        padding: 60px 24px 40px;
         align-items: center;
-        justify-content: center;
+        justify-content: flex-start;
         min-height: 100vh;
+        height: auto;
     }
     body::before {
         background: radial-gradient(circle at 20% 30%, rgba(0,74,198,0.04) 0%, transparent 45%),
@@ -327,42 +350,48 @@ body::before {
         padding: 0;
         display: grid;
         grid-template-columns: 1.1fr 0.9fr;
+        grid-template-rows: auto 1fr;
+        grid-template-areas:
+            "hero    action"
+            "seo     action";
         column-gap: 48px;
         row-gap: 0;
-        align-content: center;
-        min-height: 100vh;
+        align-items: start;
+        min-height: auto;
+        flex: unset;
     }
     
     .hero-content {
-        grid-column: 1;
-        grid-row: 1;
+        grid-area: hero;
         align-items: flex-start;
         text-align: left;
+        order: unset;
     }
     
     .seo-section {
-        grid-column: 1;
-        grid-row: 2;
+        grid-area: seo;
         margin-top: 40px;
         padding-top: 32px;
         border-top: 1px solid rgba(0,74,198,0.1);
+        order: unset;
     }
     
     .action-section {
-        grid-column: 2;
-        grid-row: 1 / 3;
-        align-items: center;
-        justify-content: center;
+        grid-area: action;
         width: 100%;
-        align-self: center;
+        position: sticky;
+        top: 40px;
+        align-self: start;
+        order: unset;
+        margin-top: 0;
     }
 
     .hero-pill { font-size: 13px; margin-bottom: 24px; }
-    .hero-title { font-size: 56px; text-align: left; line-height: 1.1; margin-bottom: 20px; }
-    .hero-sub { font-size: 16px; text-align: left; max-width: 100%; margin-bottom: 0; /* Let grid gap or seo margin handle spacing */ }
+    .hero-title { font-size: 48px; text-align: left; line-height: 1.1; margin-bottom: 20px; }
+    .hero-sub { font-size: 16px; text-align: left; max-width: 100%; margin-bottom: 0; }
     
     .glass-card { 
-        padding: 40px; 
+        padding: 36px 32px; 
         border-radius: 32px; 
         box-shadow: 0 24px 60px rgba(0,0,0,0.06); 
     }
@@ -394,6 +423,466 @@ body::before {
         bottom: 32px !important;
     }
 }
+
+/* Checklist of features */
+.students-capabilities {
+    margin-top: 24px;
+    background: rgba(255,255,255,0.4);
+    border: 1px solid rgba(0,74,198,0.06);
+    border-radius: 20px;
+    padding: 20px;
+}
+.capabilities-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 12px;
+}
+.capabilities-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.capabilities-list li {
+    font-size: 13px;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.check-icon {
+    font-size: 16px;
+    color: #10b981;
+    font-variation-settings: 'FILL' 1;
+}
+
+/* Why KnotSpot Card */
+.why-us-card {
+    margin-top: 28px;
+    background: linear-gradient(135deg, rgba(0,74,198,0.02), rgba(37,99,235,0.02));
+    border: 1px dashed rgba(0,74,198,0.15);
+    border-radius: 20px;
+    padding: 20px;
+}
+.why-us-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: #004ac6;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.why-us-text {
+    font-size: 13px;
+    color: #475569;
+    line-height: 1.5;
+}
+
+/* Popular Searches Pill Tags */
+.popular-searches {
+    margin-top: 28px;
+}
+.search-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.search-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.search-tag {
+    font-size: 11px;
+    font-weight: 600;
+    color: #475569;
+    background: rgba(0,74,198,0.05);
+    border: 1px solid rgba(0,74,198,0.08);
+    padding: 6px 12px;
+    border-radius: 100px;
+    transition: all 0.2s;
+}
+.search-tag:hover {
+    background: rgba(0,74,198,0.1);
+    color: #004ac6;
+}
+
+/* FAQ Accordion Details */
+.faq-section {
+    margin-top: 32px;
+    width: 100%;
+}
+.faq-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 16px;
+    letter-spacing: -0.3px;
+}
+.faq-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.faq-item {
+    background: rgba(255,255,255,0.5);
+    border: 1px solid rgba(0,74,198,0.06);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+.faq-item[open] {
+    background: rgba(255,255,255,0.85);
+    border-color: rgba(0,74,198,0.15);
+}
+.faq-question {
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e293b;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+}
+.faq-question::-webkit-details-marker {
+    display: none;
+}
+.faq-icon {
+    font-size: 18px;
+    color: #64748b;
+    transition: transform 0.2s ease;
+}
+.faq-item[open] .faq-icon {
+    transform: rotate(180deg);
+    color: #004ac6;
+}
+.faq-answer {
+    padding: 0 18px 14px;
+    font-size: 13px;
+    color: #475569;
+    line-height: 1.5;
+}
+
+@media (min-width: 1024px) {
+    .capabilities-list {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px 20px;
+    }
+    .students-capabilities {
+        margin-top: 28px;
+    }
+    .faq-section {
+        margin-top: 36px;
+    }
+    .why-us-card {
+        margin-top: 32px;
+    }
+    .popular-searches {
+        margin-top: 32px;
+    }
+}
+
+/* ── Mobile App-optimized UI (≤768px) ── */
+@media (max-width: 768px) {
+    body {
+        height: auto;
+        min-height: 100dvh;
+        background-attachment: scroll;
+        width: 100%;
+        overflow-x: hidden;
+    }
+
+    body::before {
+        display: none;
+    }
+
+    .page-wrap {
+        max-width: none !important;
+        width: 100% !important;
+        padding: 20px 16px 28px !important;
+        box-sizing: border-box;
+        overflow-x: hidden;
+    }
+
+    .hero-content {
+        width: 100%;
+        padding: 0;
+    }
+
+    .hero-title {
+        font-size: 40px !important;
+        margin-bottom: 8px;
+        line-height: 1.1;
+        letter-spacing: -0.03em;
+    }
+
+    .hero-sub {
+        font-size: 16px !important;
+        line-height: 1.5;
+        max-width: 100% !important;
+        margin-bottom: 16px;
+    }
+    h2.hero-sub {
+        font-size: 20px !important;
+        line-height: 1.3;
+        margin-bottom: 6px;
+    }
+    p.hero-sub {
+        font-size: 16px !important;
+    }
+
+    .action-section {
+        order: 2;
+        width: 100%;
+        margin-top: 24px;
+        padding: 0;
+    }
+
+    .confess-card {
+        width: 100%;
+        padding: 20px 20px;
+        gap: 16px;
+        min-height: 90px;
+        border-radius: 24px;
+        margin-bottom: 16px !important;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.04);
+    }
+    .confess-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 18px;
+        flex-shrink: 0;
+    }
+    .confess-icon i {
+        font-size: 22px !important;
+    }
+    .confess-text {
+        flex: 1;
+        min-width: 0;
+    }
+    .confess-text h3 {
+        font-size: 18px;
+        margin-bottom: 3px;
+    }
+    .confess-text p {
+        font-size: 14px;
+        line-height: 1.4;
+    }
+    .confess-arrow {
+        flex-shrink: 0;
+    }
+    .confess-arrow .material-symbols-outlined {
+        font-size: 24px;
+    }
+
+    .glass-card {
+        width: 100%;
+        padding: 28px 24px;
+        border-radius: 28px;
+        margin-bottom: 0;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.04);
+    }
+    .glass-card h2 {
+        font-size: 24px;
+        margin-bottom: 8px;
+    }
+    .glass-card .desc {
+        font-size: 15px;
+        margin-bottom: 24px;
+        line-height: 1.5;
+    }
+
+    .google-btn {
+        min-height: 52px;
+        padding: 14px 24px;
+        font-size: 16px;
+        gap: 12px;
+    }
+    .google-btn svg {
+        width: 22px;
+        height: 22px;
+    }
+
+    .links {
+        margin-top: 20px;
+    }
+    .lock-row {
+        font-size: 13px;
+    }
+
+    .seo-section {
+        order: 3;
+        width: 100%;
+        margin-top: 4px;
+        padding: 16px 0 0;
+        border-top: 1px solid rgba(0,74,198,0.08);
+    }
+
+    .seo-grid {
+        width: 100%;
+        gap: 12px;
+    }
+    .seo-feature {
+        width: 100%;
+        min-height: 90px;
+        padding: 18px 20px;
+        gap: 16px;
+        border-radius: 22px;
+        box-sizing: border-box;
+    }
+    .seo-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 16px;
+        flex-shrink: 0;
+    }
+    .seo-icon i,
+    .seo-icon .material-symbols-outlined {
+        font-size: 24px;
+    }
+    .seo-feature > div:last-child {
+        flex: 1;
+        min-width: 0;
+    }
+    .seo-feature h4 {
+        font-size: 17px;
+        margin-bottom: 3px;
+    }
+    .seo-feature p {
+        font-size: 14px;
+        line-height: 1.5;
+    }
+
+    .seo-tagline {
+        font-size: 15px;
+        margin-top: 24px;
+        margin-bottom: 8px;
+        line-height: 1.6;
+    }
+    .seo-campuses {
+        font-size: 13px;
+        margin-bottom: 0;
+        line-height: 1.5;
+    }
+
+    .students-capabilities {
+        width: 100%;
+        margin-top: 28px;
+        padding: 24px;
+        border-radius: 24px;
+        box-sizing: border-box;
+    }
+    .capabilities-title {
+        font-size: 17px;
+        margin-bottom: 14px;
+    }
+    .capabilities-list {
+        gap: 12px;
+    }
+    .capabilities-list li {
+        font-size: 15px;
+        gap: 10px;
+        line-height: 1.5;
+    }
+    .check-icon {
+        font-size: 20px;
+        flex-shrink: 0;
+    }
+
+    .why-us-card {
+        width: 100%;
+        margin-top: 28px;
+        padding: 24px;
+        border-radius: 24px;
+        box-sizing: border-box;
+    }
+    .why-us-title {
+        font-size: 16px;
+        margin-bottom: 10px;
+    }
+    .why-us-text {
+        font-size: 15px;
+        line-height: 1.7;
+    }
+
+    .popular-searches {
+        width: 100%;
+        margin-top: 28px;
+    }
+    .search-title {
+        font-size: 15px;
+        margin-bottom: 12px;
+    }
+    .search-tags {
+        gap: 8px;
+    }
+    .search-tag {
+        font-size: 13px;
+        padding: 10px 16px;
+        border-radius: 100px;
+        line-height: 1.3;
+    }
+
+    .faq-section {
+        width: 100%;
+        margin-top: 32px;
+    }
+    .faq-title {
+        font-size: 22px;
+        margin-bottom: 18px;
+    }
+    .faq-list {
+        gap: 12px;
+    }
+    .faq-item {
+        border-radius: 20px;
+    }
+    .faq-question {
+        padding: 18px 20px;
+        font-size: 16px;
+        min-height: 56px;
+        gap: 12px;
+    }
+    .faq-icon {
+        font-size: 22px;
+        flex-shrink: 0;
+    }
+    .faq-answer {
+        padding: 0 20px 18px;
+        font-size: 15px;
+        line-height: 1.6;
+    }
+
+    .seo-tagline:last-of-type {
+        margin-top: 28px !important;
+    }
+    .seo-campuses:last-of-type {
+        margin-top: 14px !important;
+    }
+
+    /* ── Full width enforcement ── */
+    .page-wrap > * {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box;
+    }
+    .seo-section > * {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box;
+    }
+    .hero-sub {
+        max-width: 100% !important;
+    }
+}
 </style>
 </head>
 <body>
@@ -402,13 +891,12 @@ body::before {
     
     <!-- Hero Content -->
     <div class="hero-content">
-        <div class="hero-pill"><span>Exclusive Connection Hub</span></div>
-        <h1 class="hero-title">SRM Match</h1>
-        <h2 class="hero-sub" style="margin-bottom:12px; font-weight:700; color:#151b27; font-size:20px;">Connect With Students Across SRM Campuses</h2>
-        <p class="hero-sub">SRM: Swipe, Relate, Match. SRM's unofficial exclusive space for meaningful campus interactions.</p>
+        <h1 class="hero-title">KnotSpot</h1>
+        <h2 class="hero-sub" style="margin-bottom:12px; font-weight:800; color:#151b27; font-size:24px; letter-spacing: -0.5px; line-height: 1.25;">Find Friends, Roommates &amp; Campus Connections</h2>
+        <p class="hero-sub">KnotSpot is a student social platform that helps college students find friends, roommates, campus communities, anonymous confessions, room rentals, flatmates, and meaningful connections.</p>
     </div>
 
-    <!-- Actions (Confession & Login) - Placed correctly for mobile flow -->
+    <!-- Actions (Confession & Login) -->
     <div class="action-section">
         <div class="confess-card" style="margin-bottom:20px; cursor:pointer;" onclick="window.location.href='/confessions/'">
             <div class="confess-icon">
@@ -425,7 +913,7 @@ body::before {
 
         <div class="glass-card">
             <h2>Join the Hub</h2>
-            <p class="desc">Login to unlock SRM Match, campus updates, and exclusive student features.</p>
+            <p class="desc">Login to unlock KnotSpot, campus updates, and exclusive student features.</p>
             <button type="button" onclick="triggerGoogleLogin()" class="google-btn">
                 <svg viewBox="0 0 24 24"><path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
                 Sign in with Google
@@ -439,34 +927,114 @@ body::before {
         </div>
     </div>
     
-    <!-- SEO Content - Placed at the bottom for mobile, shifted left on desktop -->
+    <!-- SEO Content -->
     <div class="seo-section">
-        <p class="seo-tagline">The smartest way to meet your campus crew — find friends, roommates, and real connections across SRM, all in one place.</p>
-        <p class="seo-campuses">Built for students at SRM KTR · Ramapuram · Vadapalani · NCR · AP · Chennai</p>
-
         <div class="seo-grid">
-            <div class="seo-feature">
+            <a href="{% url 'confessions_feed' %}" class="seo-feature" style="text-decoration:none;color:inherit;">
                 <div class="seo-icon"><i class="fas fa-mask"></i></div>
                 <div>
                     <h4>Anonymous Confessions</h4>
                     <p>Post and read campus confessions without revealing your name.</p>
                 </div>
-            </div>
-            <div class="seo-feature" style="cursor: pointer;" onclick="window.location.href='/roomfinder/'">
+            </a>
+            <a href="{% url 'roomfinder_feed' %}" class="seo-feature" style="text-decoration:none;color:inherit;">
                 <div class="seo-icon" style="background:#dcf5e7; color:#006242;"><span class="material-symbols-outlined">bed</span></div>
                 <div>
-                    <h4>Roomie</h4>
+                    <h4>Roommate Finder</h4>
                     <p>Find rooms, PGs, roommates, and flatmates near your SRM campus.</p>
                 </div>
-            </div>
-            <div class="seo-feature">
-                <div class="seo-icon" style="background:#fbe9f0; color:#be185d;"><span class="material-symbols-outlined">favorite</span></div>
+            </a>
+            <div class="seo-feature" style="text-decoration:none;color:inherit;cursor:default;">
+                <div class="seo-icon" style="background:#fbe9f0; color:#be185d;"><span class="material-symbols-outlined">handshake</span></div>
                 <div>
-                    <h4>Campus Match</h4>
-                    <p>Meet verified SRM students and make new friends safely.</p>
+                    <h4>Match & Discover</h4>
+                    <p>Connect with like-minded students and build meaningful friendships.</p>
                 </div>
             </div>
+            <a href="{% url 'event_list' %}" class="seo-feature" style="text-decoration:none;color:inherit;">
+                <div class="seo-icon" style="background:#ede9fe; color:#7c3aed;"><span class="material-symbols-outlined">event</span></div>
+                <div>
+                    <h4>Upcoming College Events</h4>
+                    <p>Discover workshops, fests, and cultural events happening across SRM campuses.</p>
+                </div>
+            </a>
         </div>
+        
+        <div class="students-capabilities">
+            <h4 class="capabilities-title">What you can do on KnotSpot:</h4>
+            <ul class="capabilities-list">
+                <li><span class="material-symbols-outlined check-icon">check_circle</span> Find roommates near campus</li>
+                <li><span class="material-symbols-outlined check-icon">check_circle</span> Discover rooms and PGs</li>
+                <li><span class="material-symbols-outlined check-icon">check_circle</span> Meet students with similar interests</li>
+                <li><span class="material-symbols-outlined check-icon">check_circle</span> Share anonymous confessions</li>
+                <li><span class="material-symbols-outlined check-icon">check_circle</span> Join campus discussions</li>
+                <li><span class="material-symbols-outlined check-icon">check_circle</span> Connect with verified college students</li>
+            </ul>
+        </div>
+
+        <div class="why-us-card">
+            <h4 class="why-us-title">Why Students Use KnotSpot</h4>
+            <p class="why-us-text">Whether you're looking for a roommate, searching for rooms near campus, making new friends, finding study partners, sharing confessions anonymously, or exploring student communities, KnotSpot provides a safe and student-focused platform.</p>
+        </div>
+
+        <div class="popular-searches">
+            <h5 class="search-title">Popular Searches</h5>
+            <div class="search-tags">
+                <span class="search-tag">SRM friend finder</span>
+                <span class="search-tag">SRM roommate finder</span>
+                <span class="search-tag">SRM room finder</span>
+                <span class="search-tag">Chennai student rooms</span>
+                <span class="search-tag">College confessions</span>
+                <span class="search-tag">Student social platform</span>
+                <span class="search-tag">Campus connections</span>
+                <span class="search-tag">Roommates near me</span>
+            </div>
+        </div>
+
+        <div class="faq-section">
+            <h3 class="faq-title">Frequently Asked Questions</h3>
+            <div class="faq-list">
+                <details class="faq-item">
+                    <summary class="faq-question">
+                        <span>How do I find roommates on KnotSpot?</span>
+                        <span class="material-symbols-outlined faq-icon">expand_more</span>
+                    </summary>
+                    <div class="faq-answer">
+                        <p>Use the Roomie section to browse rooms, flats, PGs and roommate requests.</p>
+                    </div>
+                </details>
+                <details class="faq-item">
+                    <summary class="faq-question">
+                        <span>Can I post anonymous confessions?</span>
+                        <span class="material-symbols-outlined faq-icon">expand_more</span>
+                    </summary>
+                    <div class="faq-answer">
+                        <p>Yes. Confessions are completely anonymous.</p>
+                    </div>
+                </details>
+                <details class="faq-item">
+                    <summary class="faq-question">
+                        <span>Is KnotSpot only for SRM?</span>
+                        <span class="material-symbols-outlined faq-icon">expand_more</span>
+                    </summary>
+                    <div class="faq-answer">
+                        <p>Currently focused on SRM campuses but expanding to other colleges soon.</p>
+                    </div>
+                </details>
+                <details class="faq-item">
+                    <summary class="faq-question">
+                        <span>Is KnotSpot free?</span>
+                        <span class="material-symbols-outlined faq-icon">expand_more</span>
+                    </summary>
+                    <div class="faq-answer">
+                        <p>Yes, KnotSpot is completely free to use for SRM students.</p>
+                    </div>
+                </details>
+            </div>
+        </div>
+
+        <p class="seo-tagline" style="margin-top: 32px;">The smartest way to meet your campus crew — find friends, roommates, and real connections across SRM, all in one place.</p>
+        <p class="seo-campuses" style="margin-top: 16px;">KnotSpot currently supports students from SRM campuses including KTR, Ramapuram, NCR, AP and Chennai, with support for more colleges coming soon.</p>
     </div>
 
 </div>
@@ -546,11 +1114,7 @@ body::before {
             }
         } catch (error) {
             console.error(error);
-            if (error.message && (error.message.includes('Cross-Origin') || error.message.includes('popup'))) {
-                alert("Login blocked by browser security. If you are using Brave, please turn off 'Brave Shields' (lion icon in the address bar) or try Chrome/Safari.");
-            } else {
-                alert("Google sign-in was cancelled or failed. Please try again.");
-            }
+            alert("Google sign-in was cancelled or failed. Please try again.");
         }
     };
 </script>

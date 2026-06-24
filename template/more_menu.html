@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}More | SRM Match{% endblock %}
+{% block title %}More | KnotSpot{% endblock %}
 
 {% block head %}
 <style>
@@ -251,7 +251,7 @@
 
     <div class="more-body">
     <div class="more-list">
-        {% if is_staff or user.is_staff or user.is_superuser or user.email == 'arunmohankml@gmail.com' %}
+        {% if is_staff or user.is_staff or user.is_superuser or user.email in admin_emails %}
         <a href="{% url 'admin_dashboard' %}" class="menu-card">
             <div class="menu-main">
                 <div class="menu-icon">
@@ -285,6 +285,33 @@
                 <div class="menu-copy">
                     <h3>Public Drawing Wall</h3>
                     <p>Draw, paint, and leave something creative on the shared campus canvas.</p>
+                </div>
+            </div>
+            <span class="material-symbols-outlined chevron">chevron_right</span>
+        </a>
+        <a href="{% url 'feedback_home' %}" class="menu-card" style="position:relative;">
+            <div class="menu-main">
+                <div class="menu-icon" style="background:#fef3c7;color:#d97706;">
+                    <span class="material-symbols-outlined">feedback</span>
+                </div>
+                <div class="menu-copy">
+                    <h3>Feedback Center</h3>
+                    <p>Report bugs, suggest features, or contact admin</p>
+                </div>
+            </div>
+            {% if feedback_unread_count > 0 %}
+            <span style="position:absolute;top:8px;right:8px;min-width:20px;height:20px;border-radius:10px;background:#ef4444;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 5px;">{{ feedback_unread_count }}</span>
+            {% endif %}
+            <span class="material-symbols-outlined chevron">chevron_right</span>
+        </a>
+        <a href="{% url 'spotlight_page' %}" class="menu-card">
+            <div class="menu-main">
+                <div class="menu-icon" style="background:#ede9fe;color:#7c3aed;">
+                    <span class="material-symbols-outlined">stars</span>
+                </div>
+                <div class="menu-copy">
+                    <h3>Campus Spotlights</h3>
+                    <p>Discover student creators &amp; showcase your own page</p>
                 </div>
             </div>
             <span class="material-symbols-outlined chevron">chevron_right</span>

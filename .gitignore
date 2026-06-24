@@ -6,8 +6,8 @@ serviceAccountKey.json
 .env
 .vercel/
 media/
-static_root/
-
+staticfiles/
+ 
 # Cloudinary/Supabase keys usually in .env - do not commit .env
 .env
 *.log

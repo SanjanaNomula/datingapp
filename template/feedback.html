@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Feedback Center | KnotSpot{% endblock %}
+
+{% block head %}
+<style>
+html, body {
+    height: 100dvh; overflow: hidden; position: fixed; width: 100%;
+    background: #f7f9fb; padding: 0 !important; margin: 0 !important;
+}
+.container { max-width:100% !important; width:100% !important; padding:0 !important; margin:0 !important; height:100%; box-sizing:border-box; background:transparent !important; border:none !important; box-shadow:none !important; }
+.fb-wrapper { display:flex; flex-direction:column; position:fixed; top:0; left:0; right:0; bottom:0; width:100%; max-width:560px; margin:0 auto; background:linear-gradient(180deg,#fbfcff 0%,#f7f9fb 58%,#eff4fb 100%); z-index:10; }
+.fb-header { flex-shrink:0; padding:calc(10px + env(safe-area-inset-top)) 20px 16px; background:rgba(247,249,251,0.85); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border-bottom:1px solid rgba(0,74,198,0.08); display:flex; align-items:center; gap:12px; z-index:20; }
+.fb-header-main { display:flex; align-items:center; gap:12px; flex:1; }
+.fb-back-btn { width:44px; height:44px; border-radius:16px; background:#fff; display:flex; align-items:center; justify-content:center; text-decoration:none; color:#2563eb; border:1px solid rgba(0,74,198,0.08); box-shadow:0 10px 24px rgba(15,23,42,0.06); transition:0.2s; cursor:pointer; }
+.fb-back-btn:active { transform:scale(0.94); }
+.fb-header h2 { margin:0; font-size:22px; font-weight:800; color:#0f172a; letter-spacing:-0.5px; }
+.fb-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:20px 16px 110px; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+.fb-section { animation:fadeIn 0.4s ease; margin-bottom:20px; }
+.fb-hero { background:linear-gradient(135deg,#fff 0%,#f3f7ff 100%); border:1px solid rgba(0,74,198,0.08); border-radius:32px; padding:22px; box-shadow:0 18px 40px rgba(15,23,42,0.08); margin-bottom:24px; }
+.fb-hero h2 { margin:0 0 6px; font-size:24px; font-weight:800; color:#0f172a; letter-spacing:-0.5px; }
+.fb-hero p { margin:0; font-size:14px; color:#64748b; }
+.fb-card { background:#fff; border:1px solid rgba(0,74,198,0.08); border-radius:24px; padding:20px; box-shadow:0 10px 30px rgba(15,23,42,0.04); margin-bottom:16px; }
+.fb-card-header { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+.fb-card-header h3 { margin:0; font-size:17px; font-weight:700; color:#0f172a; }
+.fb-card-header .fb-icon { width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+.fb-form { display:flex; flex-direction:column; gap:12px; }
+.fb-form label { font-size:12px; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.5px; }
+.fb-form input, .fb-form select, .fb-form textarea { width:100%; padding:12px 14px; border:1px solid #e2e8f0; border-radius:14px; font-size:14px; font-family:inherit; background:#fff; outline:none; box-sizing:border-box; transition:0.2s; }
+.fb-form input:focus, .fb-form select:focus, .fb-form textarea:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,0.1); }
+.fb-form textarea { min-height:100px; resize:vertical; }
+.fb-form .fb-upload-btn { display:inline-flex; align-items:center; gap:8px; padding:10px 16px; border:1px dashed #cbd5e1; border-radius:12px; background:#f8fafc; cursor:pointer; font-size:13px; font-weight:600; color:#475569; }
+.fb-form .fb-upload-btn:hover { border-color:#2563eb; color:#2563eb; }
+.fb-submit { padding:14px; border:none; border-radius:16px; font-size:15px; font-weight:700; cursor:pointer; transition:0.2s; font-family:inherit; }
+.fb-submit:active { transform:scale(0.97); }
+.fb-submit-blue { background:#2563eb; color:#fff; }
+.fb-submit-blue:hover { background:#1d4ed8; }
+.fb-submit-green { background:#16a34a; color:#fff; }
+.fb-submit-green:hover { background:#15803d; }
+.fb-submit-purple { background:#7c3aed; color:#fff; }
+.fb-submit-purple:hover { background:#6d28d9; }
+.fb-tabs { display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap; }
+.fb-tab { padding:8px 16px; border-radius:12px; font-size:13px; font-weight:700; border:1px solid #e2e8f0; background:#fff; color:#475569; cursor:pointer; transition:0.2s; text-decoration:none; font-family:inherit; }
+.fb-tab.active { background:#2563eb; color:#fff; border-color:#2563eb; }
+.fb-tab:active { transform:scale(0.96); }
+.fb-badge { font-size:10px; font-weight:800; padding:3px 8px; border-radius:8px; text-transform:uppercase; letter-spacing:0.3px; display:inline-block; }
+.fb-status-pending { background:#fef3c7; color:#d97706; }
+.fb-status-reviewing { background:#dbeafe; color:#2563eb; }
+.fb-status-fixed { background:#d1fae5; color:#16a34a; }
+.fb-status-closed { background:#e2e8f0; color:#64748b; }
+.fb-status-open { background:#d1fae5; color:#16a34a; }
+.fb-status-in_progress { background:#dbeafe; color:#2563eb; }
+.fb-item { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid #f1f5f9; text-decoration:none; }
+.fb-item:last-child { border-bottom:none; }
+.fb-item-info { flex:1; min-width:0; }
+.fb-item-title { font-size:14px; font-weight:700; color:#0f172a; margin:0 0 4px; }
+.fb-item-meta { font-size:11px; color:#94a3b8; }
+.fb-view-all { display:block; text-align:center; padding:12px; font-size:13px; font-weight:700; color:#2563eb; text-decoration:none; }
+.fb-success { padding:14px; background:#d1fae5; color:#16a34a; border-radius:14px; font-weight:700; text-align:center; display:none; }
+.fb-file-name { font-size:12px; color:#64748b; margin-top:4px; }
+#bugForm, #suggestionForm, #ticketForm { display:none; }
+.fb-submit:disabled { opacity:0.6; cursor:not-allowed; transform:none !important; }
+.fb-spinner { display:none; width:18px; height:18px; border:2px solid rgba(255,255,255,0.3); border-top-color:#fff; border-radius:50%; animation:fbSpin 0.6s linear infinite; margin:0 auto; }
+@keyframes fbSpin { to { transform:rotate(360deg); } }
+.fb-submit.loading .fb-btn-text { display:none; }
+.fb-submit.loading .fb-spinner { display:inline-block; }
+</style>
+{% endblock %}
+
+{% block body %}
+<section class="fb-wrapper">
+    <div class="fb-header">
+        <div class="fb-header-main">
+            <a href="{% url 'more_menu' %}" class="fb-back-btn"><span class="material-symbols-outlined">arrow_back</span></a>
+            <div>
+                <h2>Feedback Center</h2>
+            </div>
+        </div>
+        <a href="{% url 'feedback_history' %}" class="fb-back-btn" title="My Requests"><span class="material-symbols-outlined">history</span></a>
+    </div>
+
+    <div class="fb-body">
+
+        <div class="fb-tabs">
+            <button class="fb-tab active" onclick="showForm('bug')">Report Bug</button>
+            <button class="fb-tab" onclick="showForm('suggestion')">Suggest Feature</button>
+            <button class="fb-tab" onclick="showForm('ticket')">Contact Admin</button>
+        </div>
+
+        <!-- ═══ BUG FORM ═══ -->
+        <div class="fb-card" id="bugForm" style="display:block;">
+            <div class="fb-card-header">
+                <div class="fb-icon" style="background:#fee2e2;color:#ef4444;"><span class="material-symbols-outlined">bug_report</span></div>
+                <h3>Report a Bug</h3>
+            </div>
+            <div class="fb-form" id="bugFormInner">
+                <label>Bug Category</label>
+                <select id="bugCategory"><option value="login">Login/Auth</option><option value="profile">Profile</option><option value="matching">Matching</option><option value="chat">Chat</option><option value="voice">Voice Room</option><option value="roomfinder">Room Finder</option><option value="confessions">Confessions</option><option value="other">Other</option></select>
+                <label>Title</label>
+                <input type="text" id="bugTitle" placeholder="Brief title for the bug" maxlength="200">
+                <label>Description</label>
+                <textarea id="bugDesc" placeholder="Describe the bug in detail..."></textarea>
+                <label>Screenshot (optional)</label>
+                <label class="fb-upload-btn" for="bugScreenshotInput"><span class="material-symbols-outlined" style="font-size:18px;">image</span> Upload Screenshot</label>
+                <input type="file" id="bugScreenshotInput" accept="image/*" style="display:none" onchange="document.getElementById('bugFileName').textContent=this.files[0]?.name||''">
+                <div class="fb-file-name" id="bugFileName"></div>
+                <div id="bugSuccess" class="fb-success">Bug submitted successfully</div>
+                <button class="fb-submit fb-submit-blue" id="bugBtn" onclick="submitBug()"><span class="fb-btn-text">Submit Bug Report</span><span class="fb-spinner"></span></button>
+            </div>
+        </div>
+
+        <!-- ═══ SUGGESTION FORM ═══ -->
+        <div class="fb-card" id="suggestionForm">
+            <div class="fb-card-header">
+                <div class="fb-icon" style="background:#fef3c7;color:#d97706;"><span class="material-symbols-outlined">lightbulb</span></div>
+                <h3>Suggest a Feature</h3>
+            </div>
+            <div class="fb-form">
+                <label>Feature Title</label>
+                <input type="text" id="sugTitle" placeholder="Name your idea" maxlength="200">
+                <label>Description</label>
+                <textarea id="sugDesc" placeholder="Describe how it should work..."></textarea>
+                <label>Category</label>
+                <select id="sugCategory"><option value="matching">Matching</option><option value="social">Social</option><option value="chat">Chat</option><option value="profile">Profile</option><option value="other">Other</option></select>
+                <label>Priority</label>
+                <select id="sugPriority"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select>
+                <div id="sugSuccess" class="fb-success">Suggestion submitted successfully</div>
+                <button class="fb-submit fb-submit-green" id="sugBtn" onclick="submitSuggestion()"><span class="fb-btn-text">Submit Suggestion</span><span class="fb-spinner"></span></button>
+            </div>
+        </div>
+
+        <!-- ═══ TICKET FORM ═══ -->
+        <div class="fb-card" id="ticketForm">
+            <div class="fb-card-header">
+                <div class="fb-icon" style="background:#e0e7ff;color:#4f46e5;"><span class="material-symbols-outlined">support_agent</span></div>
+                <h3>Contact Admin</h3>
+            </div>
+            <div class="fb-form">
+                <label>Subject</label>
+                <input type="text" id="ticketSubject" placeholder="What is this about?" maxlength="200">
+                <label>Category</label>
+                <select id="ticketCategory"><option value="account">Account Issue</option><option value="verification">Verification Issue</option><option value="report_user">Report User</option><option value="technical">Technical Issue</option><option value="other">Other</option></select>
+                <label>Message</label>
+                <textarea id="ticketMsg" placeholder="Describe your issue in detail..."></textarea>
+                <div id="ticketSuccess" class="fb-success">Ticket submitted successfully</div>
+                <button class="fb-submit fb-submit-purple" id="ticketBtn" onclick="submitTicket()"><span class="fb-btn-text">Submit Ticket</span><span class="fb-spinner"></span></button>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<script>
+let bugFile = null;
+document.getElementById('bugScreenshotInput').addEventListener('change', function(e) {
+    bugFile = e.target.files[0];
+});
+
+function showForm(type) {
+    document.querySelectorAll('.fb-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.fb-card[id$="Form"]').forEach(f => f.style.display = 'none');
+    if (type === 'bug') {
+        document.querySelector('.fb-tab').classList.add('active');
+        document.getElementById('bugForm').style.display = 'block';
+    } else if (type === 'suggestion') {
+        document.querySelectorAll('.fb-tab')[1].classList.add('active');
+        document.getElementById('suggestionForm').style.display = 'block';
+    } else {
+        document.querySelectorAll('.fb-tab')[2].classList.add('active');
+        document.getElementById('ticketForm').style.display = 'block';
+    }
+}
+
+async function submitBug() {
+    const btn = document.getElementById('bugBtn');
+    btn.classList.add('loading'); btn.disabled = true;
+    const formData = new FormData();
+    formData.append('category', document.getElementById('bugCategory').value);
+    formData.append('title', document.getElementById('bugTitle').value);
+    formData.append('description', document.getElementById('bugDesc').value);
+    formData.append('browser', navigator.userAgent);
+    formData.append('device', navigator.platform || '');
+    formData.append('page_url', window.location.href);
+    if (bugFile) formData.append('screenshot', bugFile);
+    document.getElementById('bugTitle').value = '';
+    document.getElementById('bugDesc').value = '';
+    document.getElementById('bugFileName').textContent = '';
+    bugFile = null;
+    document.getElementById('bugScreenshotInput').value = '';
+    try {
+        const res = await fetch("{% url 'submit_bug' %}", { method:'POST', body:formData, headers:{'X-CSRFToken':'{{ csrf_token }}'} });
+        const d = await res.json();
+        if (d.success) {
+            document.getElementById('bugSuccess').style.display = 'block';
+            setTimeout(() => { document.getElementById('bugSuccess').style.display = 'none'; btn.classList.remove('loading'); btn.disabled = false; }, 2000);
+            setTimeout(() => location.reload(), 1500);
+        }
+    } catch(e) { btn.classList.remove('loading'); btn.disabled = false; }
+}
+
+async function submitSuggestion() {
+    const btn = document.getElementById('sugBtn');
+    btn.classList.add('loading'); btn.disabled = true;
+    const title = document.getElementById('sugTitle').value;
+    const desc = document.getElementById('sugDesc').value;
+    document.getElementById('sugTitle').value = '';
+    document.getElementById('sugDesc').value = '';
+    try {
+        const res = await fetch("{% url 'submit_suggestion' %}", {
+            method:'POST',
+            headers:{'Content-Type':'application/json','X-CSRFToken':'{{ csrf_token }}'},
+            body: JSON.stringify({ title: title, description: desc, category: document.getElementById('sugCategory').value, priority: document.getElementById('sugPriority').value })
+        });
+        const d = await res.json();
+        if (d.success) {
+            document.getElementById('sugSuccess').style.display = 'block';
+            setTimeout(() => { document.getElementById('sugSuccess').style.display = 'none'; btn.classList.remove('loading'); btn.disabled = false; }, 2000);
+            setTimeout(() => location.reload(), 1500);
+        }
+    } catch(e) { btn.classList.remove('loading'); btn.disabled = false; }
+}
+
+async function submitTicket() {
+    const btn = document.getElementById('ticketBtn');
+    btn.classList.add('loading'); btn.disabled = true;
+    const subject = document.getElementById('ticketSubject').value;
+    const msg = document.getElementById('ticketMsg').value;
+    document.getElementById('ticketSubject').value = '';
+    document.getElementById('ticketMsg').value = '';
+    try {
+        const res = await fetch("{% url 'submit_ticket' %}", {
+            method:'POST',
+            headers:{'Content-Type':'application/json','X-CSRFToken':'{{ csrf_token }}'},
+            body: JSON.stringify({ subject: subject, category: document.getElementById('ticketCategory').value, message: msg })
+        });
+        const d = await res.json();
+        if (d.success) {
+            document.getElementById('ticketSuccess').style.display = 'block';
+            setTimeout(() => { document.getElementById('ticketSuccess').style.display = 'none'; btn.classList.remove('loading'); btn.disabled = false; }, 2000);
+            setTimeout(() => location.reload(), 1500);
+        }
+    } catch(e) { btn.classList.remove('loading'); btn.disabled = false; }
+}
+</script>
+{% endblock %}

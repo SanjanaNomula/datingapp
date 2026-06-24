@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Home | SRM Match{% endblock %}
+{% block title %}Home | KnotSpot{% endblock %}
 
 {% block head %}
 <style>
@@ -23,21 +23,6 @@
         padding: 8px 2px 4px;
     }
 
-    .hub-brand-kicker {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 11px;
-        font-weight: 800;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-        color: #5a6a80;
-    }
-
-    .hub-brand-kicker .material-symbols-outlined {
-        font-size: 18px;
-        color: var(--primary);
-    }
 
     .hub-title {
         margin: 6px 0 0;
@@ -220,6 +205,16 @@
         line-height: 1;
         color: #7b95cf;
     }
+
+    /* ── Upcoming Events ── */
+    .spotlight-carousel { position:relative; width:100%; aspect-ratio:4/3; margin:0 auto; overflow:visible; }
+    .spotlight-card { position:absolute; top:0; width:50%; height:100%; border-radius:16px; overflow:hidden; text-decoration:none; cursor:pointer; transition:transform 0.5s cubic-bezier(0.22,1,0.36,1), left 0.5s cubic-bezier(0.22,1,0.36,1), opacity 0.5s ease, box-shadow 0.5s ease; will-change:transform,left,opacity; backface-visibility:hidden; }
+    .spotlight-card img { width:100%; height:100%; display:block; object-fit:cover; border-radius:16px; }
+    .spotlight-card.pos-center { left:25%; transform:scale(1); z-index:3; opacity:1; box-shadow:0 8px 28px rgba(15,23,42,0.12); }
+    .spotlight-card.pos-left { left:-5%; transform:scale(0.82); z-index:2; opacity:0.85; }
+    .spotlight-card.pos-right { left:55%; transform:scale(0.82); z-index:2; opacity:0.85; }
+    .spotlight-card.pos-hidden { left:55%; transform:scale(0.7); z-index:1; opacity:0; pointer-events:none; }
+    .spotlight-view { display:block; text-align:center; font-size:12px; font-weight:700; color:#2563eb; text-decoration:none; margin-top:14px; letter-spacing:0.02em; }
 
     .featured-confession p {
         margin: 10px 0 16px;
@@ -435,6 +430,746 @@
     .giveaway-btn .material-symbols-outlined {
         font-size: 18px;
     }
+
+    /* ── Voice Lounge ── */
+    .voice-lounge {
+        margin-top: 2px;
+    }
+
+    .voice-rooms {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .voice-room-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 16px 18px;
+        border-radius: 20px;
+        background: #f5f8fd;
+        border: 1px solid rgba(0, 74, 198, 0.06);
+        transition: background 0.2s ease;
+    }
+
+    .voice-room-row:active {
+        background: #eef3fb;
+    }
+
+    .voice-room-left {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+        flex: 1;
+    }
+
+    .voice-room-name {
+        font-size: 16px;
+        font-weight: 700;
+        color: #151b27;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .voice-room-name .room-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #dbe7ff;
+        color: var(--primary);
+        font-size: 16px;
+        flex-shrink: 0;
+    }
+
+    .voice-room-name .room-icon.study {
+        background: #dcf5e7;
+        color: #006242;
+    }
+    .voice-room-name .room-icon.night {
+        background: #e8e0ff;
+        color: #5b3cc4;
+    }
+
+    .voice-room-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .voice-room-count {
+        font-size: 12px;
+        font-weight: 700;
+        color: #5e6777;
+    }
+
+    .voice-room-count .num {
+        color: var(--primary);
+    }
+    .voice-room-count .num.full {
+        color: #ef4444;
+    }
+
+    .voice-room-cap {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex: 1;
+        min-width: 60px;
+        max-width: 120px;
+    }
+
+    .voice-room-cap-track {
+        flex: 1;
+        height: 4px;
+        border-radius: 4px;
+        background: #d8e0eb;
+        overflow: hidden;
+    }
+
+    .voice-room-cap-fill {
+        height: 100%;
+        border-radius: 4px;
+        background: var(--primary);
+        transition: width 0.4s ease;
+    }
+    .voice-room-cap-fill.warn {
+        background: #f59e0b;
+    }
+    .voice-room-cap-fill.full {
+        background: #ef4444;
+    }
+
+    .voice-room-cap-num {
+        font-size: 11px;
+        font-weight: 800;
+        color: #5e6777;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+
+    .voice-join-btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 999px;
+        background: var(--primary);
+        color: #fff;
+        font-size: 13px;
+        font-weight: 800;
+        cursor: pointer;
+        transition: opacity 0.2s ease, transform 0.15s ease;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .voice-join-btn:active {
+        transform: scale(0.95);
+    }
+
+    .voice-join-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    .voice-join-btn.in-room {
+        background: #eef3fb;
+        color: #496179;
+    }
+
+    .voice-friends-inside {
+        font-size: 11px;
+        font-weight: 600;
+        color: #5e6777;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex-wrap: wrap;
+    }
+
+    .voice-friends-inside .friend-name {
+        color: var(--primary);
+        font-weight: 700;
+    }
+
+    /* ── Voice Panel (Bottom Sheet) ── */
+    .voice-panel-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.5);
+        backdrop-filter: blur(8px);
+        z-index: 9000;
+        display: none;
+        justify-content: center;
+        align-items: flex-end;
+    }
+
+    .voice-panel-overlay.open {
+        display: flex;
+    }
+
+    .voice-panel {
+        width: 100%;
+        max-width: var(--shell-width);
+        max-height: 85vh;
+        background: #ffffff;
+        border-radius: 28px 28px 0 0;
+        padding: 24px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+        box-shadow: 0 -20px 60px rgba(15, 23, 42, 0.15);
+        animation: voiceSlideUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+        overflow-y: auto;
+        box-sizing: border-box;
+    }
+
+    @keyframes voiceSlideUp {
+        from { transform: translateY(100%); }
+        to { transform: translateY(0); }
+    }
+
+    .voice-panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid #eef2f7;
+    }
+
+    .voice-panel-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 20px;
+        font-weight: 800;
+        color: #151b27;
+        margin: 0;
+    }
+
+    .voice-panel-title .mic-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #e4ecff;
+        color: var(--primary);
+        font-size: 18px;
+    }
+
+    .voice-panel-count {
+        font-size: 13px;
+        font-weight: 700;
+        color: #5e6777;
+    }
+
+    .voice-panel-close {
+        width: 40px;
+        height: 40px;
+        border: none;
+        border-radius: 50%;
+        background: #f1f5f9;
+        color: #475569;
+        font-size: 20px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+    }
+
+    .voice-panel-close:active {
+        background: #e2e8f0;
+    }
+
+    .voice-participants {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 20px;
+    }
+
+    .voice-participant {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        border-radius: 16px;
+        background: #f8fafc;
+        border: 1px solid #eef2f7;
+        cursor: pointer;
+        transition: background 0.2s, border-color 0.2s;
+    }
+
+    .voice-participant:active {
+        background: #f1f5f9;
+    }
+
+    .voice-participant.speaking {
+        border-color: var(--primary);
+        background: #eef4ff;
+        box-shadow: 0 0 0 2px rgba(0, 74, 198, 0.1);
+    }
+
+    .voice-participant-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #dbe7ff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        font-weight: 800;
+        color: var(--primary);
+        flex-shrink: 0;
+        overflow: hidden;
+    }
+
+    .voice-p-avatar-wrap {
+        position: relative;
+        flex-shrink: 0;
+    }
+
+    .vad-dot {
+        position: absolute;
+        bottom: -2px;
+        right: -2px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #94a3b8;
+        border: 2px solid #fff;
+        z-index: 2;
+    }
+
+    .vad-dot.speaking {
+        background: #22c55e;
+        box-shadow: 0 0 6px rgba(34,197,94,0.5);
+    }
+
+    .vad-dot.muted {
+        background: #ef4444;
+    }
+
+    .voice-participant-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .voice-participant-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .voice-participant-name {
+        font-size: 15px;
+        font-weight: 700;
+        color: #151b27;
+    }
+
+    .voice-participant-status {
+        font-size: 11px;
+        font-weight: 600;
+        color: #5e6777;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .voice-participant-status .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    .voice-participant-status .dot.speaking {
+        background: #22c55e;
+        box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+        animation: voicePulse 1s ease-in-out infinite;
+    }
+
+    .voice-participant-status .dot.silent {
+        background: #94a3b8;
+    }
+
+    .voice-participant-status .dot.muted {
+        background: #ef4444;
+    }
+
+    @keyframes voicePulse {
+        0%, 100% { box-shadow: 0 0 4px rgba(34, 197, 94, 0.3); }
+        50% { box-shadow: 0 0 12px rgba(34, 197, 94, 0.6); }
+    }
+
+    .voice-participant-vol {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .voice-participant-vol .vol-icon {
+        font-size: 16px;
+        color: #94a3b8;
+    }
+
+    .voice-participant-vol input[type="range"] {
+        width: 80px;
+        height: 4px;
+        -webkit-appearance: none;
+        appearance: none;
+        background: #d8e0eb;
+        border-radius: 4px;
+        outline: none;
+    }
+
+    .voice-participant-vol input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--primary);
+        cursor: pointer;
+        border: 2px solid #fff;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    }
+
+    .voice-participant-vol input[type="range"]::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--primary);
+        cursor: pointer;
+        border: 2px solid #fff;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    }
+
+    .voice-actions {
+        display: flex;
+        gap: 12px;
+        padding-top: 8px;
+    }
+
+    .voice-action-btn {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 16px;
+        border: none;
+        border-radius: 16px;
+        font-size: 15px;
+        font-weight: 800;
+        cursor: pointer;
+        transition: transform 0.15s ease, opacity 0.2s ease;
+    }
+
+    .voice-action-btn:active {
+        transform: scale(0.97);
+    }
+
+    .voice-mic-btn {
+        background: #e4ecff;
+        color: var(--primary);
+    }
+
+    .voice-mic-btn.muted {
+        background: #fef2f2;
+        color: #ef4444;
+    }
+
+    .voice-leave-btn {
+        background: #fef2f2;
+        color: #dc2626;
+    }
+
+    .voice-leave-btn:active {
+        background: #fee2e2;
+    }
+
+    .voice-loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 20px;
+        color: #5e6777;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .voice-loading .spinner {
+        width: 20px;
+        height: 20px;
+        border: 3px solid #d8e0eb;
+        border-top-color: var(--primary);
+        border-radius: 50%;
+        animation: voiceSpin 0.8s linear infinite;
+    }
+
+    @keyframes voiceSpin {
+        to { transform: rotate(360deg); }
+    }
+
+    .voice-error {
+        padding: 12px 16px;
+        border-radius: 14px;
+        background: #fef2f2;
+        color: #dc2626;
+        font-size: 13px;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .voice-room-full-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: #fef2f2;
+        color: #ef4444;
+        font-size: 11px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .join-muted-option {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 0;
+        font-size: 13px;
+        font-weight: 600;
+        color: #5e6777;
+        cursor: pointer;
+    }
+
+    .join-muted-option input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--primary);
+        margin: 0;
+        cursor: pointer;
+    }
+
+    .voice-room-volume-slider {
+        display: none;
+        padding: 12px 16px;
+        border-radius: 14px;
+        background: #f1f5f9;
+        margin-top: 4px;
+    }
+
+    .voice-room-volume-slider.open {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .voice-room-volume-slider label {
+        font-size: 12px;
+        font-weight: 700;
+        color: #475569;
+        white-space: nowrap;
+    }
+
+    .voice-room-volume-slider input[type="range"] {
+        flex: 1;
+        height: 4px;
+        -webkit-appearance: none;
+        appearance: none;
+        background: #d8e0eb;
+        border-radius: 4px;
+        outline: none;
+    }
+
+    .voice-room-volume-slider input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--primary);
+        cursor: pointer;
+        border: 2px solid #fff;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+
+    .voice-room-volume-slider input[type="range"]::-moz-range-thumb {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--primary);
+        cursor: pointer;
+        border: 2px solid #fff;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+
+    /* ── Avatar Stack ── */
+    .voice-avatar-stack {
+        display: flex;
+        flex-direction: row-reverse;
+        justify-content: flex-end;
+        align-items: center;
+        padding: 4px 0;
+    }
+
+    .voice-avatar-item {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: 2px solid #fff;
+        margin-left: -8px;
+        overflow: hidden;
+        flex-shrink: 0;
+        background: #dbe7ff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        font-weight: 800;
+        color: var(--primary);
+        transition: transform 0.15s ease;
+        position: relative;
+    }
+
+    .voice-avatar-item:first-child {
+        margin-left: 0;
+    }
+
+    .voice-avatar-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .voice-avatar-item .mute-badge {
+        position: absolute;
+        bottom: -2px;
+        right: -2px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #ef4444;
+        border: 2px solid #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 7px;
+        color: #fff;
+    }
+
+    .voice-avatar-item.speaking-ring {
+        box-shadow: 0 0 0 2px #22c55e, 0 0 8px rgba(34, 197, 94, 0.4);
+    }
+
+    .voice-avatar-overflow {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: #eef3fb;
+        color: #496179;
+        font-size: 10px;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: -8px;
+        border: 2px solid #fff;
+        flex-shrink: 0;
+    }
+
+    /* ── Most Active Badge ── */
+    .voice-most-active {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 10px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #fef3c7, #fde68a);
+        color: #92400e;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        margin-left: auto;
+    }
+
+    .voice-most-active .material-symbols-outlined {
+        font-size: 14px;
+    }
+
+    /* ── Friend Join Button ── */
+    .voice-friend-join {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 12px;
+        border-radius: 999px;
+        background: #e4ecff;
+        color: var(--primary);
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+        border: none;
+        white-space: nowrap;
+        transition: background 0.2s;
+    }
+
+    .voice-friend-join:active {
+        background: #d0def5;
+    }
+
+    /* ── Reconnecting Indicator ── */
+    .voice-reconnect {
+        display: none;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 10px 16px;
+        border-radius: 14px;
+        background: #fef3c7;
+        color: #92400e;
+        font-size: 13px;
+        font-weight: 700;
+        margin-bottom: 12px;
+    }
+
+    .voice-reconnect.show {
+        display: flex;
+    }
+
+    .voice-reconnect .spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid #fde68a;
+        border-top-color: #92400e;
+        border-radius: 50%;
+        animation: voiceSpin 0.8s linear infinite;
+    }
+
+    /* ── Room Row Enhancement ── */
+    .voice-room-row-main {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        cursor: pointer;
+    }
+
+    /* ── Speaking Glow on Participant Avatar ── */
+    .voice-participant-avatar.speaking {
+        box-shadow: 0 0 0 3px #22c55e, 0 0 12px rgba(34, 197, 94, 0.35);
+    }
 </style>
 {% endblock %}
 
@@ -442,12 +1177,8 @@
 <section class="hub-shell">
     <div class="hub-topbar">
         <div>
-            <div class="hub-brand-kicker">
-                <span class="material-symbols-outlined">favorite</span>
-                Campus Connection
-            </div>
-            <h1 class="hub-title">Welcome back to SRM Match</h1>
-            <p class="hub-subtitle">Find your campus tribe — match, room, and connect at SRM.</p>
+            <h1 class="hub-title">Welcome back to KnotSpot</h1>
+            <p class="hub-subtitle">Find friends, roommates, events, and your campus community — all in one place.</p>
         </div>
         <div class="hub-chip">
             <span class="material-symbols-outlined">groups</span>
@@ -457,7 +1188,7 @@
 
     <div class="hub-grid">
         <a href="{% url 'match_feed' %}" class="hub-card match">
-            <div class="hub-icon"><span class="material-symbols-outlined">favorite</span></div>
+            <div class="hub-icon"><span class="material-symbols-outlined">handshake</span></div>
             <h3>Match</h3>
             <p>Find people who share your interests.</p>
             <span class="hub-action">Enter Match <span class="material-symbols-outlined">chevron_right</span></span>
@@ -471,6 +1202,106 @@
         </a>
     </div>
 
+    <div class="panel voice-lounge" id="voiceLounge">
+        <div class="panel-head">
+            <h2 class="panel-title"><span class="material-symbols-outlined">mic</span>Voice Lounge</h2>
+            <span class="panel-badge">Voice</span>
+        </div>
+        <div class="voice-rooms" id="voiceRoomList">
+            <div class="voice-loading"><div class="spinner"></div>Loading rooms...</div>
+        </div>
+    </div>
+
+    {% comment %}── Campus Spotlights ──{% endcomment %}
+    <style>
+    .spotlight-stack { position:relative; width:100%; height:150px; overflow:hidden; }
+    .panel-spotlight { overflow:hidden; }
+    .spot-card { position:absolute; top:0; left:6%; width:88%; border-radius:18px; padding:14px 14px 14px 12px; background:linear-gradient(135deg,#f8faff 0%,#f0f5fe 100%); border:1px solid #c8daf0; display:flex; gap:12px; align-items:flex-start; text-decoration:none; backface-visibility:hidden; box-sizing:border-box; will-change:transform; transition:transform 0.5s cubic-bezier(0.22,1,0.36,1), box-shadow 0.5s ease; }
+    .spot-card-av { width:48px; height:48px; border-radius:50%; object-fit:cover; background:#e2e8f0; flex-shrink:0; margin-top:2px; }
+    .spot-card-body { flex:1; min-width:0; }
+    .spot-card-name { font-size:14px; font-weight:800; color:#0f172a; line-height:1.3; }
+    .spot-card-handle { font-size:12px; font-weight:600; color:#2563eb; margin-bottom:3px; }
+    .spot-card-tag { display:inline-block; font-size:9px; font-weight:700; color:#fff; padding:2px 8px; border-radius:999px; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.4px; }
+    .spot-card-note { font-size:11.5px; color:#64748b; line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .spot-divider { height:1px; background:#eef2f6; margin:0 0 10px; }
+    .spot-showcase { display:flex; align-items:center; justify-content:center; gap:6px; font-size:12px; font-weight:700; color:#2563eb; text-decoration:none; }
+    .spot-empty { text-align:center; padding:20px 16px 8px; }
+    .spot-empty-icon { font-size:36px; color:#cbd5e1; margin-bottom:8px; }
+    .spot-empty-text { font-size:13px; color:#94a3b8; margin-bottom:10px; line-height:1.5; }
+    </style>
+    <div class="panel panel-spotlight">
+        <div class="panel-head">
+            <h2 class="panel-title"><span class="material-symbols-outlined">stars</span>Spotlights</h2>
+            <span class="panel-badge">Promotions</span>
+        </div>
+        {% if spotlights %}
+        <div class="spotlight-stack" id="spotlightStack">
+            {% for s in spotlights %}
+            <a class="spot-card" href="https://instagram.com/{{ s.instagram_handle }}" target="_blank" rel="noopener">
+                <img class="spot-card-av" src="{{ s.user.profile.profile_pic|default:'https://res.cloudinary.com/dq9vbhbcj/image/upload/v1/srm_match/default_avatar' }}" alt="" loading="lazy" decoding="async">
+                <div class="spot-card-body">
+                    <div class="spot-card-name">{{ s.user.profile.name }}</div>
+                    <div class="spot-card-handle">@{{ s.instagram_handle }}</div>
+                    <span class="spot-card-tag" style="background:{% if s.content_type == 'vlog' %}#8b5cf6{% elif s.content_type == 'blog' %}#2563eb{% elif s.content_type == 'photography' %}#059669{% elif s.content_type == 'art' %}#d97706{% elif s.content_type == 'music' %}#dc2626{% elif s.content_type == 'fitness' %}#ea580c{% elif s.content_type == 'tech' %}#0284c7{% elif s.content_type == 'fashion' %}#db2777{% else %}#64748b{% endif %};">{{ s.get_content_type_display }}</span>
+                    {% if s.note %}<div class="spot-card-note">{{ s.note }}</div>{% endif %}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        <div class="spot-divider"></div>
+        <a href="{% url 'spotlight_page' %}" class="spot-showcase">
+            <span class="material-symbols-outlined" style="font-size:16px;">arrow_forward</span> View all
+        </a>
+        {% else %}
+        <div class="spot-empty">
+            <div class="spot-empty-icon"><span class="material-symbols-outlined" style="font-size:36px;">stars</span></div>
+            <div class="spot-empty-text">Be the first to showcase your account!<br>Share your Instagram page with campus.</div>
+            <button class="btn btn-primary" onclick="openSpotlightForm()" style="padding:10px 24px;border-radius:12px;border:none;font-size:13px;font-weight:700;background:#2563eb;color:#fff;cursor:pointer;font-family:inherit;">Showcase your skill</button>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="modal-overlay" id="spotlightFormModal" onclick="if(event.target===this)closeSpotlightForm()" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);z-index:9999;align-items:center;justify-content:center;">
+        <form id="spotlightForm" method="post" action="{% url 'submit_spotlight' %}" enctype="multipart/form-data" style="background:#fff;border-radius:24px;padding:28px 24px 20px;max-width:380px;width:90%;box-shadow:0 24px 64px rgba(0,0,0,0.2);animation:modalIn 0.2s ease;">
+            {% csrf_token %}
+            <div style="font-size:17px;font-weight:800;color:#0f172a;margin:0 0 4px;">Showcase your skill</div>
+            <div style="font-size:12px;color:#94a3b8;margin-bottom:16px;">Share your Instagram page with campus</div>
+            <div class="form-group">
+                <label style="display:block;font-size:11px;font-weight:700;color:#475569;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.3px;">Cover Image</label>
+                <input type="file" name="cover_image" accept="image/*" style="width:100%;padding:8px 14px;border-radius:12px;border:1.5px solid #e2e8f0;font-size:12px;font-weight:600;color:#1e293b;outline:none;font-family:inherit;box-sizing:border-box;">
+            </div>
+            <div class="form-group">
+                <label style="display:block;font-size:11px;font-weight:700;color:#475569;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.3px;">Instagram Handle</label>
+                <input type="text" name="instagram_handle" required placeholder="@your_handle" style="width:100%;padding:10px 14px;border-radius:12px;border:1.5px solid #e2e8f0;font-size:13px;font-weight:600;color:#1e293b;outline:none;font-family:inherit;box-sizing:border-box;">
+            </div>
+            <div class="form-group">
+                <label style="display:block;font-size:11px;font-weight:700;color:#475569;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.3px;">Content Type</label>
+                <select name="content_type" style="width:100%;padding:10px 14px;border-radius:12px;border:1.5px solid #e2e8f0;font-size:13px;font-weight:600;color:#1e293b;outline:none;font-family:inherit;box-sizing:border-box;">
+                    <option value="vlog">Vlog</option>
+                    <option value="blog">Blog</option>
+                    <option value="photography">Photography</option>
+                    <option value="art">Art</option>
+                    <option value="music">Music</option>
+                    <option value="fitness">Fitness</option>
+                    <option value="tech">Tech</option>
+                    <option value="fashion">Fashion</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label style="display:block;font-size:11px;font-weight:700;color:#475569;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.3px;">Note</label>
+                <textarea name="note" maxlength="200" placeholder="What kind of content do you create?" style="width:100%;padding:10px 14px;border-radius:12px;border:1.5px solid #e2e8f0;font-size:13px;font-weight:600;color:#1e293b;outline:none;font-family:inherit;box-sizing:border-box;min-height:60px;resize:vertical;"></textarea>
+            </div>
+            <div id="spotlightFormMsg" style="font-size:12px;font-weight:600;margin-bottom:10px;display:none;"></div>
+            <div style="display:flex;gap:10px;">
+                <button type="button" class="btn btn-outline" onclick="closeSpotlightForm()" style="flex:1;padding:10px 20px;border-radius:12px;border:1.5px solid #e2e8f0;font-size:13px;font-weight:700;background:transparent;cursor:pointer;font-family:inherit;color:#475569;">Cancel</button>
+                <button type="submit" class="btn btn-primary" style="flex:1;padding:10px 20px;border-radius:12px;border:none;font-size:13px;font-weight:700;background:#2563eb;color:#fff;cursor:pointer;font-family:inherit;">Submit</button>
+            </div>
+        </form>
+    </div>
+
+    {% include 'home_events_widget.html' %}
+
     {% if show_giveaway %}
     <a href="{% url 'giveaway_page' %}" class="giveaway-card">
         <div class="giveaway-glow"></div>
@@ -479,7 +1310,7 @@
                 <span class="material-symbols-outlined" style="font-size:14px;">celebration</span>
                 Giveaway
             </div>
-            <h2 class="giveaway-heading">SRM Match Giveaway</h2>
+            <h2 class="giveaway-heading">KnotSpot Giveaway</h2>
             <p class="giveaway-sub">
                 Win cash prizes! Follow us, complete your profile, and share with your campus friends.
             </p>
@@ -551,6 +1382,35 @@
 
 </section>
 
+<div class="voice-panel-overlay" id="voicePanelOverlay">
+    <div class="voice-panel" id="voicePanel">
+        <div class="voice-panel-header">
+            <div>
+                <h3 class="voice-panel-title">
+                    <span class="mic-icon"><span class="material-symbols-outlined">mic</span></span>
+                    <span id="voicePanelRoomName">General Chat</span>
+                </h3>
+                <div class="voice-panel-count">
+                    <span id="voicePanelCount">0</span> participants
+                </div>
+            </div>
+            <button class="voice-panel-close" id="voicePanelClose" aria-label="Close">&times;</button>
+        </div>
+        <div class="voice-reconnect" id="voiceReconnect"><div class="spinner"></div>Reconnecting...</div>
+        <div class="voice-participants" id="voiceParticipants"></div>
+        <div class="voice-actions">
+            <button class="voice-action-btn voice-mic-btn" id="voiceMicBtn">
+                <span class="material-symbols-outlined" id="voiceMicIcon">mic</span>
+                <span id="voiceMicLabel">Mic On</span>
+            </button>
+            <button class="voice-action-btn voice-leave-btn" id="voiceLeaveBtn">
+                <span class="material-symbols-outlined">logout</span>
+                Leave
+            </button>
+        </div>
+    </div>
+</div>
+
 {% if giveaway_state and giveaway_state.show_timer and giveaway_state.timer_end_time %}
 <script>
 (function() {
@@ -572,6 +1432,771 @@
     update();
     setInterval(update, 1000);
 })();
+
+/* ── Upcoming Events Carousel ── */
+(function() {
+    var cards = document.querySelectorAll('.spotlight-card');
+    if (cards.length < 2) return;
+    var total = cards.length;
+    var center = 0;
+    var timer, isMoving = false;
+
+    function getPos(i) {
+        var diff = (i - center + total) % total;
+        if (diff === 0) return 'pos-center';
+        if (diff === 1) return 'pos-right';
+        if (diff === total - 1) return 'pos-left';
+        return 'pos-hidden';
+    }
+
+    function apply(animate) {
+        for (var i = 0; i < total; i++) {
+            if (!animate) cards[i].style.transition = 'none';
+            cards[i].className = 'spotlight-card ' + getPos(i);
+            if (!animate) { void cards[i].offsetHeight; cards[i].style.transition = ''; }
+        }
+    }
+
+    function advance() {
+        if (isMoving) return;
+        isMoving = true;
+        center = (center + 1) % total;
+        apply(true);
+        setTimeout(function() { isMoving = false; }, 550);
+    }
+
+    // Swipe left/right
+    var sx = 0, swiping = false;
+    var wrap = document.getElementById('spotlightCarousel');
+    if (wrap) {
+        wrap.addEventListener('touchstart', function(e) { sx = e.touches[0].clientX; swiping = false; }, {passive:true});
+        wrap.addEventListener('touchmove', function(e) {
+            var dx = e.touches[0].clientX - sx;
+            if (Math.abs(dx) > 10) { swiping = true; e.preventDefault(); }
+        }, {passive:false});
+        wrap.addEventListener('touchend', function(e) {
+            if (!swiping) return;
+            var dx = e.changedTouches[0].clientX - sx;
+            if (Math.abs(dx) > 40) {
+                clearInterval(timer);
+                if (dx < 0) advance();
+                else { center = (center - 1 + total) % total; apply(true); }
+                timer = setInterval(advance, 4000);
+            }
+            swiping = false;
+        }, {passive:true});
+    }
+
+    apply(false);
+    if (total > 2) timer = setInterval(advance, 4000);
+})();
+</script>
+
+
+<script>
+(function() {
+    var cards = Array.prototype.slice.call(document.querySelectorAll('#spotlightStack .spot-card'));
+    if (cards.length < 3) return;
+    var total = cards.length, top = 0, moving = false, timer, sx;
+
+    function apply(animate) {
+        for (var i = 0; i < total; i++) {
+            var c = cards[i];
+            if (!animate) c.style.transition = 'none';
+            var d = (i - top + total) % total;
+            var x = '0%', y = '0px', s = 1, r = '0deg', z = 7, sh = '0 2px 8px rgba(15,23,42,0.04)';
+            if (d === 0) { x='0%'; y='0px'; s=1; r='0deg'; z=10; sh='0 12px 40px rgba(15,23,42,0.12), 0 4px 14px rgba(15,23,42,0.08)'; c.style.opacity='1'; c.style.pointerEvents=''; }
+            else if (d === 1) { x='-5%'; y='10px'; s=0.93; r='-1.5deg'; z=9; sh='0 6px 20px rgba(15,23,42,0.06)'; c.style.opacity='1'; c.style.pointerEvents='none'; }
+            else if (d === 2) { x='5%'; y='20px'; s=0.89; r='1.5deg'; z=8; sh='0 4px 14px rgba(15,23,42,0.04)'; c.style.opacity='1'; c.style.pointerEvents='none'; }
+            else { x='0%'; y='0px'; s=0.85; r='0deg'; z=0; sh='none'; c.style.opacity='0'; c.style.pointerEvents='none'; }
+            c.style.transform = 'translateX('+x+') translateY('+y+') scale('+s+') rotate('+r+')';
+            c.style.zIndex = z;
+            c.style.boxShadow = sh;
+            if (!animate) { void c.offsetHeight; c.style.transition = ''; }
+        }
+    }
+
+    function advance() {
+        if (moving) return;
+        moving = true;
+        top = (top + 1) % total;
+        apply(true);
+        setTimeout(function() { moving = false; }, 550);
+    }
+
+    var wrap = document.getElementById('spotlightStack');
+    if (wrap) {
+        wrap.addEventListener('touchstart', function(e) { sx = e.touches[0].clientX; }, {passive:true});
+        wrap.addEventListener('touchmove', function(e) { if (sx && Math.abs(e.touches[0].clientX - sx) > 8) e.preventDefault(); }, {passive:false});
+        wrap.addEventListener('touchend', function(e) {
+            if (!sx) return;
+            var dx = e.changedTouches[0].clientX - sx;
+            if (Math.abs(dx) > 40) {
+                clearInterval(timer);
+                advance();
+                timer = setInterval(advance, 4500);
+            }
+            sx = 0;
+        }, {passive:true});
+    }
+
+    apply(false);
+    timer = setInterval(advance, 4500);
+})();
+
+function openSpotlightForm() { document.getElementById('spotlightFormModal').style.display = 'flex'; }
+function closeSpotlightForm() { document.getElementById('spotlightFormModal').style.display = 'none'; }
+document.getElementById('spotlightForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var f = this, msg = document.getElementById('spotlightFormMsg');
+    msg.style.display = 'none';
+    var fd = new FormData(f);
+    fetch(f.action, {method:'POST', body:fd, headers:{'X-CSRFToken':fd.get('csrfmiddlewaretoken')}})
+    .then(function(r){return r.json()}).then(function(d){
+        if (d.success) { msg.style.display='block'; msg.style.color='#059669'; msg.textContent=d.message||'Submitted!'; f.reset(); setTimeout(closeSpotlightForm, 1500); }
+        else { msg.style.display='block'; msg.style.color='#dc2626'; msg.textContent=d.error; }
+    }).catch(function(){ msg.style.display='block'; msg.style.color='#dc2626'; msg.textContent='Something went wrong'; });
+});
 </script>
 {% endif %}
+
+<script>
+(function() {
+    'use strict';
+
+    /* ── User ── */
+    var ME = {
+        id: {{ request.user.id }},
+        name: '{{ request.user.profile.name|escapejs|default:"" }}',
+        username: '{{ request.user.username|escapejs }}',
+        pic: '{{ request.user.profile.profile_pic|escapejs|default:"" }}',
+        sessionPeerId: '{{ request.user.username|escapejs }}-' + Math.random().toString(36).substr(2,5)
+    };
+
+    function LOG(tag, msg) { if (console) console.log('[VC]', tag, msg); }
+
+    /* ════════════════════════════════════════════════════════
+       VoiceRoomState — single source of truth
+       ════════════════════════════════════════════════════════ */
+    var VRS = {
+        // ── State ──
+        rooms: {},         // {roomId: {id, name, slug, count, max, is_full, avatars:[], friends:[]}}
+        curId: null,       // current room id or null
+        muted: false,      // am I muted?
+        pwOk: false,       // PeerWave ready?
+        vols: {},          // {peerId: volume}
+        mic: null,         // MediaStream
+        _pch: null,        // Pusher room channel
+        _cch: null,        // Pusher counts channel
+        _hb: null,         // heartbeat interval
+        _vad: null,        // VAD interval
+        _wakeLock: null,   // Screen Wake Lock
+        _van: null,        // AnalyserNode
+
+        /* ── Server API ── */
+        _post: function(url, data) {
+            return fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data||{}) }).then(function(r){return r.json()});
+        },
+
+        /* ── INIT ── */
+        init: function() {
+            LOG('init', 'starting');
+            this.fetchRooms();
+            this._subCounts();
+            this._bindLifecycle();
+        },
+
+        /* ── FETCH ROOMS ── */
+        fetchRooms: function() {
+            var self = this;
+            fetch('/api/voice/rooms/').then(function(r){return r.json()}).then(function(d) {
+                if (d.rooms) {
+                    d.rooms.forEach(function(r) { self.rooms[r.id] = r; });
+                    LOG('rooms loaded', Object.keys(self.rooms).length + ' rooms');
+                    self._render();
+                }
+            }).catch(function(e){ LOG('fetch err', e); });
+        },
+
+        /* ── PUSHER COUNTS CHANNEL ── */
+        _subCounts: function() {
+            var self = this;
+            function trySub() {
+                if (!window.pusher) { LOG('counts', 'pusher not ready, retry in 1s'); setTimeout(trySub, 1000); return; }
+                try {
+                    self._cch = window.pusher.subscribe('voice_counts');
+                    self._cch.bind('update', function(d) {
+                        if (!d.rooms) return;
+                        LOG('counts update', d.rooms.map(function(r){return r.name+':'+r.count}).join(', '));
+                        d.rooms.forEach(function(r) {
+                            if (self.rooms[r.id]) {
+                                var o = self.rooms[r.id];
+                                // Preserve fields not in broadcast (name, slug, friends)
+                                // Update avatars from broadcast data (now includes avatars)
+                                self.rooms[r.id] = {
+                                    id: r.id, name: o.name, slug: o.slug,
+                                    count: r.count, max: r.max, is_full: r.is_full,
+                                    avatars: r.avatars || o.avatars || [],
+                                    friends: o.friends || []
+                                };
+                            } else {
+                                // New room from broadcast
+                                self.rooms[r.id] = r;
+                            }
+                        });
+                        self._render();
+                    });
+                    LOG('counts', 'subscribed');
+                } catch(e) { LOG('counts err', e); setTimeout(trySub, 2000); }
+            }
+            trySub();
+        },
+
+        /* ── PUSHER ROOM CHANNEL ── */
+        _subRoom: function(roomId) {
+            var self = this;
+            this._unsubRoom();
+            function trySub() {
+                if (!window.pusher) { LOG('room', 'pusher not ready, retry'); setTimeout(trySub, 500); return; }
+                try {
+                    self._pch = window.pusher.subscribe('voice_room_'+roomId);
+
+                    self._pch.bind('user_joined', function(d) {
+                        var uid = d.id || d.user_id;
+                        if (uid !== ME.id) { self._playSound('/static/join.mp3'); }
+                        LOG('user_joined', d.name+'('+uid+')');
+                        var spid = d.session_peer_id || '';
+                        self._upsertPart(roomId, uid, {
+                            id: uid, name: d.name, pic: d.profile_pic||'', session_peer_id: spid, muted: d.is_muted||false
+                        });
+                        self._updateRoomAvatar(roomId);
+                        if (uid !== ME.id && spid && ME.sessionPeerId && spid < ME.sessionPeerId) {
+                            // Election rule: I call peers with SMALLER spid than mine.
+                            // Delay call to let new peer register on PeerJS server.
+                            setTimeout(function() {
+                                (function retryCall(uid2, tries) {
+                                    if (tries > 20) return;
+                                    try {
+                                        if (window.PW && window.PW.callUser) {
+                                            window.PW.callUser(String(uid2));
+                                        }
+                                    } catch(e) {}
+                                    setTimeout(function() { retryCall(uid2, tries+1); }, 500);
+                                })(uid, 0);
+                            }, 1500);
+                        }
+                    });
+
+                    self._pch.bind('user_left', function(d) {
+                        if (d.user_id === ME.id) return;  // self-leave handled locally
+                        LOG('user_left', d.user_id);
+                        self._playSound('/static/leave.mp3');
+                        self._removePart(roomId, d.user_id);
+                        self._updateRoomAvatar(roomId);
+                        if (self._getParts(roomId).length === 0 && self.curId === roomId) {
+                            self._stopVoiceSession();
+                        }
+                    });
+
+                    self._pch.bind('user_muted', function(d) {
+                        LOG('user_muted', d.user_id+' muted='+d.is_muted);
+                        self._updatePart(roomId, d.user_id, {muted: d.is_muted});
+                        // Update avatar mute state
+                        var rd = self.rooms[roomId];
+                        if (rd && rd.avatars) {
+                            rd.avatars.forEach(function(a) { if (a.id===d.user_id) a.is_muted = d.is_muted; });
+                            self._render();
+                        }
+                    });
+
+                    self._pch.bind('participant_list', function(d) {
+                        if (!d.participants) return;
+                        LOG('participant_list', d.participants.length+' users');
+                        self._setParts(roomId, d.participants);
+                        // Sync room data avatars
+                        var rd = self.rooms[roomId];
+                        if (rd) {
+                            rd.count = d.participants.length;
+                            rd.avatars = d.participants.map(function(p){return {id:p.id, name:p.name, profile_pic:p.profile_pic||'', session_peer_id:p.session_peer_id||'', is_muted:p.is_muted||false};});
+                            self._render();
+                        }
+                    });
+
+                    LOG('room', 'subscribed to voice_room_'+roomId);
+                } catch(e) { LOG('room err', e); setTimeout(trySub, 2000); }
+            }
+            trySub();
+        },
+
+        _unsubRoom: function() {
+            if (this._pch) {
+                try { window.pusher.unsubscribe(this._pch.name); } catch(e) {}
+                this._pch = null;
+            }
+        },
+
+        /* ── STATE MUTATIONS (pure data updates) ── */
+        _upsertPart: function(roomId, userId, data) {
+            var parts = this._getParts(roomId);
+            var idx = -1;
+            for (var i=0; i<parts.length; i++) { if (parts[i].id === userId) { idx = i; break; } }
+            if (idx >= 0) {
+                for (var k in data) { if (data.hasOwnProperty(k)) parts[idx][k] = data[k]; }
+            } else {
+                parts.push(data);
+            }
+            this._setPartsRaw(roomId, parts);
+        },
+
+        _removePart: function(roomId, userId) {
+            var parts = this._getParts(roomId).filter(function(p){return p.id!==userId});
+            this._setPartsRaw(roomId, parts);
+            // Clean up stale audio element & VAD analyser
+            var el = document.getElementById(userId+'-audio');
+            if (el) { try { el.pause(); el.srcObject = null; } catch(e){} el.remove(); }
+            if (this._remoteVans) { delete this._remoteVans[userId]; }
+            if (this._remoteVadArrs) { delete this._remoteVadArrs[userId]; }
+        },
+
+        _updatePart: function(roomId, userId, updates) {
+            var parts = this._getParts(roomId);
+            for (var i=0; i<parts.length; i++) {
+                if (parts[i].id === userId) {
+                    for (var k in updates) { if (updates.hasOwnProperty(k)) parts[i][k] = updates[k]; }
+                    break;
+                }
+            }
+            this._renderPanel();
+        },
+
+        _setParts: function(roomId, serverParts) {
+            var parts = serverParts.map(function(p){return {id:p.id, name:p.name, pic:p.profile_pic||'', session_peer_id:p.session_peer_id||'', muted:p.is_muted||false};});
+            this._setPartsRaw(roomId, parts);
+        },
+
+        _setPartsRaw: function(roomId, parts) {
+            // Store participants on the room object
+            if (!this.rooms[roomId]) return;
+            this.rooms[roomId]._parts = parts;
+            this.rooms[roomId].count = parts.length;
+            this._renderPanel();
+            this._render();
+        },
+
+        _getParts: function(roomId) {
+            if (!this.rooms[roomId]) return [];
+            if (!this.rooms[roomId]._parts) this.rooms[roomId]._parts = [];
+            return this.rooms[roomId]._parts;
+        },
+
+        _updateRoomAvatar: function(roomId) {
+            var rd = this.rooms[roomId];
+            if (!rd) return;
+            var parts = this._getParts(roomId);
+            rd.count = parts.length;
+            rd.avatars = parts.map(function(p){return {id:p.id, name:p.name, profile_pic:p.pic||'', session_peer_id:p.session_peer_id||'', is_muted:p.muted||false};});
+            this._render();
+        },
+
+        /* ── JOIN ── */
+        join: function(roomId) {
+            if (this.curId) { toast('Already in a room. Leave first.'); return; }
+            var self = this;
+            var ov = document.getElementById('voicePanelOverlay');
+            var loadHtml = '<div class="voice-loading"><div class="spinner"></div>Connecting...</div>';
+            document.getElementById('voiceParticipants').innerHTML = loadHtml;
+            document.getElementById('voicePanelRoomName').textContent = this.rooms[roomId] ? this.rooms[roomId].name : 'Room';
+            ov.classList.add('open');
+            this._post('/api/voice/join/', { room_id: roomId, join_muted: false, session_peer_id: ME.sessionPeerId }).then(function(data) {
+                if (!data.success) { toast(data.error||'Failed'); ov.classList.remove('open'); return; }
+                self.curId = data.room_id;
+                LOG('join', 'joined room '+self.curId);
+                var parts = (data.participants||[]).map(function(p){return {id:p.id, name:p.name, pic:p.profile_pic||'', session_peer_id:p.session_peer_id||'', muted:p.is_muted||false};});
+                self._setPartsRaw(self.curId, parts);
+                self._updateRoomAvatar(self.curId);
+                self._initPW(function() {
+                    self._subRoom(self.curId);
+                    self._startHB();
+                    self._playSound('/static/join.mp3');
+                    self._acquireWakeLock();
+                });
+            }).catch(function(){ toast('Connection error'); ov.classList.remove('open'); });
+        },
+
+        /* ── LEAVE ── */
+        leave: function() {
+            var self = this;
+            self._playSound('/static/leave.mp3');
+            self._stopVoiceSession();
+            this._post('/api/voice/leave/', {}).then(function() {
+                LOG('leave', 'done');
+            }).catch(function(){});
+        },
+
+        _stopVoiceSession: function() {
+            LOG('stopVS', 'stopping voice session');
+            this._stopVAD();
+            this._stopHB();
+            this._unsubRoom();
+            // Remove self from local parts so sidebar updates immediately
+            if (this.curId && ME) this._removePart(this.curId, ME.id);
+            if (this.curId) this._updateRoomAvatar(this.curId);
+            this.curId = null;
+            this.pwOk = false;
+            this.muted = false;
+            this.vols = {};
+            if (this.mic) { try { this.mic.getTracks().forEach(function(t){t.stop()}); } catch(e) {} this.mic = null; }
+            if (window.PW) {
+                try { if (window.PW.disconnectAll) window.PW.disconnectAll(); } catch(e) {}
+            }
+            document.querySelectorAll('audio').forEach(function(el){
+                if (el.srcObject) { try { el.srcObject.getTracks().forEach(function(t){t.stop()}); } catch(e) {} }
+                el.remove();
+            });
+            this._releaseWakeLock();
+            document.getElementById('voicePanelOverlay').classList.remove('open');
+            this._render();
+            LOG('stopVS', 'done');
+        },
+
+        /* ── MUTE ── */
+        toggleMic: function() {
+            this.muted = !this.muted;
+            this._playSound(this.muted ? '/static/mute.mp3' : '/static/unmute.mp3');
+            if (this.pwOk && window.PW.setMyVolume) {
+                try { window.PW.setMyVolume(this.muted ? 0 : 1); } catch(e) {}
+            }
+            this._post('/api/voice/mute/', { is_muted: this.muted }).catch(function(){});
+            this._renderMicBtn();
+        },
+
+        /* ── SOUND ── */
+        _playSound: function(url) {
+            try {
+                var a = new Audio(url);
+                a.volume = 0.4;
+                a.play().catch(function(){});
+            } catch(e) {}
+        },
+
+        /* ── VOLUME ── */
+        setVol: function(peerId, val) {
+            this.vols[peerId] = parseInt(val, 10);
+            if (this.pwOk && window.PW.setUserVolume) {
+                try { window.PW.setUserVolume(String(peerId), parseInt(val,10)/100); } catch(e) {}
+            }
+        },
+
+        toggleVol: function(el) {
+            var s = document.getElementById('vslider_'+el.getAttribute('data-peer'));
+            if (s) s.classList.toggle('open');
+        },
+
+        /* ── PEERWAVE ── */
+        _initPW: function(cb) {
+            var self = this;
+            function doConnect() {
+                try {
+                    window.PW.connectToVoice(String(ME.id));
+                    self._startVAD();
+                    var peers = self._getParts(self.curId);
+                    var onReady = function() {
+                        self.pwOk = true;
+                        peers.forEach(function(p) {
+                            if (p.id !== ME.id && p.session_peer_id && ME.sessionPeerId) {
+                                if (p.session_peer_id < ME.sessionPeerId) {
+                                    try { window.PW.callUser(String(p.id)); } catch(e) {}
+                                }
+                            }
+                        });
+                        LOG('pw', 'ready, peers called via election');
+                        if (cb) cb();
+                    };
+                    if (window.PW.peer && window.PW.peer._open) {
+                        onReady();
+                    } else if (window.PW.peer) {
+                        window.PW.peer.on('open', onReady);
+                    } else {
+                        var iv = setInterval(function() {
+                            if (window.PW && window.PW.peer && window.PW.peer._open) {
+                                clearInterval(iv);
+                                onReady();
+                            }
+                        }, 300);
+                        setTimeout(function() { clearInterval(iv); onReady(); }, 8000);
+                    }
+                } catch(e) { LOG('pw err', e); toast('Voice connection failed'); }
+            }
+            if (window.PW && window.PW.connectToVoice) { doConnect(); return; }
+            var pj = document.createElement('script');
+            pj.src = 'https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js';
+            pj.onload = function() {
+                var pw = document.createElement('script');
+                pw.src = '/api/voice/voice.js';
+                pw.onload = function(){ doConnect(); };
+                document.head.appendChild(pw);
+            };
+            document.head.appendChild(pj);
+        },
+
+        /* ── VAD ── */
+        _startVAD: function() {
+            if (this._vad) return;
+            var self = this;
+            try {
+                var ac = new (window.AudioContext || window.webkitAudioContext)();
+                self._vadCtx = ac;
+                self._remoteVans = {};
+                self._remoteVadArrs = {};
+                var pwStream = window.PW && window.PW.getMediaStream ? window.PW.getMediaStream() : null;
+                if (pwStream) { setupVAD(pwStream); return; }
+                navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(setupVAD).catch(function(e){ LOG('vad mic err', e); });
+            } catch(e) { LOG('vad err', e); }
+            function setupVAD(stream) {
+                try {
+                    var src = ac.createMediaStreamSource(stream);
+                    var an = ac.createAnalyser(); an.fftSize = 256;
+                    src.connect(an);
+                    self._van = an;
+                    self._vadArr = new Uint8Array(an.frequencyBinCount);
+                    self.mic = stream;
+                    self._vad = setInterval(function() {
+                        var parts = self.curId ? self._getParts(self.curId) : [];
+                        parts.forEach(function(p) {
+                            var isMe = p.id === ME.id;
+                            if (!isMe && !self._remoteVans[p.id]) {
+                                var audioEl = document.getElementById(p.id+'-audio');
+                                if (audioEl && audioEl.srcObject) {
+                                    try {
+                                        var rsrc = ac.createMediaStreamSource(audioEl.srcObject);
+                                        var ran = ac.createAnalyser(); ran.fftSize = 256;
+                                        rsrc.connect(ran);
+                                        self._remoteVans[p.id] = ran;
+                                        self._remoteVadArrs[p.id] = new Uint8Array(ran.frequencyBinCount);
+                                    } catch(e) {}
+                                }
+                            }
+                            var arr = isMe ? self._vadArr : self._remoteVadArrs[p.id];
+                            var anl = isMe ? self._van : self._remoteVans[p.id];
+                            if (!arr || !anl) return;
+                            anl.getByteFrequencyData(arr);
+                            var sum = 0; for (var i=0; i<arr.length; i++) sum+=arr[i];
+                            var speaking = (sum/arr.length) > 15;
+                            var dot = document.getElementById('sdot_'+p.id);
+                            if (dot) {
+                                if (p.muted) { dot.className = 'vad-dot muted'; }
+                                else if (speaking) { dot.className = 'vad-dot speaking'; }
+                                else { dot.className = 'vad-dot silent'; }
+                            }
+                            var ava = document.getElementById('pava_'+p.id);
+                            if (ava) { ava.classList.toggle('speaking', speaking && !p.muted); }
+                            var pe = document.querySelector('.voice-participant[data-peer="'+p.id+'"]');
+                            if (pe) { pe.classList.toggle('speaking', speaking && !p.muted); }
+                        });
+                    }, 200);
+                    LOG('vad', 'started');
+                } catch(e) { LOG('vad setup err', e); }
+            }
+        },
+
+        _stopVAD: function() {
+            if (this._vad) { clearInterval(this._vad); this._vad=null; }
+            if (this._vadCtx) { try { this._vadCtx.close(); } catch(e) {} this._vadCtx = null; }
+            this._van = null; this._vadArr = null;
+            this._remoteVans = null; this._remoteVadArrs = null;
+        },
+
+        /* ── HEARTBEAT ── */
+        _startHB: function() {
+            var self = this;
+            if (this._hb) return;
+            this._hb = setInterval(function() {
+                self._post('/api/voice/heartbeat/', {}).then(function(d) {
+                    if (d.in_room === null && self.curId) {
+                        LOG('hb', 'server removed us');
+                        self._stopVoiceSession();
+                    }
+                }).catch(function(){});
+            }, 10000);
+        },
+
+        _stopHB: function() {
+            if (this._hb) { clearInterval(this._hb); this._hb=null; }
+        },
+
+        /* ── PANEL ── */
+        openPanel: function() {
+            document.getElementById('voicePanelOverlay').classList.add('open');
+            this._renderPanel();
+        },
+
+        /* ── RENDER ROOM LIST ── */
+        _render: function() {
+            var el = document.getElementById('voiceRoomList');
+            if (!el) return;
+            var rooms = Object.values(this.rooms);
+            if (!rooms.length) { el.innerHTML = '<div class="voice-loading"><div class="spinner"></div>Loading rooms...</div>'; return; }
+            var maxCount = rooms.reduce(function(m,r){return r.count>m ? r.count : m}, 0);
+            var self = this;
+            var html = '';
+            rooms.sort(function(a,b){return a.id-b.id}).forEach(function(r) {
+                var pct = r.max > 0 ? Math.round((r.count/r.max)*100) : 0;
+                var fillCls = pct >= 100 ? 'full' : (pct >= 75 ? 'warn' : '');
+                var cntCls = r.count >= r.max ? 'num full' : 'num';
+                var inRoom = self.curId === r.id;
+                var icon = 'forum', icCls = '';
+                if (r.slug === 'study-room') { icon = 'menu_book'; icCls = 'study'; }
+                if (r.slug === 'night-owls') { icon = 'dark_mode'; icCls = 'night'; }
+                var isMostActive = r.count > 0 && r.count === maxCount;
+                var avHtml = '';
+                var avs = r.avatars || [];
+                if (avs.length) {
+                    avHtml += '<div class="voice-avatar-stack">';
+                    var show = avs.slice(0, 4);
+                    var overflow = avs.length - 4;
+                    show.reverse().forEach(function(a) {
+                        var init = (a.name||'?').charAt(0).toUpperCase();
+                        var img = a.profile_pic ? '<img src="'+a.profile_pic+'" alt="" onerror="this.style.display=\'none\'">' : '';
+                        var mutedBadge = a.is_muted ? '<span class="mute-badge"><span class="material-symbols-outlined" style="font-size:7px;">mic_off</span></span>' : '';
+                        avHtml += '<div class="voice-avatar-item" title="'+(a.name||'')+'">'+img+'<span'+(img?' style="display:none"':'')+'>'+init+'</span>'+mutedBadge+'</div>';
+                    });
+                    if (overflow > 0) avHtml += '<div class="voice-avatar-overflow">+'+overflow+'</div>';
+                    avHtml += '</div>';
+                }
+                var friendsHtml = '';
+                if (r.friends && r.friends.length) {
+                    var btn = '';
+                    if (!inRoom) btn = '<button class="voice-friend-join" onclick="VRS.join('+r.id+')"><span class="material-symbols-outlined" style="font-size:14px;">headset</span>Join '+r.friends[0]+'</button>';
+                    friendsHtml = '<div class="voice-friends-inside"><span class="material-symbols-outlined" style="font-size:14px;color:var(--primary);">group</span>'+r.friends.map(function(f){return '<span class="friend-name">'+f+'</span>'}).join(', ')+btn+'</div>';
+                }
+                html += '<div class="voice-room-row">';
+                html += '<div class="voice-room-left">';
+                html += '<div class="voice-room-name"><span class="room-icon '+icCls+'"><span class="material-symbols-outlined">'+icon+'</span></span>'+r.name;
+                if (isMostActive) html += '<span class="voice-most-active"><span class="material-symbols-outlined">local_fire_department</span>Active</span>';
+                html += '</div>';
+                html += avHtml;
+                html += '<div class="voice-room-meta">';
+                html += '<span class="voice-room-count"><span class="'+cntCls+'">'+r.count+'</span>/'+r.max+'</span>';
+                html += '<div class="voice-room-cap"><div class="voice-room-cap-track"><div class="voice-room-cap-fill '+fillCls+'" style="width:'+pct+'%"></div></div></div>';
+                if (r.is_full) html += '<span class="voice-room-full-badge"><span class="material-symbols-outlined" style="font-size:14px;">block</span>Full</span>';
+                html += '</div>'+friendsHtml+'</div>';
+                if (inRoom) {
+                    html += '<button class="voice-join-btn in-room" onclick="VRS.openPanel()">In Room</button>';
+                } else {
+                    html += '<button class="voice-join-btn" onclick="VRS.join('+r.id+')"'+(r.is_full?' disabled':'')+'>Join</button>';
+                }
+                html += '</div>';
+            });
+            el.innerHTML = html;
+        },
+
+        /* ── RENDER PARTICIPANT PANEL ── */
+        _renderPanel: function() {
+            var parts = this.curId ? this._getParts(this.curId) : [];
+            var el = document.getElementById('voiceParticipants');
+            if (!el) return;
+            var cnt = document.getElementById('voicePanelCount');
+            if (cnt) cnt.textContent = parts.length;
+            var html = '';
+            var self = this;
+            parts.forEach(function(p) {
+                var init = (p.name||'?').charAt(0).toUpperCase();
+                var img = p.pic ? '<img src="'+p.pic+'" alt="" onerror="this.style.display=\'none\'">' : '';
+                var me = p.id === ME.id;
+                var muteIcon = p.muted ? ' <span class="material-symbols-outlined" style="font-size:14px;color:#ef4444;vertical-align:middle;">mic_off</span>' : '';
+                html += '<div class="voice-participant" data-peer="'+p.id+'" onclick="VRS.toggleVol(this)">';
+                html += '<div class="voice-p-avatar-wrap"><div class="voice-participant-avatar" id="pava_'+p.id+'">'+img+'<span'+(img?' style="display:none"':'')+'>'+init+'</span></div><span class="vad-dot silent" id="sdot_'+p.id+'"></span></div>';
+                html += '<div class="voice-participant-info">';
+                html += '<div class="voice-participant-name">'+(p.name||'User')+muteIcon+(me?' <span style="font-size:11px;color:#94a3b8;font-weight:600;">(you)</span>':'')+'</div>';
+                html += '<div class="voice-participant-status" id="sstat_'+p.id+'">&nbsp;</div>';
+                html += '</div>';
+                html += '<div class="voice-participant-vol"><span class="vol-icon material-symbols-outlined">volume_up</span></div>';
+                html += '</div>';
+                var vol = self.vols[p.id] !== undefined ? self.vols[p.id] : 100;
+                html += '<div class="voice-room-volume-slider" id="vslider_'+p.id+'"><label>Volume</label><input type="range" min="0" max="100" value="'+vol+'" oninput="VRS.setVol('+p.id+',this.value)"></div>';
+            });
+            el.innerHTML = html;
+            this._renderMicBtn();
+        },
+
+        _renderMicBtn: function() {
+            var btn = document.getElementById('voiceMicBtn');
+            var ico = document.getElementById('voiceMicIcon');
+            var lbl = document.getElementById('voiceMicLabel');
+            if (!btn) return;
+            btn.classList.toggle('muted', this.muted);
+            ico.textContent = this.muted ? 'mic_off' : 'mic';
+            lbl.textContent = this.muted ? 'Mic Off' : 'Mic On';
+        },
+
+        _acquireWakeLock: function() {
+            if (this._wakeLock) return;
+            var self = this;
+            if ('wakeLock' in navigator) {
+                navigator.wakeLock.request('screen').then(function(lock) {
+                    self._wakeLock = lock;
+                    lock.addEventListener('release', function() { self._wakeLock = null; });
+                }).catch(function(){});
+            }
+        },
+
+        _releaseWakeLock: function() {
+            if (this._wakeLock) { try { this._wakeLock.release(); } catch(e) {} this._wakeLock = null; }
+        },
+
+        _showReconnect: function(yes) {
+            var el = document.getElementById('voiceReconnect');
+            if (el) el.classList.toggle('show', yes);
+        },
+
+        /* ── LIFECYCLE ── */
+        _bindLifecycle: function() {
+            var self = this;
+            window.addEventListener('beforeunload', function() {
+                if (self.curId) navigator.sendBeacon('/api/voice/leave/', JSON.stringify({}));
+                if (self.mic) self.mic.getTracks().forEach(function(t){t.stop()});
+            });
+            window.addEventListener('pagehide', function() {
+                if (self.curId) navigator.sendBeacon('/api/voice/leave/', JSON.stringify({}));
+            });
+            // Voice continues in background. Heartbeat + server-side stale
+            // cleanup keeps session alive. On return, verify server state.
+            document.addEventListener('visibilitychange', function() {
+                if (document.visibilityState === 'visible' && self.curId) {
+                    self._post('/api/voice/heartbeat/', {}).then(function(d) {
+                        if (d.in_room === null) self._stopVoiceSession();
+                    }).catch(function(){});
+                }
+            });
+        }
+    };
+
+    /* ── TOAST ── */
+    function toast(msg) {
+        if (window.showGlobalToast) { window.showGlobalToast(msg); return; }
+        var c = document.querySelector('.messages-toast-container') || function(){
+            var d=document.createElement('div'); d.className='messages-toast-container';
+            var ct=document.querySelector('.container'); if(ct) ct.prepend(d); return d;
+        }();
+        var t = document.createElement('div');
+        t.className = 'message-toast info';
+        t.innerHTML = '<span>'+msg+'</span><button onclick="this.parentElement.remove()" style="margin-left:auto;background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer;">&times;</button>';
+        c.appendChild(t);
+        setTimeout(function(){t.style.opacity='0';setTimeout(function(){t.remove()},500)},4000);
+    }
+
+    /* ── INIT ── */
+    VRS.init();
+    window.VRS = VRS;
+
+    /* ── WIRE UI ── */
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('voiceLeaveBtn').addEventListener('click', function(){ VRS.leave(); });
+        document.getElementById('voiceMicBtn').addEventListener('click', function(){ VRS.toggleMic(); });
+        document.getElementById('voicePanelClose').addEventListener('click', function(){ document.getElementById('voicePanelOverlay').classList.remove('open'); });
+        document.getElementById('voicePanelOverlay').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); });
+    });
+
+})();
+</script>
 {% endblock %}

@@ -3,12 +3,19 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from .analytics import (overview, user_analytics, growth, engagement,
+                        feature_usage, matching_analytics, chat_analytics,
+                        voice_analytics, confession_analytics,
+                        room_finder_analytics, profile_analytics,
+                        user_journey, moderation_analytics, system_health,
+                        live_activity, retention)
 from django.contrib.auth.models import User
 from django.contrib.auth import login as auth_login
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, Http404
 from django.core.management import call_command
 import json
 import os
+from urllib.parse import quote
 import requests
 import firebase_admin
 from firebase_admin import auth as firebase_auth, credentials, messaging
@@ -20,6 +27,7 @@ from .moderation import (
     check_rate_limit, record_rate_limit, check_shadow_ban
 )
 from django.core.paginator import Paginator
+from datetime import datetime
 
 def get_firebase_app():
     """Helper to initialize or get the Firebase app with robust config parsing."""
@@ -78,13 +86,13 @@ def get_firebase_app():
             raise e
     return firebase_admin.get_app()
 from django.views.decorators.csrf import csrf_exempt
-from django.db.models import Q
+from django.db.models import Q, Prefetch
 from django.core.files.base import ContentFile
 import base64
 import math
 from django.utils import timezone
 
-from .models import Profile, Question, Option, UserAnswer, MatchRequest, Message, ProfileImage, WallStroke, WallImage, Confession, ConfessionComment, ConfessionLike, ConfessionReport, UserReport, Spark, BlockedUser, Announcement, FavoriteMovie, FavoriteSong, FCMToken, BannedIdentifier, Conversation, RoomRequest, StaffMember
+from .models import Profile, Question, Option, UserAnswer, MatchRequest, Message, ProfileImage, WallStroke, WallImage, Confession, ConfessionComment, ConfessionLike, ConfessionReport, UserReport, Spark, BlockedUser, Announcement, FavoriteMovie, FavoriteSong, FCMToken, BannedIdentifier, Conversation, RoomRequest, StaffMember, VoiceRoom, VoiceParticipant, BugReport, FeatureSuggestion, SupportTicket, TicketMessage, FeedbackNotification, Advertisement, CampusSpotlight, Event
 from .forms import ProfileForm, ProfileEditForm, ProfileImageForm, ProfileInitForm
 from .supabase_utils import delete_from_supabase_by_url
 from .cloudinary_utils import upload_to_cloudinary, upload_base64_to_cloudinary
@@ -252,7 +260,7 @@ def home_hub(request):
     if not profile.is_face_verified and not request.session.get('skipped_verification'):
         return redirect('verify')
 
-    from .models import Confession, Announcement, GiveawayEntry, GiveawayState
+    from .models import Confession, Announcement, GiveawayEntry, GiveawayState, Advertisement, CampusSpotlight, Event
     latest_confession = Confession.objects.filter(moderation_status='approved', is_flagged=False).order_by('-created_at').first()
     latest_update = Announcement.objects.order_by('-created_at').first()
     total_users = User.objects.count() + 50
@@ -276,6 +284,10 @@ def home_hub(request):
     except GiveawayState.DoesNotExist:
         pass
     
+    ads = Advertisement.objects.filter(is_active=True)[:10]
+    spotlights = CampusSpotlight.objects.filter(is_active=True).select_related('user__profile')[:15]
+    upcoming_events = Event.objects.filter(status='approved', event_date__gte=timezone.now().date()).order_by('event_date').select_related('user__profile')[:5]
+    
     return render(request, "home_hub.html", {
         "profile": profile,
         "latest_confession": latest_confession,
@@ -290,6 +302,9 @@ def home_hub(request):
         "giveaway_count": display_giveaway_count,
         "show_giveaway": show_giveaway,
         "giveaway_state": giveaway_state,
+        "ads": ads,
+        "spotlights": spotlights,
+        "upcoming_events": upcoming_events,
     })
 
 
@@ -443,9 +458,9 @@ def match_feed(request):
     answered_ids = list(UserAnswer.objects.filter(user=user).values_list("question_id", flat=True))
     ans_count = len(answered_ids)
 
-    # ── 10-question round break ──
-    # Round number = how many complete 10-question rounds the user has finished
-    current_round = ans_count // 10  # 10→1, 20→2, 30→3 ...
+    # ── Quiz round break (6 for girls, 10 for guys) ──
+    round_size = quiz_round_size(user)
+    current_round = ans_count // round_size
 
     if 'rounds_shown' not in request.session:
         request.session['rounds_shown'] = current_round
@@ -487,7 +502,8 @@ def match_feed(request):
             "all_done": True, 
             "progress": 100,
             "matches": [],
-            "profile": profile
+            "profile": profile,
+            "quiz_round_size": round_size,
         })
 
     question = Question.objects.exclude(id__in=answered_ids).first()
@@ -529,7 +545,7 @@ def match_feed(request):
             score, reasons, cand_ans_count, debug_info = calculate_intelligent_match(profile, c, user_dict, cand_dict)
             
             admin_reasons = []
-            if request.user.email == 'arunmohankml@gmail.com':
+            if request.user.email in settings.ADMIN_EMAILS:
                 admin_reasons = reasons + ["======== ADMIN DEBUG ========"] + debug_info
             
             # Age preference bool
@@ -547,7 +563,7 @@ def match_feed(request):
             matches_list.append({
                 'profile': c, 
                 'score': score,
-                'reasons': admin_reasons if request.user.email == 'arunmohankml@gmail.com' else [],
+                'reasons': admin_reasons if request.user.email in settings.ADMIN_EMAILS else [],
                 'mutual_age_ok': mutual_age_ok,
                 'looking_for_match': looking_for_match,
                 'campus_match': campus_match,
@@ -564,14 +580,15 @@ def match_feed(request):
             "progress": 100,
             "matches": matches_list[:20],  # Show top 20
             "sparked_ids": sparked_ids,
-            "profile": profile
+            "profile": profile,
+            "quiz_round_size": round_size,
         })
 
     total_q_db = Question.objects.count()
     progress = int((ans_count / total_q_db) * 100) if total_q_db > 0 else 0
     sparked_ids = list(Spark.objects.filter(sender=user).values_list('receiver_id', flat=True))
 
-    return render(request, "home.html", {"question": question, "progress": progress, "sparked_ids": sparked_ids})
+    return render(request, "home.html", {"question": question, "progress": progress, "sparked_ids": sparked_ids, "quiz_round_size": round_size})
 
 
 import math
@@ -753,13 +770,13 @@ def check_match(request):
             score, reasons, _, debug_info = calculate_intelligent_match(profile, best_match, user_dict, cand_dict)
             
             admin_reasons = []
-            if request.user.email == 'arunmohankml@gmail.com':
+            if request.user.email in settings.ADMIN_EMAILS:
                 admin_reasons = reasons + ["======== ADMIN DEBUG ========"] + debug_info
                 
             return render(request, "match_popup.html", {
                 "match": best_match,
                 "score": score,
-                "reasons": admin_reasons if request.user.email == 'arunmohankml@gmail.com' else []
+                "reasons": admin_reasons if request.user.email in settings.ADMIN_EMAILS else []
             })
 
     # IDs of users already shown to this user in previous rounds (stored in session)
@@ -770,7 +787,7 @@ def check_match(request):
     best_reasons = []
 
     for attempt in range(2):
-        candidates = Profile.objects.filter(
+        candidates = Profile.objects.select_related('user').filter(
             is_discoverable=True,
             is_face_verified=True
         ).exclude(user=user).exclude(user__id__in=interacted_user_ids).exclude(user__id__in=blocked_user_ids).exclude(user__id__in=seen_ids)
@@ -799,7 +816,7 @@ def check_match(request):
             score, reasons, cand_ans_count, debug_info = calculate_intelligent_match(profile, c, user_dict, cand_dict)
 
             admin_reasons = []
-            if request.user.email == 'arunmohankml@gmail.com':
+            if request.user.email in settings.ADMIN_EMAILS:
                 admin_reasons = reasons + ["======== ADMIN DEBUG ========"] + debug_info
 
             # Age range check (both ways)
@@ -817,7 +834,7 @@ def check_match(request):
             matches_list.append({
                 'profile': c, 
                 'score': score,
-                'reasons': admin_reasons if request.user.email == 'arunmohankml@gmail.com' else [],
+                'reasons': admin_reasons if request.user.email in settings.ADMIN_EMAILS else [],
                 'mutual_age_ok': mutual_age_ok,
                 'looking_for_match': looking_for_match,
                 'campus_match': campus_match,
@@ -948,7 +965,7 @@ def send_push_to_user(user, title, body, url='/'):
     # Construct absolute HTTPS URL as required by Firebase WebpushFCMOptions.link
     domain = os.environ.get('VERCEL_URL')
     if not domain:
-        domain = 'srmmatch.vercel.app' # fallback
+        domain = 'knotspot.online' # fallback
     
     if not domain.startswith('http'):
         domain = f"https://{domain}"
@@ -971,8 +988,8 @@ def send_push_to_user(user, title, body, url='/'):
         webpush=messaging.WebpushConfig(
             headers={'Urgency': 'high'},
             notification=messaging.WebpushNotification(
-                icon='/icon-192x192.png',
-                badge='/icon-192x192.png',
+                icon='https://knotspot.online/favicon.ico',
+                badge='https://knotspot.online/favicon.ico',
                 tag='chat-msg',
                 renotify=True
             ),
@@ -1114,7 +1131,7 @@ def chat_list_view(request):
     all_msgs = Message.objects.filter(
         (Q(sender=user, receiver__in=partners, sender_deleted=False)) |
         (Q(sender__in=partners, receiver=user, receiver_deleted=False))
-    ).exclude(text__startswith='__SPIN__:').order_by('-timestamp').select_related('sender')
+    ).exclude(text__startswith='__SPIN__:').order_by('-timestamp').select_related('sender__profile')
 
     # Group latest messages and unread counts in memory
     latest_msg_map = {}
@@ -1285,7 +1302,7 @@ def chat_view(request, partner_id):
     chat_messages = Message.objects.filter(
         (Q(sender=request.user, receiver=partner, sender_deleted=False)) |
         (Q(sender=partner, receiver=request.user, receiver_deleted=False))
-    ).exclude(text__startswith='__SPIN__:') .order_by('timestamp')
+    ).exclude(text__startswith='__SPIN__:').select_related('reply_to__sender__profile').order_by('timestamp')
     
     # Mark messages as read
     Message.objects.filter(sender=partner, receiver=request.user, is_read=False).update(is_read=True)
@@ -1343,7 +1360,7 @@ def chat_api_messages(request, partner_id):
         (Q(sender=partner, receiver=request.user, receiver_deleted=False))
     ).exclude(
         Q(text__startswith='__SPIN__:') & Q(timestamp__lt=recent_cutoff)
-    ).order_by('timestamp')
+    ).select_related('reply_to__sender__profile').order_by('timestamp')
     
     # Mark incoming unread messages as read
     Message.objects.filter(sender=partner, receiver=request.user, is_read=False).update(is_read=True)
@@ -1369,8 +1386,8 @@ def chat_api_messages(request, partner_id):
 
 @login_required
 def view_profile(request, user_id):
-    target_user = get_object_or_404(User, id=user_id)
-    profile = get_object_or_404(Profile, user=target_user)
+    profile = get_object_or_404(Profile.objects.select_related('user'), user__id=user_id)
+    target_user = profile.user
     
     # Matching logic (simplified)
     my_profile = request.user.profile
@@ -1687,7 +1704,7 @@ def wall_api(request):
             
             if 'image_url' in data:
                 # Handle image upload (Admin only check in frontend, but could add here too)
-                if not request.user.is_superuser and request.user.email != 'arunmohankml@gmail.com':
+                if not request.user.is_superuser and request.user.email not in settings.ADMIN_EMAILS:
                     return JsonResponse({'error': 'Unauthorized'}, status=403)
                     
                 obj = WallImage.objects.create(
@@ -1728,7 +1745,7 @@ def wall_api(request):
             return JsonResponse({'error': str(e)}, status=400)
 
     elif request.method == 'DELETE':
-        if not request.user.is_superuser and request.user.email != 'arunmohankml@gmail.com':
+        if not request.user.is_superuser and request.user.email not in settings.ADMIN_EMAILS:
             return JsonResponse({'error': 'Unauthorized'}, status=403)
         
         try:
@@ -1848,7 +1865,7 @@ def create_confession(request):
         user = request.user
 
     # ── 2. Rate limit ──
-    is_admin = user and user.email == 'arunmohankml@gmail.com'
+    is_admin = user and user.email in settings.ADMIN_EMAILS
     if not is_admin:
         allowed, wait = check_rate_limit(fingerprint, ip)
         if not allowed:
@@ -2112,15 +2129,14 @@ def answer_question(request, question_id):
 
 @login_required
 def get_quiz_batch(request):
-    """Returns 10 unanswered questions for the Fast Fire quiz."""
+    """Returns unanswered questions for the Fast Fire quiz (6 for girls, 10 for guys)."""
     answered_ids = UserAnswer.objects.filter(user=request.user).values_list('question_id', flat=True)
-    questions = Question.objects.exclude(id__in=answered_ids)[:10]
+    limit = quiz_round_size(request.user)
+    questions = Question.objects.prefetch_related('options').exclude(id__in=answered_ids)[:limit]
     
     data = []
     for q in questions:
-        options = []
-        for opt in q.options.all():
-            options.append({'id': opt.id, 'text': opt.text})
+        options = [{'id': opt.id, 'text': opt.text} for opt in q.options.all()]
         data.append({
             'id': q.id,
             'text': q.text,
@@ -2138,21 +2154,25 @@ def save_quiz_batch(request):
             data = json.loads(request.body)
             answers = data.get('answers', [])
             
+            q_ids = [a['question_id'] for a in answers if a.get('question_id')]
+            o_ids = [a['option_id'] for a in answers if a.get('option_id')]
+            questions = {q.id: q for q in Question.objects.filter(id__in=q_ids)}
+            options = {o.id: o for o in Option.objects.filter(id__in=o_ids)}
+
             for ans in answers:
                 question_id = ans.get('question_id')
                 option_id = ans.get('option_id')
-                if question_id and option_id:
-                    question = get_object_or_404(Question, id=question_id)
-                    option = get_object_or_404(Option, id=option_id)
+                if question_id and option_id and question_id in questions and option_id in options:
                     UserAnswer.objects.get_or_create(
                         user=request.user,
-                        question=question,
-                        defaults={'option': option}
+                        question=questions[question_id],
+                        defaults={'option': options[option_id]}
                     )
             
             # Reset rounds_shown to trigger 'check_match' redirect on next home load
             ans_count = UserAnswer.objects.filter(user=request.user).count()
-            request.session['rounds_shown'] = (ans_count // 10) - 1
+            size = quiz_round_size(request.user)
+            request.session['rounds_shown'] = (ans_count // size) - 1
             
             return JsonResponse({'success': True})
         except Exception as e:
@@ -2163,7 +2183,7 @@ def save_quiz_batch(request):
 # ---------------- ADMIN MENU ----------------
 
 def is_admin_check(user):
-    return user.is_authenticated and user.email == 'arunmohankml@gmail.com'
+    return user.is_authenticated and user.email in settings.ADMIN_EMAILS
 
 def is_staff_check(user):
     if not user or not user.is_authenticated:
@@ -2171,6 +2191,12 @@ def is_staff_check(user):
     if is_admin_check(user):
         return True
     return StaffMember.objects.filter(email=user.email).exists()
+
+def quiz_round_size(user):
+    profile = getattr(user, 'profile', None)
+    if profile and profile.gender == 'female':
+        return 6
+    return 10
 
 @login_required
 def admin_giveaway_control(request):
@@ -2409,8 +2435,7 @@ def admin_giveaway_control(request):
     # GET JSON endpoint for participants
     if request.GET.get('participants') == '1':
         from django.db.models import Q
-        from django.core.paginator import Paginator
-        
+
         q = request.GET.get('q', '').strip()
         page_num = request.GET.get('page', 1)
         
@@ -2475,14 +2500,14 @@ def admin_view_user(request, user_id):
     gallery_images = ProfileImage.objects.filter(profile=profile)
     match_requests_sent = MatchRequest.objects.filter(sender=target_user).select_related('receiver__profile')
     match_requests_received = MatchRequest.objects.filter(receiver=target_user).select_related('sender__profile')
-    messages_sent = Message.objects.filter(sender=target_user).order_by('-timestamp')[:50]
-    messages_received = Message.objects.filter(receiver=target_user).order_by('-timestamp')[:50]
-    confessions = Confession.objects.filter(user=target_user).order_by('-created_at')
+    messages_sent = Message.objects.filter(sender=target_user).select_related('receiver__profile').order_by('-timestamp')[:50]
+    messages_received = Message.objects.filter(receiver=target_user).select_related('sender__profile').order_by('-timestamp')[:50]
+    confessions = Confession.objects.filter(user=target_user).select_related('user__profile').order_by('-created_at')
     reports_made = UserReport.objects.filter(reporter=target_user).select_related('reported_user')
     reports_received = UserReport.objects.filter(reported_user=target_user).select_related('reporter')
     answers = UserAnswer.objects.filter(user=target_user).select_related('question', 'option')
-    fav_movies = FavoriteMovie.objects.filter(user=target_user)
-    fav_songs = FavoriteSong.objects.filter(user=target_user)
+    fav_movies = FavoriteMovie.objects.filter(user=target_user).select_related('user')
+    fav_songs = FavoriteSong.objects.filter(user=target_user).select_related('user')
     connections = MatchRequest.objects.filter(
         Q(sender=target_user, status='accepted') | Q(receiver=target_user, status='accepted')
     ).select_related('sender__profile', 'receiver__profile')
@@ -2565,13 +2590,13 @@ def admin_dashboard(request):
 
     reported_confessions = Confession.objects.filter(
         is_flagged=True
-    ).exclude(moderation_status='rejected').order_by('-created_at')
+    ).exclude(moderation_status='rejected').select_related('user__profile').order_by('-created_at')
 
     pending_confessions = Confession.objects.filter(
         moderation_status='pending_review'
-    ).order_by('-created_at')
+    ).select_related('user__profile').order_by('-created_at')
 
-    user_reports  = UserReport.objects.all().order_by('-created_at')
+    user_reports  = UserReport.objects.select_related('reporter', 'reported_user').all().order_by('-created_at')
     all_users     = Profile.objects.all().select_related('user').order_by('-created_at')
     face_reviews  = Profile.objects.filter(
         verification_status='manual_review'
@@ -2584,6 +2609,8 @@ def admin_dashboard(request):
         for r in user_reports:
             r.chat_snapshot = []
 
+    pending_events_count = Event.objects.filter(status='pending').count()
+
     return render(request, 'admin_dashboard.html', {
         'reported_confessions':  reported_confessions,
         'pending_confessions':   pending_confessions,
@@ -2591,16 +2618,96 @@ def admin_dashboard(request):
         'all_users':             all_users,
         'face_reviews':          face_reviews,
         'banned_identifiers':    banned_identifiers,
+        'pending_events_count':  pending_events_count,
         'is_admin':              is_admin,
         'is_staff':              True,
     })
 
 @login_required
+def admin_analytics(request):
+    if not is_staff_check(request.user):
+        return HttpResponse("Not authorized", status=403)
+    is_admin = is_admin_check(request.user)
+    ctx = {
+        'overview': overview(),
+        'users': user_analytics(),
+        'growth_data': growth('30d'),
+        'engagement': engagement(),
+        'features': feature_usage(),
+        'matching': matching_analytics(),
+        'chat': chat_analytics(),
+        'voice': voice_analytics(),
+        'confessions': confession_analytics(),
+        'roomfinder': room_finder_analytics(),
+        'profiles': profile_analytics(),
+        'funnel': user_journey(),
+        'moderation': moderation_analytics(),
+        'health': system_health(),
+        'retention': retention(),
+        'live_activity': live_activity(),
+        'is_admin': is_admin,
+        'is_staff': True,
+    }
+    return render(request, 'admin_analytics.html', ctx)
+
+@login_required
+def admin_analytics_data(request):
+    if not is_staff_check(request.user):
+        return JsonResponse({'error': 'Not authorized'}, status=403)
+    import json
+    section = request.GET.get('section', 'overview')
+    if section == 'live':
+        events = live_activity()
+        data = [{'type': e['type'], 'icon': e['icon'], 'text': e['text'],
+                 'time': e['time'].strftime('%Y-%m-%d %H:%M') if hasattr(e['time'], 'strftime') else str(e['time'])}
+                for e in events]
+        return JsonResponse({'events': data})
+    if section == 'growth':
+        period = request.GET.get('period', '30d')
+        g = growth(period)
+        return JsonResponse(g)
+    return JsonResponse({'error': 'Unknown section'})
+
+@login_required
+def admin_analytics_export(request):
+    if not is_staff_check(request.user):
+        return HttpResponse("Not authorized", status=403)
+    import json
+    data = {
+        'overview': overview(),
+        'users': user_analytics(),
+        'growth': growth('all'),
+        'engagement': engagement(),
+        'features': feature_usage(),
+        'matching': matching_analytics(),
+        'chat': chat_analytics(),
+        'voice': voice_analytics(),
+        'confessions': confession_analytics(),
+        'roomfinder': room_finder_analytics(),
+        'profiles': profile_analytics(),
+        'funnel': user_journey(),
+        'moderation': moderation_analytics(),
+        'health': system_health(),
+        'retention': retention(),
+        'live_activity': live_activity(),
+        'generated_at': timezone.now().isoformat(),
+    }
+    response = HttpResponse(json.dumps(data, indent=2, default=str), content_type='application/json')
+    response['Content-Disposition'] = 'attachment; filename="analytics_export.json"'
+    return response
+
+@login_required
 def admin_all_users(request):
     if not is_staff_check(request.user):
         return HttpResponse("Not authorized", status=403)
-    profiles = Profile.objects.all().order_by('name')
-    return render(request, 'admin_all_users.html', {'profiles': profiles})
+    page = request.GET.get('page', 1)
+    profiles = Profile.objects.select_related('user').all().order_by('name')
+    paginator = Paginator(profiles, 50)
+    try:
+        profiles_page = paginator.get_page(page)
+    except:
+        profiles_page = paginator.get_page(1)
+    return render(request, 'admin_all_users.html', {'profiles': profiles_page})
 
 @login_required
 def admin_manual_verification(request):
@@ -2764,7 +2871,6 @@ def admin_action(request):
                 if duration > 0:
                     state.timer_duration = duration
                     if state.show_timer:
-                        from django.utils import timezone
                         state.timer_end_time = timezone.now() + timezone.timedelta(seconds=duration)
                     else:
                         state.timer_end_time = None
@@ -3119,7 +3225,7 @@ def roomfinder_feed(request):
 
 def roomfinder_detail(request, id):
     try:
-        listing = RoomListing.objects.get(id=id, is_active=True)
+        listing = RoomListing.objects.select_related('user__profile').prefetch_related('images').get(id=id, is_active=True)
     except RoomListing.DoesNotExist:
         messages.error(request, "Listing not found or is no longer available.")
         return redirect('roomfinder_feed')
@@ -3155,7 +3261,7 @@ def api_edit_room(request, id):
         try:
             listing = RoomListing.objects.get(id=id)
             # Authorization check
-            if not (request.user == listing.user or request.user.is_staff or request.user.email == 'arunmohankml@gmail.com'):
+            if not (request.user == listing.user or request.user.is_staff or request.user.email in settings.ADMIN_EMAILS):
                 return JsonResponse({'success': False, 'error': 'Unauthorized to edit this listing.'})
             
             # Update fields
@@ -3204,7 +3310,7 @@ def api_delete_room(request, id):
         try:
             listing = RoomListing.objects.get(id=id)
             # Authorization check
-            if not (request.user == listing.user or request.user.is_staff or request.user.email == 'arunmohankml@gmail.com'):
+            if not (request.user == listing.user or request.user.is_staff or request.user.email in settings.ADMIN_EMAILS):
                 return JsonResponse({'success': False, 'error': 'Unauthorized to delete this listing.'})
             
             listing.is_active = False # soft delete
@@ -3286,7 +3392,7 @@ def api_create_room(request):
 def api_get_rooms(request):
     if request.method == 'GET':
         try:
-            listings = RoomListing.objects.filter(is_active=True).order_by('-created_at')
+            listings = RoomListing.objects.filter(is_active=True).select_related('user__profile').prefetch_related('images').order_by('-created_at')
             saved_ids = set()
             
             if request.user.is_authenticated:
@@ -3534,7 +3640,7 @@ def api_create_room_request(request):
 def api_get_room_requests(request):
     if request.method == 'GET':
         try:
-            reqs = RoomRequest.objects.filter(is_active=True).order_by('-created_at')
+            reqs = RoomRequest.objects.filter(is_active=True).select_related('user__profile').order_by('-created_at')
             
             if request.user.is_authenticated:
                 # Exclude blocked users for safety
@@ -3611,7 +3717,7 @@ def api_get_room_requests(request):
                     'extra_note': r.extra_note,
                     'created_at': r.created_at.strftime("%b %d, %Y"),
                     'is_owner': request.user.is_authenticated and r.user == request.user,
-                    'is_admin': request.user.is_authenticated and (request.user.is_staff or request.user.email == 'arunmohankml@gmail.com'),
+                    'is_admin': request.user.is_authenticated and (request.user.is_staff or request.user.email in settings.ADMIN_EMAILS),
                     'user': {
                         'id': r.user.id,
                         'name': profile.name if profile else r.user.username,
@@ -3637,7 +3743,7 @@ def api_delete_room_request(request, id):
     if request.method == 'POST':
         try:
             req = RoomRequest.objects.get(id=id)
-            if not (request.user == req.user or request.user.is_staff or request.user.email == 'arunmohankml@gmail.com'):
+            if not (request.user == req.user or request.user.is_staff or request.user.email in settings.ADMIN_EMAILS):
                 return JsonResponse({'success': False, 'error': 'Unauthorized.'})
                 
             req.is_active = False # soft delete
@@ -3657,7 +3763,7 @@ def api_edit_room_request(request, id):
     if request.method == 'POST':
         try:
             req = RoomRequest.objects.get(id=id, is_active=True)
-            if not (request.user == req.user or request.user.is_staff or request.user.email == 'arunmohankml@gmail.com'):
+            if not (request.user == req.user or request.user.is_staff or request.user.email in settings.ADMIN_EMAILS):
                 return JsonResponse({'success': False, 'error': 'Unauthorized.'})
             
             import json
@@ -3727,7 +3833,7 @@ def roomrequest_detail(request, id):
     
     profile = req.user.profile
     is_owner = request.user == req.user
-    is_admin = request.user.is_authenticated and (request.user.is_staff or request.user.email == 'arunmohankml@gmail.com')
+    is_admin = request.user.is_authenticated and (request.user.is_staff or request.user.email in settings.ADMIN_EMAILS)
     
     return render(request, 'roomrequest_detail.html', {
         'req': req,
@@ -3740,7 +3846,7 @@ def roomrequest_detail(request, id):
 from django.http import HttpResponse
 
 def sitemap_view(request):
-    base_url = "https://srm-match.vercel.app"
+    base_url = "https://knotspot.online"
     
     pages = [
         {"loc": "/", "changefreq": "daily", "priority": "1.0"},
@@ -3748,7 +3854,10 @@ def sitemap_view(request):
         {"loc": "/about/", "changefreq": "monthly", "priority": "0.5"},
         {"loc": "/confessions/", "changefreq": "hourly", "priority": "0.9"},
         {"loc": "/roomfinder/", "changefreq": "daily", "priority": "0.9"},
+        {"loc": "/events/", "changefreq": "daily", "priority": "0.9"},
         {"loc": "/wall/", "changefreq": "hourly", "priority": "0.8"},
+        {"loc": "/spotlights/", "changefreq": "daily", "priority": "0.7"},
+        {"loc": "/giveaway/", "changefreq": "weekly", "priority": "0.6"},
         {"loc": "/privacy-policy/", "changefreq": "monthly", "priority": "0.5"},
         {"loc": "/community-guidelines/", "changefreq": "monthly", "priority": "0.5"},
         {"loc": "/terms-and-conditions/", "changefreq": "monthly", "priority": "0.5"},
@@ -3779,6 +3888,16 @@ def sitemap_view(request):
             xml += '    <priority>0.7</priority>\n'
             xml += '  </url>\n'
             
+        # Dynamic Events
+        events = Event.objects.filter(status='approved').order_by('-created_at')
+        for e in events:
+            xml += '  <url>\n'
+            xml += f'    <loc>{base_url}/events/{e.slug}/</loc>\n'
+            xml += f'    <lastmod>{e.created_at.strftime("%Y-%m-%d")}</lastmod>\n'
+            xml += '    <changefreq>weekly</changefreq>\n'
+            xml += '    <priority>0.8</priority>\n'
+            xml += '  </url>\n'
+
         # Dynamic Room Listings
         listings = RoomListing.objects.filter(is_active=True).order_by('-created_at')
         for listing in listings:
@@ -3795,7 +3914,7 @@ def sitemap_view(request):
     return HttpResponse(xml, content_type='application/xml')
 
 def robots_txt_view(request):
-    text = "User-agent: *\nAllow: /\n\nSitemap: https://srm-match.vercel.app/sitemap.xml\n"
+    text = "User-agent: *\nAllow: /\n\nSitemap: https://knotspot.online/sitemap.xml\n"
     return HttpResponse(text, content_type='text/plain')
 
 def privacy_policy_view(request):
@@ -3814,7 +3933,955 @@ def about_view(request):
 
 def contact_view(request):
     return render(request, 'contact.html')
-def contact_view(request):
-    return render(request, 'contact.html')
-def contact_view(request):
-    return render(request, 'contact.html')
+
+
+# ── Voice Lounge API ──
+
+from django.utils import timezone
+from datetime import timedelta
+
+STALE_HEARTBEAT_SECONDS = 120
+
+
+def _clean_stale_participants():
+    cutoff = timezone.now() - timedelta(seconds=STALE_HEARTBEAT_SECONDS)
+    stale = VoiceParticipant.objects.filter(last_heartbeat__lt=cutoff)
+    stale |= VoiceParticipant.objects.filter(last_heartbeat__isnull=True, joined_at__lt=cutoff)
+    if stale.exists():
+        rooms_affected = set(stale.values_list('room_id', flat=True))
+        stale.delete()
+        for rid in rooms_affected:
+            _broadcast_room_counts(rid)
+
+
+def _build_participant_dict(participant):
+    """Build full participant dict from a VoiceParticipant instance."""
+    user = participant.user
+    profile = getattr(user, 'profile', None)
+    return {
+        'id': user.id,
+        'name': profile.name if profile else user.username,
+        'profile_pic': profile.profile_pic if profile and profile.profile_pic else '',
+        'session_peer_id': participant.session_peer_id or '',
+        'is_muted': participant.is_muted,
+    }
+
+
+def _broadcast_room_counts(target_room_id=None):
+    rooms = VoiceRoom.objects.prefetch_related(
+        Prefetch('participants', queryset=VoiceParticipant.objects.select_related('user__profile').order_by('joined_at'))
+    ).all()
+    data = []
+    for room in rooms:
+        entries = list(room.participants.all())
+        avatars = [_build_participant_dict(p) for p in entries]
+        data.append({
+            'id': room.id,
+            'name': room.name,
+            'slug': room.slug,
+            'count': len(entries),
+            'max': room.max_capacity,
+            'is_full': len(entries) >= room.max_capacity,
+            'avatars': avatars,
+        })
+    broadcast_event('voice_counts', 'update', {'rooms': data})
+    if target_room_id:
+        try:
+            room = VoiceRoom.objects.get(id=target_room_id)
+            entries = VoiceParticipant.objects.filter(room=room).select_related('user__profile')
+            participants = [_build_participant_dict(p) for p in entries]
+            broadcast_event(f'voice_room_{room.id}', 'participant_list', {'participants': participants})
+        except VoiceRoom.DoesNotExist:
+            pass
+
+
+def _get_participant_data(user):
+    profile = getattr(user, 'profile', None)
+    return {
+        'id': user.id,
+        'name': profile.name if profile else user.username,
+        'profile_pic': profile.profile_pic if profile and profile.profile_pic else '',
+    }
+
+
+def _get_user_friend_ids(user):
+    from .models import MatchRequest
+    accepted = MatchRequest.objects.filter(
+        status='accepted'
+    ).filter(
+        Q(sender=user) | Q(receiver=user)
+    ).values_list('sender_id', 'receiver_id')
+    friend_ids = set()
+    for s, r in accepted:
+        friend_ids.add(s)
+        friend_ids.add(r)
+    friend_ids.discard(user.id)
+    return friend_ids
+
+
+@csrf_exempt
+@login_required
+def api_voice_rooms(request):
+    _clean_stale_participants()
+    rooms = VoiceRoom.objects.prefetch_related(
+        Prefetch('participants', queryset=VoiceParticipant.objects.select_related('user__profile').order_by('joined_at'))
+    ).all()
+    friend_ids = _get_user_friend_ids(request.user)
+    data = []
+    for room in rooms:
+        entries = list(room.participants.all())
+        count = len(entries)
+        avatars = []
+        friends_in_room = []
+        for p in entries:
+            pd = _build_participant_dict(p)
+            avatars.append(pd)
+            if p.user_id in friend_ids:
+                friends_in_room.append(pd['name'])
+        data.append({
+            'id': room.id,
+            'name': room.name,
+            'slug': room.slug,
+            'count': count,
+            'max': room.max_capacity,
+            'is_full': count >= room.max_capacity,
+            'avatars': avatars[:6],
+            'friends': friends_in_room[:3],
+        })
+    return JsonResponse({'rooms': data})
+
+
+@csrf_exempt
+@login_required
+def api_voice_join(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'})
+    try:
+        _clean_stale_participants()
+        body = json.loads(request.body)
+        room_id = body.get('room_id')
+        join_muted = body.get('join_muted', False)
+        session_peer_id = body.get('session_peer_id', '')
+        room = VoiceRoom.objects.get(id=room_id)
+
+        current_count = VoiceParticipant.objects.filter(room=room).count()
+        if current_count >= room.max_capacity:
+            return JsonResponse({'success': False, 'error': 'Room Full'})
+
+        VoiceParticipant.objects.filter(user=request.user).delete()
+
+        participant = VoiceParticipant.objects.create(
+            user=request.user,
+            room=room,
+            is_muted=join_muted,
+            last_heartbeat=timezone.now(),
+            session_peer_id=session_peer_id,
+        )
+
+        entries = VoiceParticipant.objects.filter(room=room).select_related('user__profile')
+        participants = [_build_participant_dict(p) for p in entries]
+
+        broadcast_event(f'voice_room_{room.id}', 'user_joined', {
+            **_build_participant_dict(participant),
+        })
+        _broadcast_room_counts(room.id)
+
+        return JsonResponse({'success': True, 'room_id': room.id, 'participants': participants})
+    except VoiceRoom.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Room not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@csrf_exempt
+@login_required
+def api_voice_leave(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'})
+    try:
+        entry = VoiceParticipant.objects.filter(user=request.user).first()
+        if entry:
+            room_id = entry.room_id
+            entry.delete()
+            broadcast_event(f'voice_room_{room_id}', 'user_left', {
+                'user_id': request.user.id,
+            })
+            _broadcast_room_counts(room_id)
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def api_voice_participants(request, room_id):
+    try:
+        room = VoiceRoom.objects.get(id=room_id)
+        entries = VoiceParticipant.objects.filter(room=room).select_related('user__profile')
+        participants = [_build_participant_dict(p) for p in entries]
+        return JsonResponse({'success': True, 'participants': participants, 'count': len(participants), 'max': room.max_capacity})
+    except VoiceRoom.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Room not found'})
+
+
+@csrf_exempt
+@login_required
+def api_voice_heartbeat(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'})
+    try:
+        entry = VoiceParticipant.objects.filter(user=request.user).first()
+        if entry:
+            entry.last_heartbeat = timezone.now()
+            entry.save(update_fields=['last_heartbeat'])
+            _clean_stale_participants()
+            return JsonResponse({'success': True, 'in_room': entry.room_id})
+        return JsonResponse({'success': True, 'in_room': None})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@csrf_exempt
+@login_required
+def api_voice_mute(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'})
+    try:
+        body = json.loads(request.body)
+        is_muted = body.get('is_muted', False)
+        entry = VoiceParticipant.objects.filter(user=request.user).first()
+        if entry:
+            entry.is_muted = is_muted
+            entry.save(update_fields=['is_muted'])
+            broadcast_event(f'voice_room_{entry.room_id}', 'user_muted', {
+                'user_id': request.user.id,
+                'is_muted': is_muted,
+            })
+            return JsonResponse({'success': True})
+        return JsonResponse({'success': False, 'error': 'Not in a room'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@csrf_exempt
+@login_required
+def api_voice_cleanup(request):
+    VoiceParticipant.objects.filter(user=request.user).delete()
+    return JsonResponse({'success': True})
+
+
+from django.http import HttpResponse
+
+def voice_js(request):
+    path = os.path.join(settings.BASE_DIR, 'home', 'static', 'home', 'js', 'voice.js')
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            return HttpResponse(f.read(), content_type='application/javascript')
+    except FileNotFoundError:
+        return HttpResponse('/* voice.js not found */', content_type='application/javascript', status=404)
+
+
+# ═══════════════════════════════════════════════
+#  FEEDBACK SYSTEM
+# ═══════════════════════════════════════════════
+
+@login_required
+def feedback_home(request):
+    profile = getattr(request.user, 'profile', None)
+    recent_bugs = BugReport.objects.filter(user=request.user)[:5]
+    recent_suggestions = FeatureSuggestion.objects.filter(user=request.user)[:5]
+    open_tickets = SupportTicket.objects.filter(user=request.user).exclude(status='closed')[:5]
+    return render(request, 'feedback.html', {
+        'profile': profile,
+        'recent_bugs': recent_bugs,
+        'recent_suggestions': recent_suggestions,
+        'open_tickets': open_tickets,
+    })
+
+
+@login_required
+def submit_bug(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'})
+    try:
+        data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+        screenshot_url = ''
+        if 'screenshot' in request.FILES:
+            from .cloudinary_utils import upload_to_cloudinary
+            screenshot_url = upload_to_cloudinary(request.FILES['screenshot'], folder='srm_match/bug_reports') or ''
+        bug = BugReport.objects.create(
+            user=request.user,
+            category=data.get('category', 'other'),
+            title=data.get('title', ''),
+            description=data.get('description', ''),
+            screenshot=screenshot_url,
+            device_info={'browser': data.get('browser',''), 'device': data.get('device','')},
+            page_url=data.get('page_url', ''),
+        )
+        return JsonResponse({'success': True, 'id': bug.id, 'message': 'Bug submitted successfully'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def submit_suggestion(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'})
+    try:
+        data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+        s = FeatureSuggestion.objects.create(
+            user=request.user,
+            title=data.get('title', ''),
+            description=data.get('description', ''),
+            category=data.get('category', 'other'),
+            priority=data.get('priority', 'medium'),
+        )
+        return JsonResponse({'success': True, 'id': s.id, 'message': 'Suggestion submitted successfully'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def submit_ticket(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'})
+    try:
+        data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+        ticket = SupportTicket.objects.create(
+            user=request.user,
+            subject=data.get('subject', ''),
+            category=data.get('category', 'other'),
+        )
+        TicketMessage.objects.create(
+            ticket=ticket,
+            sender=request.user,
+            message=data.get('message', ''),
+            is_admin=False,
+        )
+        return JsonResponse({'success': True, 'id': ticket.id, 'message': 'Ticket submitted successfully'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def feedback_history(request):
+    page_num = request.GET.get('page', 1)
+    bugs = BugReport.objects.filter(user=request.user).values('id', 'title', 'description', 'status', 'category', 'created_at', 'admin_reply')
+    for b in bugs:
+        b['type'] = 'bug'
+    suggs = FeatureSuggestion.objects.filter(user=request.user).values('id', 'title', 'description', 'status', 'category', 'created_at', 'admin_reply')
+    for s in suggs:
+        s['type'] = 'suggestion'
+    tickets = SupportTicket.objects.filter(user=request.user).values('id', 'subject', 'status', 'category', 'created_at', 'unread')
+    for t in tickets:
+        t['type'] = 'ticket'
+        t['title'] = t.pop('subject')
+    combined = sorted(list(bugs) + list(suggs) + list(tickets), key=lambda x: x['created_at'], reverse=True)
+    paginator = Paginator(combined, 20)
+    page_obj = paginator.get_page(page_num)
+    return render(request, 'feedback_history.html', {
+        'page_obj': page_obj,
+        'profile': getattr(request.user, 'profile', None),
+    })
+
+
+@login_required
+def ticket_detail(request, id):
+    ticket = get_object_or_404(SupportTicket, id=id, user=request.user)
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+            if 'status' in data:
+                ticket.status = data['status']
+                ticket.save(update_fields=['status', 'updated_at'])
+                return JsonResponse({'success': True})
+            msg = data.get('message', '').strip()
+            if msg:
+                new_msg = TicketMessage.objects.create(ticket=ticket, sender=request.user, message=msg, is_admin=False)
+                return JsonResponse({'success': True, 'msg_id': new_msg.id})
+            return JsonResponse({'success': False, 'error': 'Message is empty'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    if request.GET.get('since'):
+        since_id = int(request.GET.get('since'))
+        new_msgs = ticket.messages.filter(id__gt=since_id).values('id', 'message', 'is_admin', 'sender__username', 'created_at')
+        return JsonResponse({'messages': list(new_msgs)})
+    ticket.unread = 0
+    ticket.save(update_fields=['unread'])
+    ticket_msgs = ticket.messages.all()
+    return render(request, 'feedback_ticket_detail.html', {
+        'ticket': ticket,
+        'ticket_msgs': ticket_msgs,
+        'profile': getattr(request.user, 'profile', None),
+    })
+
+
+# ─── ADMIN FEEDBACK VIEWS ───
+
+@login_required
+def admin_feedback(request):
+    if not is_staff_check(request.user):
+        return HttpResponse("Not authorized", status=403)
+    tab = request.GET.get('tab', 'bugs')
+    is_admin = is_admin_check(request.user)
+
+    if tab == 'bugs':
+        items = BugReport.objects.all()
+        paginator = Paginator(items, 20)
+        page_obj = paginator.get_page(request.GET.get('page', 1))
+        template_data = {'tab': 'bugs', 'page_obj': page_obj}
+    elif tab == 'suggestions':
+        sort = request.GET.get('sort', '-votes')
+        if sort not in ('-votes', 'created_at', '-created_at', 'priority', '-priority'):
+            sort = '-votes'
+        items = FeatureSuggestion.objects.all().order_by(sort)
+        paginator = Paginator(items, 20)
+        page_obj = paginator.get_page(request.GET.get('page', 1))
+        template_data = {'tab': 'suggestions', 'page_obj': page_obj, 'current_sort': sort}
+    else:
+        items = SupportTicket.objects.all()
+        paginator = Paginator(items, 20)
+        page_obj = paginator.get_page(request.GET.get('page', 1))
+        template_data = {'tab': 'tickets', 'page_obj': page_obj}
+
+    template_data['is_admin'] = is_admin
+    template_data['is_staff'] = True
+    return render(request, 'admin_feedback.html', template_data)
+
+
+@login_required
+def admin_bug_detail(request, id):
+    if not is_staff_check(request.user):
+        return HttpResponse("Not authorized", status=403)
+    bug = get_object_or_404(BugReport, id=id)
+    is_admin = is_admin_check(request.user)
+
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+            if 'status' in data:
+                bug.status = data['status']
+            if 'admin_reply' in data:
+                bug.admin_reply = data['admin_reply']
+            bug.save(update_fields=['status', 'admin_reply', 'updated_at'] if 'admin_reply' in data else ['status', 'updated_at'])
+            _notify_user(bug.user, f'Your bug report "{bug.title[:60]}" updated to {bug.get_status_display()}',
+                         '/feedback/')
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+
+    return render(request, 'admin_bug_detail.html', {'bug': bug, 'is_admin': is_admin, 'is_staff': True})
+
+
+@login_required
+def admin_suggestion_detail(request, id):
+    if not is_staff_check(request.user):
+        return HttpResponse("Not authorized", status=403)
+    s = get_object_or_404(FeatureSuggestion, id=id)
+    is_admin = is_admin_check(request.user)
+
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+            if 'status' in data:
+                s.status = data['status']
+            if 'admin_reply' in data:
+                s.admin_reply = data['admin_reply']
+            s.save(update_fields=['status', 'admin_reply'] if 'admin_reply' in data else ['status'])
+            _notify_user(s.user, f'Your suggestion "{s.title[:60]}" updated to {s.get_status_display()}',
+                         '/feedback/')
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+
+    return render(request, 'admin_suggestion_detail.html', {'s': s, 'is_admin': is_admin, 'is_staff': True})
+
+
+@login_required
+def admin_ticket_detail(request, id):
+    if not is_staff_check(request.user):
+        return HttpResponse("Not authorized", status=403)
+    ticket = get_object_or_404(SupportTicket, id=id)
+    is_admin = is_admin_check(request.user)
+
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+            if 'message' in data and data['message'].strip():
+                new_msg = TicketMessage.objects.create(ticket=ticket, sender=request.user, message=data['message'], is_admin=True)
+                ticket.status = 'in_progress'
+                ticket.unread += 1
+                ticket.save(update_fields=['status', 'unread', 'updated_at'])
+                return JsonResponse({'success': True, 'msg_id': new_msg.id})
+            if 'status' in data:
+                ticket.status = data['status']
+                ticket.save(update_fields=['status', 'updated_at'])
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+
+    if request.GET.get('since'):
+        since_id = int(request.GET.get('since'))
+        new_msgs = ticket.messages.filter(id__gt=since_id).values('id', 'message', 'is_admin', 'sender__username', 'created_at')
+        return JsonResponse({'messages': list(new_msgs)})
+
+    ticket_msgs = ticket.messages.all()
+    return render(request, 'admin_ticket_detail.html', {
+        'ticket': ticket, 'ticket_msgs': ticket_msgs,
+        'is_admin': is_admin, 'is_staff': True,
+    })
+
+
+@login_required
+def admin_ads(request):
+    if not is_staff_check(request.user):
+        return HttpResponse("Not authorized", status=403)
+    if request.method == 'POST':
+        try:
+            import json
+            data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+            if 'delete' in data:
+                Advertisement.objects.filter(id=data['delete']).delete()
+                return JsonResponse({'success': True})
+            if 'reorder' in data:
+                for item in data['reorder']:
+                    Advertisement.objects.filter(id=item['id']).update(order=item['order'])
+                return JsonResponse({'success': True})
+            title = data.get('title', '')
+            image_url = data.get('image_url', '').strip()
+            link_url = data.get('link_url', '').strip()
+            ad_id = data.get('id')
+            
+            # Handle file upload
+            if request.FILES.get('image'):
+                uploaded = upload_to_cloudinary(request.FILES['image'], folder='srm_match/ads')
+                if uploaded:
+                    image_url = uploaded
+            
+            if not image_url or not link_url:
+                return JsonResponse({'success': False, 'error': 'Image and Link URL are required'})
+            if ad_id:
+                Advertisement.objects.filter(id=ad_id).update(title=title, image_url=image_url, link_url=link_url)
+            else:
+                Advertisement.objects.create(title=title, image_url=image_url, link_url=link_url)
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    ads = Advertisement.objects.all()
+    is_admin = is_admin_check(request.user)
+    return render(request, 'admin_ads.html', {'ads': ads, 'is_admin': is_admin, 'is_staff': True})
+
+
+def admin_spotlights(request):
+    if not is_staff_check(request.user):
+        return HttpResponse("Not authorized", status=403)
+    if request.method == 'POST':
+        try:
+            import json
+            data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+            if 'delete' in data:
+                CampusSpotlight.objects.filter(id=data['delete']).delete()
+                return JsonResponse({'success': True})
+            if 'reorder' in data:
+                for item in data['reorder']:
+                    CampusSpotlight.objects.filter(id=item['id']).update(order=item['order'])
+                return JsonResponse({'success': True})
+            if 'activate' in data:
+                CampusSpotlight.objects.filter(id=data['activate']).update(is_active=True)
+                return JsonResponse({'success': True})
+            if 'deactivate' in data:
+                CampusSpotlight.objects.filter(id=data['deactivate']).update(is_active=False)
+                return JsonResponse({'success': True})
+            spot_id = data.get('id')
+            user_id = data.get('user_id')
+            link_type = data.get('link_type', 'instagram')
+            ig_handle = data.get('instagram_handle', '').strip().lstrip('@')
+            website = data.get('website_url', '').strip()
+            ctype = data.get('content_type', 'other')
+            if ctype == '__custom__':
+                ctype = data.get('custom_type', '').strip() or 'other'
+            note = data.get('note', '').strip()
+            if link_type == 'instagram':
+                if not ig_handle:
+                    return JsonResponse({'success': False, 'error': 'Instagram handle is required'})
+                value = ig_handle
+            else:
+                if not website:
+                    return JsonResponse({'success': False, 'error': 'Website URL is required'})
+                value = website
+            if request.FILES.get('cover_image'):
+                uploaded = upload_to_cloudinary(request.FILES['cover_image'], folder='srm_match/spotlights')
+                if uploaded:
+                    cover_image = uploaded
+            if spot_id:
+                upd = {'instagram_handle': value, 'content_type': ctype, 'note': note}
+                if cover_image:
+                    upd['cover_image'] = cover_image
+                CampusSpotlight.objects.filter(id=spot_id).update(**upd)
+            else:
+                if user_id:
+                    u = User.objects.filter(id=user_id).first()
+                    if u:
+                        CampusSpotlight.objects.create(user=u, instagram_handle=value, content_type=ctype, note=note, cover_image=cover_image)
+                    else:
+                        return JsonResponse({'success': False, 'error': 'User not found'})
+                else:
+                    return JsonResponse({'success': False, 'error': 'User is required'})
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    spotlights = CampusSpotlight.objects.select_related('user__profile').all()
+    users = User.objects.select_related('profile').filter(is_active=True)
+    is_admin = is_admin_check(request.user)
+    return render(request, 'admin_spotlights.html', {'spotlights': spotlights, 'users': users, 'is_admin': is_admin, 'is_staff': True})
+
+
+def submit_spotlight(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Login required'}, status=403)
+    if request.method == 'POST':
+        link_type = request.POST.get('link_type', 'instagram')
+        handle = request.POST.get('instagram_handle', '').strip().lstrip('@')
+        website = request.POST.get('website_url', '').strip()
+        ctype = request.POST.get('content_type', 'other')
+        if ctype == '__custom__':
+            ctype = request.POST.get('custom_type', '').strip() or 'other'
+        note = request.POST.get('note', '').strip()
+        if link_type == 'instagram':
+            if not handle:
+                return JsonResponse({'success': False, 'error': 'Instagram handle is required'})
+            value = handle
+        else:
+            if not website:
+                return JsonResponse({'success': False, 'error': 'Website URL is required'})
+            value = website
+        if CampusSpotlight.objects.filter(user=request.user).exists():
+            return JsonResponse({'success': False, 'error': 'You already have a spotlight'})
+        cover_image = ''
+        if request.FILES.get('cover_image'):
+            uploaded = upload_to_cloudinary(request.FILES['cover_image'], folder='srm_match/spotlights')
+            if uploaded:
+                cover_image = uploaded
+        CampusSpotlight.objects.create(user=request.user, instagram_handle=value, content_type=ctype, note=note, cover_image=cover_image)
+        return JsonResponse({'success': True, 'message': 'Submitted for review!'})
+    return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
+
+
+def edit_spotlight(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Login required'}, status=403)
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
+    spot_id = request.POST.get('id')
+    try:
+        spot = CampusSpotlight.objects.get(id=spot_id, user=request.user)
+    except CampusSpotlight.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Spotlight not found or not yours'})
+    link_type = request.POST.get('link_type', 'instagram')
+    ig_handle = request.POST.get('instagram_handle', '').strip()
+    website = request.POST.get('website_url', '').strip()
+    ctype = request.POST.get('content_type', 'other')
+    if ctype == '__custom__':
+        ctype = request.POST.get('custom_type', '').strip() or 'other'
+    note = request.POST.get('note', '').strip()
+    if link_type == 'instagram':
+        if not ig_handle:
+            return JsonResponse({'success': False, 'error': 'Instagram handle is required'})
+        value = ig_handle
+    else:
+        if not website:
+            return JsonResponse({'success': False, 'error': 'Website URL is required'})
+        value = website
+    cover_image = spot.cover_image
+    if request.FILES.get('cover_image'):
+        uploaded = upload_to_cloudinary(request.FILES['cover_image'], folder='srm_match/spotlights')
+        if uploaded:
+            cover_image = uploaded
+    spot.instagram_handle = value
+    spot.content_type = ctype
+    spot.note = note
+    spot.cover_image = cover_image
+    spot.save()
+    return JsonResponse({'success': True, 'message': 'Updated!'})
+
+def delete_spotlight(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Login required'}, status=403)
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
+    import json
+    data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+    spot_id = data.get('id')
+    try:
+        spot = CampusSpotlight.objects.get(id=spot_id, user=request.user)
+    except CampusSpotlight.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Spotlight not found or not yours'})
+    spot.delete()
+    return JsonResponse({'success': True, 'message': 'Deleted!'})
+
+def spotlight_page(request):
+    qs = CampusSpotlight.objects.filter(is_active=True).select_related('user__profile')
+    paginator = Paginator(qs, 10)
+    page = request.GET.get('page', 1)
+    spotlights = paginator.get_page(page)
+    return render(request, 'spotlight_page.html', {'spotlights': spotlights, 'paginator': paginator})
+
+
+def event_list(request):
+    now = timezone.now()
+    user = request.user if request.user.is_authenticated else None
+
+    approved = Event.objects.filter(status='approved').select_related('user__profile')
+    pending_own = Event.objects.none()
+    if user:
+        pending_own = Event.objects.filter(status='pending', user=user)
+
+    q = request.GET.get('q', '').strip()
+    campus_filter = request.GET.get('campus', '')
+    fee_filter = request.GET.get('fee', '')
+    sort = request.GET.get('sort', 'latest')
+    include_past = request.GET.get('include_past', '') == '1'
+    month = request.GET.get('month', '')
+
+    if q:
+        approved = approved.filter(title__icontains=q)
+    if campus_filter:
+        approved = approved.filter(campus=campus_filter)
+    if not include_past:
+        approved = approved.filter(event_date__gte=now.date())
+    if month:
+        try:
+            ym = month.split('-')
+            y, m = int(ym[0]), int(ym[1])
+            approved = approved.filter(event_date__year=y, event_date__month=m)
+        except (ValueError, IndexError):
+            pass
+    if fee_filter in ('free', 'paid'):
+        approved = approved.filter(fee_type=fee_filter)
+
+    if sort == 'earliest':
+        approved = approved.order_by('event_date', '-created_at')
+    else:
+        approved = approved.order_by('-created_at')
+
+    paginator = Paginator(approved, 16)
+    page = request.GET.get('page', 1)
+    try:
+        events_page = paginator.page(page)
+    except (EmptyPage, PageNotAnInteger):
+        events_page = paginator.page(1)
+
+    event_campuses = Event.objects.filter(status='approved').values_list('campus', flat=True)
+    profile_campuses = Profile.objects.exclude(campus='').values_list('campus', flat=True)
+    campuses = sorted(set(c for c in list(event_campuses) + list(profile_campuses) if c))
+
+    months = []
+    for m in range(1, 13):
+        months.append({
+            'value': f'{now.year}-{m:02d}',
+            'label': datetime(now.year, m, 1).strftime('%B %Y'),
+        })
+
+    qs_parts = []
+    if q: qs_parts.append(f'q={quote(q)}')
+    if campus_filter: qs_parts.append(f'campus={quote(campus_filter)}')
+    if fee_filter: qs_parts.append(f'fee={quote(fee_filter)}')
+    if sort != 'latest': qs_parts.append(f'sort={quote(sort)}')
+    if include_past: qs_parts.append('include_past=1')
+    if month: qs_parts.append(f'month={quote(month)}')
+    query_string = '&'.join(qs_parts)
+
+    return render(request, 'event_list.html', {
+        'events': events_page,
+        'pending_events': pending_own,
+        'campuses': campuses,
+        'q': q,
+        'current_campus': campus_filter,
+        'current_fee': fee_filter,
+        'current_sort': sort,
+        'include_past': include_past,
+        'current_month': month,
+        'months': months,
+        'query_string': query_string,
+    })
+
+
+def event_detail(request, slug):
+    try:
+        event = Event.objects.select_related('user__profile').get(slug=slug)
+    except Event.DoesNotExist:
+        raise Http404("Event not found")
+    if event.status == 'pending' and event.user != request.user and not is_staff_check(request.user):
+        raise Http404("Event not found")
+    profile_campuses = Profile.objects.exclude(campus='').values_list('campus', flat=True)
+    campuses = sorted(set(c for c in list(profile_campuses) if c))
+    return render(request, 'event_detail.html', {'event': event, 'campuses': campuses})
+
+
+@csrf_exempt
+def submit_event(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Login required'}, status=403)
+    if request.method == 'POST':
+        title = request.POST.get('title', '').strip()
+        description = request.POST.get('description', '').strip()
+        campus = request.POST.get('campus', '').strip()
+        event_date = request.POST.get('event_date', '').strip()
+        last_reg_date = request.POST.get('last_reg_date', '').strip()
+        fee_type = request.POST.get('fee_type', 'free')
+        fee_amount = request.POST.get('fee_amount', '').strip()
+        reg_link = request.POST.get('reg_link', '').strip()
+        page_link = request.POST.get('page_link', '').strip()
+
+        if not title or not description or not event_date:
+            return JsonResponse({'success': False, 'error': 'Title, description and event date are required'})
+
+        poster = ''
+        if request.FILES.get('poster'):
+            uploaded = upload_to_cloudinary(request.FILES['poster'], folder='knotspot/events')
+            if uploaded:
+                poster = uploaded
+
+        is_staff = is_staff_check(request.user)
+        status = 'approved' if is_staff else 'pending'
+
+        event = Event.objects.create(
+            user=request.user,
+            title=title,
+            poster=poster,
+            description=description,
+            campus=campus,
+            event_date=event_date,
+            last_reg_date=last_reg_date if last_reg_date else None,
+            fee_type=fee_type,
+            fee_amount=fee_amount if fee_amount else None,
+            reg_link=reg_link,
+            page_link=page_link,
+            status=status,
+        )
+        return JsonResponse({'success': True, 'id': event.id, 'message': 'Event submitted!' if status == 'pending' else 'Event published!', 'status': status})
+    return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
+
+
+@csrf_exempt
+def edit_event(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Login required'}, status=403)
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
+    import json
+    data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+    event_id = data.get('event_id')
+    try:
+        event = Event.objects.get(id=event_id)
+    except Event.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Event not found'})
+    if event.user != request.user and not is_staff_check(request.user):
+        return JsonResponse({'success': False, 'error': 'Not authorized'}, status=403)
+
+    event.title = data.get('title', event.title)
+    event.description = data.get('description', event.description)
+    event.campus = data.get('campus', event.campus)
+    event.event_date = data.get('event_date', event.event_date)
+    event.last_reg_date = data.get('last_reg_date', event.last_reg_date) if data.get('last_reg_date') else None
+    event.fee_type = data.get('fee_type', event.fee_type)
+    event.fee_amount = data.get('fee_amount', event.fee_amount) if data.get('fee_amount') else None
+    event.reg_link = data.get('reg_link', event.reg_link)
+    event.page_link = data.get('page_link', event.page_link)
+
+    if request.FILES.get('cover_image'):
+        uploaded = upload_to_cloudinary(request.FILES['cover_image'], folder='knotspot/events')
+        if uploaded:
+            event.poster = uploaded
+
+    if not is_staff_check(request.user):
+        event.status = 'pending'
+    event.save()
+    return JsonResponse({'success': True, 'message': 'Event updated!'})
+
+
+@csrf_exempt
+def delete_event(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Login required'}, status=403)
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid request'}, status=400)
+    import json
+    data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+    event_id = data.get('id')
+    try:
+        event = Event.objects.get(id=event_id)
+    except Event.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Event not found'})
+    if event.user != request.user and not is_staff_check(request.user):
+        return JsonResponse({'success': False, 'error': 'Not authorized'}, status=403)
+    event.delete()
+    return JsonResponse({'success': True, 'message': 'Event deleted!'})
+
+
+@login_required
+def admin_events(request):
+    if not is_staff_check(request.user):
+        return HttpResponse("Not authorized", status=403)
+    if request.method == 'POST':
+        try:
+            import json
+            data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+            event_id = data.get('event_id')
+            new_status = data.get('status')
+            if new_status not in ('approved', 'rejected'):
+                return JsonResponse({'success': False, 'error': 'Invalid status'})
+            Event.objects.filter(id=event_id).update(status=new_status)
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    status_filter = request.GET.get('status', '')
+    events_qs = Event.objects.select_related('user__profile').all().order_by('-created_at')
+    if status_filter and status_filter != 'all':
+        events_qs = events_qs.filter(status=status_filter)
+    paginator = Paginator(events_qs, 20)
+    page = request.GET.get('page', 1)
+    events_page = paginator.get_page(page)
+    return render(request, 'admin_events.html', {
+        'events': events_page,
+        'status_filter': status_filter,
+        'is_staff': True,
+    })
+
+
+def event_api_get(request, id):
+    try:
+        event = Event.objects.get(id=id)
+    except Event.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Not found'}, status=404)
+    return JsonResponse({'success': True, 'event': {
+        'id': event.id,
+        'title': event.title,
+        'description': event.description,
+        'poster': event.poster,
+        'campus': event.campus,
+        'event_date': event.event_date.isoformat(),
+        'last_reg_date': event.last_reg_date.isoformat() if event.last_reg_date else None,
+        'fee_type': event.fee_type,
+        'fee_amount': str(event.fee_amount) if event.fee_amount else None,
+        'reg_link': event.reg_link,
+        'page_link': event.page_link,
+    }})
+
+
+def upcoming_events_api(request):
+    now = timezone.now()
+    events = Event.objects.filter(status='approved', event_date__gte=now.date()).order_by('event_date')[:5]
+    data = [{
+        'id': e.id,
+        'title': e.title,
+        'poster': e.poster,
+        'event_date': e.event_date.isoformat(),
+        'campus': e.campus,
+        'fee_type': e.fee_type,
+        'fee_amount': str(e.fee_amount) if e.fee_amount else None,
+    } for e in events]
+    return JsonResponse(data, safe=False)
+
+
+def _notify_user(user, message, link=''):
+    FeedbackNotification.objects.create(user=user, message=message, link=link)

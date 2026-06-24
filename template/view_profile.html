@@ -517,7 +517,7 @@
         {% if gallery %}
         <div class="gallery-grid">
             {% for img in gallery %}
-            <img src="{{ img.get_image_url }}" alt="Photo" onclick="openLightbox(this.src)">
+            <img src="{{ img.get_image_url }}" alt="Photo" onclick="openLightbox(this.src)" loading="lazy" decoding="async">
             {% endfor %}
         </div>
         {% else %}
@@ -618,7 +618,7 @@
             <div class="vibe-grid">
                 {% for movie in profile.user.favorite_movies.all %}
                 <div class="vibe-item movie">
-                    <img src="{{ movie.poster_url }}" alt="{{ movie.title }}">
+                    <img src="{{ movie.poster_url }}" alt="{{ movie.title }}" loading="lazy" decoding="async">
                     <div class="vibe-title">{{ movie.title }}</div>
                     <div class="vibe-subtitle">{{ movie.release_year }}</div>
                 </div>
@@ -636,7 +636,7 @@
             <div class="vibe-grid">
                 {% for song in profile.user.favorite_songs.all %}
                 <div class="vibe-item">
-                    <img src="{{ song.artwork_url }}" alt="{{ song.title }}">
+                    <img src="{{ song.artwork_url }}" alt="{{ song.title }}" loading="lazy" decoding="async">
                     <div class="vibe-title">{{ song.title }}</div>
                     <div class="vibe-subtitle">{{ song.artist }}</div>
                 </div>

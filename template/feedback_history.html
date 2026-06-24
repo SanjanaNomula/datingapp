@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Requests | KnotSpot{% endblock %}
+
+{% block head %}
+<style>
+html, body {
+    height: 100dvh; overflow: hidden; position: fixed; width: 100%;
+    background: #f7f9fb; padding: 0 !important; margin: 0 !important;
+}
+.container { max-width:100% !important; width:100% !important; padding:0 !important; margin:0 !important; height:100%; box-sizing:border-box; background:transparent !important; border:none !important; box-shadow:none !important; }
+.fb-wrapper { display:flex; flex-direction:column; position:fixed; top:0; left:0; right:0; bottom:0; width:100%; max-width:560px; margin:0 auto; background:linear-gradient(180deg,#fbfcff 0%,#f7f9fb 58%,#eff4fb 100%); z-index:10; }
+.fb-header { flex-shrink:0; padding:calc(10px + env(safe-area-inset-top)) 20px 16px; background:rgba(247,249,251,0.85); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border-bottom:1px solid rgba(0,74,198,0.08); display:flex; align-items:center; gap:12px; z-index:20; }
+.fb-header-main { display:flex; align-items:center; gap:12px; flex:1; }
+.fb-back-btn { width:44px; height:44px; border-radius:16px; background:#fff; display:flex; align-items:center; justify-content:center; text-decoration:none; color:#2563eb; border:1px solid rgba(0,74,198,0.08); box-shadow:0 10px 24px rgba(15,23,42,0.06); transition:0.2s; cursor:pointer; }
+.fb-back-btn:active { transform:scale(0.94); }
+.fb-header h2 { margin:0; font-size:22px; font-weight:800; color:#0f172a; letter-spacing:-0.5px; }
+.fb-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:20px 16px 110px; }
+
+.req-card {
+    background:#fff; border-radius:16px; margin-bottom:12px;
+    box-shadow:0 4px 16px rgba(15,23,42,0.04);
+    border-left:4px solid #e2e8f0; overflow:hidden;
+    transition:0.15s; padding:14px 16px;
+}
+.req-card:active { transform:scale(0.98); }
+.req-card.bug { border-left-color:#dc2626; }
+.req-card.suggestion { border-left-color:#d97706; }
+.req-card.ticket { border-left-color:#2563eb; }
+.req-card.unread { background:#f8faff; }
+
+.req-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:4px; }
+.req-title { font-size:15px; font-weight:700; color:#0f172a; line-height:1.3; margin:0; flex:1; min-width:0; }
+.req-type-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; flex-shrink:0; }
+.req-type-dot.bug { background:#dc2626; }
+.req-type-dot.suggestion { background:#d97706; }
+.req-type-dot.ticket { background:#2563eb; }
+.req-status-pill { font-size:9px; font-weight:800; padding:3px 8px; border-radius:10px; text-transform:uppercase; letter-spacing:0.4px; flex-shrink:0; margin-top:2px; }
+.req-status-pill.pending { background:#fef3c7; color:#d97706; }
+.req-status-pill.reviewing { background:#dbeafe; color:#2563eb; }
+.req-status-pill.fixed { background:#d1fae5; color:#16a34a; }
+.req-status-pill.closed { background:#e2e8f0; color:#64748b; }
+.req-status-pill.open { background:#d1fae5; color:#16a34a; }
+.req-status-pill.in_progress { background:#dbeafe; color:#2563eb; }
+.req-status-pill.under_review { background:#dbeafe; color:#2563eb; }
+.req-status-pill.accepted { background:#d1fae5; color:#16a34a; }
+.req-status-pill.rejected { background:#fee2e2; color:#ef4444; }
+
+.req-desc { font-size:12px; color:#64748b; margin:0 0 10px; line-height:1.45; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; padding-left:14px; }
+
+.req-footer { display:flex; align-items:center; justify-content:space-between; font-size:11px; color:#94a3b8; padding-left:14px; }
+.req-footer a { color:#2563eb; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:3px; }
+.req-footer .sep { color:#d1d5db; margin:0 4px; }
+.admin-reply { margin:6px 0 6px 14px; padding:10px 12px; background:#f8faff; border-left:3px solid #2563eb; border-radius:8px; }
+.admin-reply-head { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:#2563eb; margin-bottom:4px; }
+.admin-reply-text { font-size:13px; color:#1e293b; line-height:1.5; white-space:pre-wrap; }
+
+.fb-empty { text-align:center; padding:40px 20px; color:#94a3b8; font-size:13px; }
+.fb-empty a { color:#2563eb; font-weight:700; text-decoration:none; }
+.pagination { display:flex; justify-content:center; gap:6px; margin-top:20px; flex-wrap:wrap; padding-bottom:20px; }
+.pagination a, .pagination span { display:inline-flex; align-items:center; justify-content:center; min-width:36px; height:36px; padding:0 10px; border-radius:10px; font-size:13px; font-weight:700; border:1px solid #e2e8f0; background:#fff; color:#475569; text-decoration:none; transition:0.2s; }
+.pagination a:hover { border-color:#2563eb; color:#2563eb; }
+.pagination .current { background:#2563eb; color:#fff; border-color:#2563eb; }
+</style>
+{% endblock %}
+
+{% block body %}
+<section class="fb-wrapper">
+    <div class="fb-header">
+        <div class="fb-header-main">
+            <a href="{% url 'feedback_home' %}" class="fb-back-btn"><span class="material-symbols-outlined">arrow_back</span></a>
+            <h2>My Requests</h2>
+        </div>
+    </div>
+    <div class="fb-body">
+        {% for item in page_obj %}
+        <div class="req-card {{ item.type }}{% if item.type == 'ticket' and item.unread > 0 %} unread{% endif %}">
+            <div class="req-top">
+                <div class="req-title">
+                    <span class="req-type-dot {{ item.type }}"></span>
+                    {% if item.type == 'ticket' and item.unread > 0 %}<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#ef4444;margin-right:5px;vertical-align:middle;"></span>{% endif %}
+                    {{ item.title|truncatechars:60 }}
+                </div>
+                <span class="req-status-pill {{ item.status }}">{{ item.status }}</span>
+            </div>
+            {% if item.description %}
+            <div class="req-desc">{{ item.description|truncatechars:120 }}</div>
+            {% endif %}
+            {% if item.admin_reply and item.type != 'ticket' %}
+            <div class="admin-reply">
+                <div class="admin-reply-head">Admin reply</div>
+                <div class="admin-reply-text">{{ item.admin_reply }}</div>
+            </div>
+            {% endif %}
+            <div class="req-footer">
+                <span>
+                    {% if item.category %}{{ item.category|capfirst }}<span class="sep">&middot;</span>{% endif %}
+                    {{ item.created_at|date:"M d, Y" }}
+
+                </span>
+                {% if item.type == 'ticket' %}
+                <a href="{% url 'ticket_detail' item.id %}">View Ticket &rarr;</a>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="fb-empty">No requests yet. <a href="{% url 'feedback_home' %}">Submit one now</a></div>
+        {% endfor %}
+
+        {% if page_obj.paginator.num_pages > 1 %}
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}">&laquo;</a>
+            {% endif %}
+            {% for p in page_obj.paginator.page_range %}
+                {% if p == page_obj.number %}
+                <span class="current">{{ p }}</span>
+                {% elif p > page_obj.number|add:'-3' and p < page_obj.number|add:'3' %}
+                <a href="?page={{ p }}">{{ p }}</a>
+                {% endif %}
+            {% endfor %}
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}">&raquo;</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

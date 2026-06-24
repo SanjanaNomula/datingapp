@@ -1,14 +1,14 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Public Drawing Wall | SRM Match{% endblock %}
+{% block title %}Public Drawing Wall | KnotSpot{% endblock %}
 
-{% block meta_description %}Draw and explore the public collaborative student wall on SRM Match.{% endblock %}
+{% block meta_description %}Draw and explore the public collaborative student wall on KnotSpot.{% endblock %}
 {% block meta_keywords %}public drawing wall, SRM wall, pixel wall, student wall{% endblock %}
+{% block og_title %}Public Drawing Wall | KnotSpot{% endblock %}
+{% block og_description %}Draw and explore the public collaborative student wall on KnotSpot.{% endblock %}
 
 {% block head %}
-<meta property="og:title" content="Public Drawing Wall | SRM Match">
-<meta property="og:description" content="Draw and explore the public collaborative student wall on SRM Match.">
 <style>
 :root {
     --wall-grid: #eef2f6;
@@ -225,7 +225,7 @@ body {
     <div class="size-btn active" data-size="1">1x</div>
     <div class="size-btn" data-size="2">2x</div>
 
-    {% if request.user.email == 'arunmohankml@gmail.com' %}
+    {% if request.user.email in admin_emails %}
     <div class="sep"></div>
     <button class="size-btn" style="width: auto; padding: 0 8px;" onclick="document.getElementById('adminImageInput').click()" title="Admin: Upload Image">
         <i class="fas fa-image"></i>
@@ -263,7 +263,6 @@ body {
     <div id="gwm-actions" style="display: flex; gap: 12px;"></div>
 </div>
 
-<script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
 <script>
 (function() {
 // Pusher Setup — use wallPusher to avoid conflict with base.html

@@ -1,150 +1,143 @@
-const CACHE_NAME = 'srm-match-v1.1'; // Version bump to clear old broken cache
-const STATIC_ASSETS = [
+const CACHE = 'knotspot-v1';
+const STATIC_CACHE = 'knotspot-static-v1';
+const IMAGE_CACHE = 'knotspot-images-v1';
+
+const PRECACHE_URLS = [
+  '/',
+  '/login/',
   '/manifest.json',
-  '/icon-192x192.png',
-  '/icon-512x512.png'
+  '/static/favicon.png',
 ];
 
+// ── Install – precache app shell ──
 self.addEventListener('install', (event) => {
-    self.skipWaiting();
-    event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => {
-            return cache.addAll(STATIC_ASSETS);
-        })
-    );
+  event.waitUntil(
+    caches.open(CACHE).then((cache) => {
+      return cache.addAll(PRECACHE_URLS).catch(() => {});
+    }).then(() => self.skipWaiting())
+  );
 });
 
+// ── Activate – clean old caches ──
 self.addEventListener('activate', (event) => {
-    event.waitUntil(
-        caches.keys().then((cacheNames) => {
-            return Promise.all(
-                cacheNames.map((name) => {
-                    if (name !== CACHE_NAME) {
-                        return caches.delete(name);
-                    }
-                })
-            );
-        })
-    );
-    self.clients.claim();
+  event.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.filter((k) => k !== CACHE && k !== STATIC_CACHE && k !== IMAGE_CACHE)
+          .map((k) => caches.delete(k))
+      );
+    }).then(() => self.clients.claim())
+  );
 });
 
-self.addEventListener("fetch", function(event) {
-    // Only handle GET requests
-    if (event.request.method !== 'GET') {
-        return;
-    }
+// ── Fetch strategies ──
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  const url = new URL(request.url);
 
-    const url = new URL(event.request.url);
+  // skip non-GET
+  if (request.method !== 'GET') return;
 
-    // API and Chat routes bypass cache entirely
-    if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/chat/')) {
-        event.respondWith(fetch(event.request));
-        return;
-    }
+  // Chrome extension requests
+  if (url.protocol === 'chrome-extension:') return;
 
-    // HTML Pages (Navigation) -> Network First
-    if (event.request.mode === 'navigate' || event.request.headers.get('accept').includes('text/html')) {
-        event.respondWith(
-            fetch(event.request).catch(() => {
-                return caches.match(event.request);
-            })
-        );
-        return;
-    }
+  // Images – cache first
+  if (request.destination === 'image') {
+    event.respondWith(cacheFirst(request, IMAGE_CACHE));
+    return;
+  }
 
-    // Static Assets -> Cache First, fallback to Network
-    event.respondWith(
-        caches.match(event.request).then((cachedResponse) => {
-            if (cachedResponse) {
-                return cachedResponse;
-            }
-            
-            return fetch(event.request).then((networkResponse) => {
-                if (networkResponse && networkResponse.status === 200) {
-                    if (url.pathname.includes('/static/') || url.pathname.match(/\.(png|jpg|jpeg|svg|gif|woff2?|css|js)$/)) {
-                        const responseToCache = networkResponse.clone();
-                        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
-                    }
-                }
-                return networkResponse;
-            });
-        })
-    );
+  // Static assets – cache first
+  if (
+    request.destination === 'script' ||
+    request.destination === 'style' ||
+    request.destination === 'font'
+  ) {
+    event.respondWith(cacheFirst(request, STATIC_CACHE));
+    return;
+  }
+
+  // Navigation – network first with offline fallback
+  if (request.mode === 'navigate') {
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
+  // Everything else – network with cache fallback
+  event.respondWith(
+    fetch(request).catch(() => caches.match(request))
+  );
 });
 
-self.addEventListener('push', function(event) {
-    console.log('[Service Worker] Push Received.', event.data ? event.data.text() : 'No data');
-    
-    let data = {};
-    if (event.data) {
-        try {
-            data = event.data.json();
-        } catch (e) {
-            console.error('Push data is not JSON:', e);
-            data = { title: 'New Message', body: event.data.text() };
-        }
+async function cacheFirst(request, cacheName) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+  try {
+    const response = await fetch(request);
+    if (response.ok && response.type === 'basic') {
+      const cache = await caches.open(cacheName);
+      cache.put(request, response.clone());
     }
+    return response;
+  } catch {
+    return new Response('', { status: 408, statusText: 'Offline' });
+  }
+}
 
-    // FCM sends notification data inside a 'notification' object or 'data' object
-    const title = data.title || (data.notification ? data.notification.title : 'SRM Match');
-    const body = data.body || (data.notification ? data.notification.body : 'You have a new message');
-    const url = data.url || (data.data ? data.data.url : '/');
+async function networkFirst(request) {
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(CACHE);
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    return caches.match('/login/');
+  }
+}
 
-    const options = {
-        body: body,
-        icon: '/icon-192x192.png',
-        badge: '/icon-192x192.png',
-        vibrate: [100, 50, 100],
-        data: { url: url }
-    };
-
-    // Show system notification unless the app is open and the user is already on the exact target URL
-    event.waitUntil(
-        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
-            let isCurrentPage = false;
-            for (var i = 0; i < windowClients.length; i++) {
-                var client = windowClients[i];
-                if (client.visibilityState === 'visible') {
-                    try {
-                        const clientUrl = new URL(client.url);
-                        const targetUrl = new URL(url, client.url);
-                        if (clientUrl.pathname === targetUrl.pathname) {
-                            isCurrentPage = true;
-                            break;
-                        }
-                    } catch (e) {
-                        if (url !== '/' && client.url.includes(url)) {
-                            isCurrentPage = true;
-                            break;
-                        }
-                    }
-                }
-            }
-            if (!isCurrentPage) {
-                return self.registration.showNotification(title, options);
-            }
-        })
-    );
+// ── Notification click ──
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || '/';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const c of clients) {
+        if (c.url === url && 'focus' in c) return c.focus();
+      }
+      if (clients.openWindow) return clients.openWindow(url);
+    })
+  );
 });
 
-self.addEventListener('notificationclick', function(event) {
-    console.log('[Service Worker] Notification click Received.');
-    event.notification.close();
-    
-    const urlToOpen = event.notification.data.url || '/';
-    
-    event.waitUntil(
-        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
-            for (var i = 0; i < windowClients.length; i++) {
-                var client = windowClients[i];
-                if (client.url === urlToOpen && 'focus' in client) {
-                    return client.focus();
-                }
-            }
-            if (clients.openWindow) {
-                return clients.openWindow(urlToOpen);
-            }
-        })
-    );
+// ── Firebase Cloud Messaging (background messages) ──
+importScripts('https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.11.0/firebase-messaging-compat.js');
+
+firebase.initializeApp({
+  apiKey: "AIzaSyDNiJROEM1-oa2kidoUorjFPS4FvP_et0M",
+  authDomain: "datingapp-636fa.firebaseapp.com",
+  projectId: "datingapp-636fa",
+  storageBucket: "datingapp-636fa.firebasestorage.app",
+  messagingSenderId: "848138254029",
+  appId: "1:848138254029:web:db606ec479cc1220805b84",
+  measurementId: "G-VVG7199H45"
+});
+
+const messaging = firebase.messaging();
+
+messaging.onBackgroundMessage((payload) => {
+  const { notification: data, data: extra } = payload;
+  const title = data?.title || 'KnotSpot';
+  const options = {
+    body: data?.body || '',
+    icon: '/static/favicon.png',
+    badge: '/static/favicon.png',
+    data: { url: extra?.url || '/' },
+    vibrate: [200, 100, 200],
+  };
+  self.registration.showNotification(title, options);
 });

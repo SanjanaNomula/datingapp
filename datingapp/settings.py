@@ -29,10 +29,12 @@ if not os.environ.get('VERCEL'):
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY')
-if not SECRET_KEY and not os.environ.get('VERCEL'):
-    SECRET_KEY = 'django-insecure-local-dev-only'
+if not SECRET_KEY:
+    SECRET_KEY = 'django-insecure-216tlt-jzkigd^5*g2g+(nd1qli0dsqq8de^7@)z6#+k7i2(jn'
 
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
+
+ADMIN_EMAILS = [e.strip() for e in os.environ.get('ADMIN_EMAILS', '').split(',') if e.strip()]
 
 # Split allowed hosts from environment variable
 ALLOWED_HOSTS = ['*']
@@ -84,6 +86,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'django.middleware.gzip.GZipMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -100,13 +103,21 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [BASE_DIR / 'template'],
-        'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'home.context_processors.unread_messages_count',
+            ],
+            'loaders': [(
+                'django.template.loaders.cached.Loader', [
+                    'django.template.loaders.filesystem.Loader',
+                    'django.template.loaders.app_directories.Loader',
+                ],
+            )] if not DEBUG else [
+                'django.template.loaders.filesystem.Loader',
+                'django.template.loaders.app_directories.Loader',
             ],
         },
     },
@@ -124,15 +135,11 @@ if os.environ.get('DATABASE_URL'):
     DATABASES = {
         'default': dj_database_url.config(
             default=os.environ.get('DATABASE_URL'),
-            conn_max_age=600,
-            ssl_require=True if os.environ.get('VERCEL') else False
+            conn_max_age=60,
+            ssl_require=True
         )
     }
-    # Ensure SSL options are correctly set for Supabase/Vercel
-    if os.environ.get('VERCEL'):
-        DATABASES['default']['OPTIONS'] = {
-            'sslmode': 'require',
-        }
+    DATABASES['default']['CONN_HEALTH_CHECKS'] = True
 else:
     # Fallback to SQLite for local development if no DB URL is set
     DATABASES = {
@@ -141,6 +148,21 @@ else:
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
+
+# Cache
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'knotspot-cache',
+        'TIMEOUT': 300,
+    }
+}
+
+# Session
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+SESSION_COOKIE_AGE = 604800  # 1 week
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
 
 # Password validation
@@ -183,14 +205,25 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
 ]
 
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Django 5.2 uses STORAGES dict (STATICFILES_STORAGE is removed)
+# Using StaticFilesStorage to avoid ValueError crashes on Vercel
+# when the staticfiles manifest is missing or not deployed
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
+
+# Serve root-level files (favicon.ico, robots.txt) from project root
+WHITENOISE_ROOT = os.path.join(BASE_DIR, 'static_root')
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
@@ -218,6 +251,17 @@ LOGOUT_REDIRECT_URL = '/'
 
 # Set COOP to allow popup communication for Firebase Auth (fixes Brave/Chrome issues)
 SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'
+
+# Security Headers
+SECURE_HSTS_SECONDS = 31536000  # 1 year
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_BROWSER_XSS_FILTER = True
+X_FRAME_OPTIONS = 'DENY'
+CSRF_COOKIE_HTTPONLY = False  # Kept False for JS access in Google Sign-In flow
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = 'Lax'
 
 # TMDB API
 TMDB_API_KEY = os.environ.get('TMDB_API_KEY')

@@ -1,0 +1,789 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load cloudinary_tags %}
+
+{% block title %}Spotlight | KnotSpot{% endblock %}
+
+{% block head %}
+<style>
+    nav { display: none !important; }
+    html, body {
+        height: 100dvh;
+        overflow: hidden;
+        position: fixed;
+        width: 100%;
+        background: #f7f9fb;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    .container {
+        max-width: 100% !important;
+        width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        height: 100%;
+        box-sizing: border-box;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    .sp-wrapper {
+        display: flex;
+        flex-direction: column;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        width: 100%;
+        max-width: 560px;
+        margin: 0 auto;
+        background: linear-gradient(180deg, #fbfcff 0%, #f7f9fb 58%, #eff4fb 100%);
+        z-index: 10;
+    }
+
+    /* ---- Header ---- */
+    .sp-header {
+        flex-shrink: 0;
+        padding: calc(10px + env(safe-area-inset-top)) 20px 16px;
+        background: rgba(247,249,251,0.78);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        border-bottom: 1px solid rgba(0,74,198,0.08);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        z-index: 20;
+    }
+    .sp-header-main {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+        flex: 1;
+    }
+    .sp-back-btn {
+        width: 44px; height: 44px;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.88);
+        display: flex; align-items: center; justify-content: center;
+        text-decoration: none;
+        color: #2563eb;
+        border: 1px solid rgba(0,74,198,0.08);
+        box-shadow: 0 10px 24px rgba(15,23,42,0.06);
+        transition: 0.2s ease;
+        flex-shrink: 0;
+        cursor: pointer;
+    }
+    .sp-back-btn:active { transform: scale(0.94); }
+    .sp-header h2 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 800;
+        color: #151b27;
+        letter-spacing: -0.04em;
+    }
+    .sp-add-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 18px;
+        border-radius: 100px;
+        border: none;
+        font-size: 12px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: #fff;
+        cursor: pointer;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        transition: all 0.2s;
+        box-shadow: 0 4px 12px rgba(37,99,235,0.25);
+        flex-shrink: 0;
+    }
+    .sp-add-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(37,99,235,0.35);
+    }
+    .sp-add-btn:active { transform: scale(0.96); }
+
+    /* ---- Scrollable Body ---- */
+    .sp-body {
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 16px 20px 120px;
+        background: transparent;
+    }
+
+    /* ---- Cards ---- */
+    .sp-card {
+        background: #ffffff;
+        border: 1px solid #eef2f6;
+        border-radius: 24px;
+        overflow: hidden;
+        margin-bottom: 14px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.02);
+        transition: transform 0.2s, box-shadow 0.2s;
+        animation: cardIn 0.4s ease backwards;
+    }
+    .sp-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+    }
+    @keyframes cardIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .sp-cover {
+        width: 100%;
+        aspect-ratio: 16/9;
+        object-fit: cover;
+        display: block;
+        background: #f1f5f9;
+    }
+    .sp-card-body {
+        padding: 0 18px 18px;
+    }
+    .sp-avatar-wrap {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-top: 0;
+        margin-bottom: 10px;
+    }
+    .sp-card:not(.no-cover) .sp-avatar-wrap {
+        margin-top: -8px;
+    }
+    .sp-card.no-cover .sp-avatar-wrap {
+        margin-top: 0;
+    }
+    .sp-card.no-cover .sp-card-body {
+        padding-top: 0;
+    }
+    .sp-avatar {
+        width: 56px; height: 56px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid #fff;
+        background: #e2e8f0;
+        flex-shrink: 0;
+        box-shadow: 0 4px 12px rgba(15,23,42,0.08);
+    }
+    .sp-name-row {
+        flex: 1;
+        min-width: 0;
+    }
+    .sp-name {
+        font-size: 16px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+    .sp-handle {
+        font-size: 12px;
+        font-weight: 600;
+        color: #2563eb;
+    }
+    .sp-type {
+        display: inline-block;
+        font-size: 9px;
+        font-weight: 700;
+        color: #fff;
+        padding: 4px 12px;
+        border-radius: 999px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        background: #334155;
+        white-space: nowrap;
+        flex-shrink: 0;
+        margin-left: auto;
+    }
+    .sp-note {
+        font-size: 13px;
+        color: #475569;
+        line-height: 1.55;
+        margin: 8px 0 14px;
+    }
+    .sp-go-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 9px 18px;
+        border-radius: 100px;
+        font-size: 12px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: #fff;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.2s;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .sp-go-btn:hover {
+        box-shadow: 0 4px 16px rgba(37,99,235,0.25);
+    }
+    .sp-go-btn:active { transform: scale(0.96); }
+
+    /* ---- Owner Actions ---- */
+    .sp-owner-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+    }
+    .sp-owner-actions button {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 7px 14px;
+        border-radius: 100px;
+        font-size: 11px;
+        font-weight: 700;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+    }
+    .sp-owner-actions button:active { transform: scale(0.96); }
+    .sp-edit-btn {
+        background: #f1f5f9;
+        color: #475569;
+    }
+    .sp-edit-btn:hover { background: #e2e8f0; }
+    .sp-delete-btn {
+        background: #fef2f2;
+        color: #dc2626;
+    }
+    .sp-delete-btn:hover { background: #fee2e2; }
+
+    /* ---- Empty State ---- */
+    .sp-empty {
+        text-align: center;
+        padding: 80px 40px;
+    }
+    .sp-empty .material-symbols-outlined {
+        font-size: 56px;
+        color: #cbd5e1;
+        margin-bottom: 14px;
+    }
+    .sp-empty h3 {
+        font-size: 17px;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0 0 4px;
+    }
+    .sp-empty p {
+        font-size: 13px;
+        color: #64748b;
+        margin: 0 0 20px;
+    }
+    .sp-empty-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 12px 24px;
+        border-radius: 100px;
+        border: none;
+        font-size: 13px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: #fff;
+        cursor: pointer;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        transition: all 0.2s;
+        box-shadow: 0 4px 16px rgba(37,99,235,0.25);
+    }
+    .sp-empty-btn:active { transform: scale(0.96); }
+
+    /* ---- Modal (Slide Up) ---- */
+    .sp-modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(15,23,42,0.5);
+        backdrop-filter: blur(4px);
+        z-index: 100;
+        align-items: flex-end;
+        justify-content: center;
+    }
+    .sp-modal-overlay.open { display: flex; }
+    .sp-modal {
+        background: #ffffff;
+        border-radius: 24px 24px 0 0;
+        width: 100%;
+        max-width: 500px;
+        max-height: 85vh;
+        overflow-y: auto;
+        padding: 20px 20px 24px;
+        animation: slideUp 0.3s ease;
+    }
+    @keyframes slideUp {
+        from { transform: translateY(100%); }
+        to { transform: translateY(0); }
+    }
+    .sp-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+    .sp-modal-header h2 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 800;
+        color: #0f172a;
+    }
+    .sp-modal-close {
+        width: 32px; height: 32px;
+        border-radius: 50%;
+        border: none;
+        background: #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .sp-modal-close:hover { background: #e2e8f0; }
+    .sp-modal-close .material-symbols-outlined {
+        font-size: 18px;
+        color: #64748b;
+    }
+    .sp-modal-subtitle {
+        font-size: 12px;
+        color: #94a3b8;
+        margin: -10px 0 16px;
+    }
+
+    /* ---- Link Type Toggle ---- */
+    .sp-link-toggle {
+        display: flex;
+        background: #f1f5f9;
+        padding: 4px;
+        border-radius: 100px;
+        gap: 4px;
+        margin-bottom: 14px;
+    }
+    .sp-link-toggle button {
+        flex: 1;
+        border: none;
+        background: none;
+        padding: 10px 16px;
+        border-radius: 100px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #64748b;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .sp-link-toggle button.active {
+        background: #ffffff;
+        color: #2563eb;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .sp-link-toggle button .material-symbols-outlined {
+        font-size: 16px;
+    }
+    .sp-link-input-wrap {
+        transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    .sp-link-input-wrap.hidden {
+        display: none;
+    }
+
+    /* ---- Form Styles ---- */
+    .sp-form-group {
+        margin-bottom: 14px;
+    }
+    .sp-form-group label {
+        display: block;
+        font-size: 11px;
+        font-weight: 700;
+        color: #475569;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+    }
+    .sp-form-group input,
+    .sp-form-group select,
+    .sp-form-group textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        background: #ffffff;
+        font-size: 13px;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        outline: none;
+        transition: border-color 0.3s;
+        box-sizing: border-box;
+    }
+    .sp-form-group input:focus,
+    .sp-form-group select:focus,
+    .sp-form-group textarea:focus {
+        border-color: #2563eb;
+    }
+    .sp-form-group textarea {
+        resize: vertical;
+        min-height: 70px;
+    }
+    .sp-form-group input[type="file"] {
+        padding: 9px;
+        border: 1px dashed #cbd5e1;
+        border-radius: 12px;
+        background: #f8fafc;
+        cursor: pointer;
+    }
+
+    .sp-form-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 18px;
+    }
+    .sp-form-actions button {
+        flex: 1;
+        padding: 12px;
+        border-radius: 100px;
+        font-size: 13px;
+        font-weight: 700;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .sp-btn-cancel {
+        background: #f1f5f9;
+        color: #475569;
+        border: none;
+    }
+    .sp-btn-cancel:active { transform: scale(0.97); }
+    .sp-btn-submit {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: #fff;
+        border: none;
+    }
+    .sp-btn-submit:hover {
+        box-shadow: 0 4px 16px rgba(37,99,235,0.3);
+    }
+    .sp-btn-submit:active { transform: scale(0.97); }
+
+    #spotlightFormMsg {
+        font-size: 12px;
+        font-weight: 600;
+        margin-bottom: 10px;
+        display: none;
+    }
+
+    /* ---- Pagination ---- */
+    .sp-pagination {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 20px 0 30px;
+    }
+    .sp-page-btn {
+        width: 36px; height: 36px;
+        border-radius: 50%;
+        border: 1px solid #e2e8f0;
+        background: #ffffff;
+        color: #475569;
+        font-size: 13px;
+        font-weight: 700;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        text-decoration: none;
+    }
+    .sp-page-btn:active { transform: scale(0.94); }
+    .sp-page-btn.active {
+        background: #2563eb;
+        color: #fff;
+        border-color: #2563eb;
+    }
+    .sp-page-btn.active:hover {
+        box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+    }
+    .sp-page-arrow {
+        width: 36px; height: 36px;
+        border-radius: 50%;
+        border: 1px solid #e2e8f0;
+        background: #ffffff;
+        color: #2563eb;
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+    }
+    .sp-page-arrow:active { transform: scale(0.94); }
+    .sp-page-arrow.disabled {
+        opacity: 0.3;
+        pointer-events: none;
+    }
+
+    /* ---- Scrollbar ---- */
+    .sp-body::-webkit-scrollbar { width: 4px; }
+    .sp-body::-webkit-scrollbar-track { background: transparent; }
+    .sp-body::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 100px; }
+    .sp-modal::-webkit-scrollbar { width: 4px; }
+    .sp-modal::-webkit-scrollbar-track { background: transparent; }
+    .sp-modal::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 100px; }
+
+    /* ---- Responsive ---- */
+    @media (min-width: 768px) {
+        .sp-modal { border-radius: 24px; margin-bottom: 40px; }
+        .sp-modal-overlay { align-items: center; }
+    }
+    @keyframes sp-spin { to { transform: rotate(360deg); } }
+</style>
+{% endblock %}
+
+{% block body %}
+<section class="sp-wrapper">
+    <div class="sp-header">
+        <div class="sp-header-main">
+            <a href="{% url 'home' %}" class="sp-back-btn"><span class="material-symbols-outlined" style="font-size:22px;">arrow_back</span></a>
+            <h2>Spotlight</h2>
+        </div>
+        <button class="sp-add-btn" onclick="openSpotlightForm()">
+            <span class="material-symbols-outlined" style="font-size:16px;">add</span> Add yours
+        </button>
+    </div>
+    <div class="sp-body">
+        {% if spotlights %}
+            {% for s in spotlights %}
+            <div class="sp-card{% if not s.cover_image %} no-cover{% endif %}" style="animation-delay:{{ forloop.counter0|divisibleby:1|yesno:'0.05,0.1' }}s;">
+                {% if s.cover_image %}
+                <img class="sp-cover" src="{{ s.cover_image|cloudinary_optimize }}" alt="" onerror="this.style.display='none'" loading="lazy" decoding="async">
+                {% endif %}
+                <div class="sp-card-body">
+                    {% with is_website=s.instagram_handle|slice:':4' %}
+                    <div class="sp-avatar-wrap">
+                        <img class="sp-avatar" src="{{ s.user.profile.profile_pic|default:'https://res.cloudinary.com/dq9vbhbcj/image/upload/v1/srm_match/default_avatar' }}" alt="">
+                        <div class="sp-name-row">
+                            <div class="sp-name">{{ s.user.profile.name }}</div>
+                            {% if is_website == 'http' %}
+                            <div class="sp-handle" style="font-size:10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ s.instagram_handle }}</div>
+                            {% else %}
+                            <div class="sp-handle">@{{ s.instagram_handle }}</div>
+                            {% endif %}
+                        </div>
+                        <span class="sp-type">{{ s.get_content_type_display }}</span>
+                    </div>
+                    {% if s.note %}<div class="sp-note">{{ s.note }}</div>{% endif %}
+                    {% if is_website == 'http' %}
+                    <a href="{{ s.instagram_handle }}" target="_blank" rel="noopener" class="sp-go-btn">
+                        <span class="material-symbols-outlined" style="font-size:16px;">open_in_new</span> Visit website
+                    </a>
+                    {% else %}
+                    <a href="https://instagram.com/{{ s.instagram_handle }}" target="_blank" rel="noopener" class="sp-go-btn">
+                        <span class="material-symbols-outlined" style="font-size:16px;">open_in_new</span> Go to page
+                    </a>
+                    {% endif %}
+                    {% if user.is_authenticated and s.user == user %}
+                    <div class="sp-owner-actions">
+                        <button class="sp-edit-btn" onclick="editSpotlight({{ s.id }}, '{{ s.instagram_handle|escapejs }}', '{{ s.content_type|escapejs }}', '{{ s.note|escapejs }}', '{{ s.cover_image|escapejs }}')">
+                            <span class="material-symbols-outlined" style="font-size:14px;">edit</span> Edit
+                        </button>
+                        <button class="sp-delete-btn" onclick="deleteSpotlight({{ s.id }})">
+                            <span class="material-symbols-outlined" style="font-size:14px;">delete</span> Delete
+                        </button>
+                    </div>
+                    {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+            {% endfor %}
+            {% if spotlights.has_other_pages %}
+            <div class="sp-pagination">
+                {% if spotlights.has_previous %}
+                <a href="?page={{ spotlights.previous_page_number }}" class="sp-page-arrow"><span class="material-symbols-outlined" style="font-size:18px;">chevron_left</span></a>
+                {% else %}
+                <span class="sp-page-arrow disabled"><span class="material-symbols-outlined" style="font-size:18px;">chevron_left</span></span>
+                {% endif %}
+                {% for p in spotlights.paginator.page_range %}
+                <a href="?page={{ p }}" class="sp-page-btn{% if p == spotlights.number %} active{% endif %}">{{ p }}</a>
+                {% endfor %}
+                {% if spotlights.has_next %}
+                <a href="?page={{ spotlights.next_page_number }}" class="sp-page-arrow"><span class="material-symbols-outlined" style="font-size:18px;">chevron_right</span></a>
+                {% else %}
+                <span class="sp-page-arrow disabled"><span class="material-symbols-outlined" style="font-size:18px;">chevron_right</span></span>
+                {% endif %}
+            </div>
+            {% endif %}
+        {% else %}
+        <div class="sp-empty">
+            <span class="material-symbols-outlined">emoji_objects</span>
+            <h3>No spotlights yet</h3>
+            <p>Be the first to showcase your page to the campus!</p>
+            <button class="sp-empty-btn" onclick="openSpotlightForm()">
+                <span class="material-symbols-outlined" style="font-size:16px;">add</span> Add your spotlight
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<div class="sp-modal-overlay" id="spotlightFormModal" onclick="if(event.target===this)closeSpotlightForm()">
+    <div class="sp-modal">
+        <div class="sp-modal-header">
+            <h2 id="spotlightFormTitle">Showcase your skill</h2>
+            <button class="sp-modal-close" onclick="closeSpotlightForm()">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="sp-modal-subtitle" id="spotlightFormSubtitle">Share your page with the campus</div>
+        <form id="spotlightForm" method="post" action="{% url 'submit_spotlight' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="spot_id" id="editSpotId" value="">
+            <div class="sp-form-group">
+                <label>Cover Image</label>
+                <input type="file" name="cover_image" accept="image/*">
+            </div>
+
+            <div class="sp-link-toggle">
+                <button type="button" class="active" data-link="instagram" onclick="switchLinkType('instagram')">
+                    <span class="material-symbols-outlined">camera</span> Instagram
+                </button>
+                <button type="button" data-link="website" onclick="switchLinkType('website')">
+                    <span class="material-symbols-outlined">language</span> Website
+                </button>
+            </div>
+            <input type="hidden" name="link_type" id="linkTypeInput" value="instagram">
+
+            <div class="sp-link-input-wrap" id="linkInputInstagram">
+                <div class="sp-form-group">
+                    <label>Instagram Handle</label>
+                    <input type="text" name="instagram_handle" id="instagramHandleInput" required placeholder="@your_handle">
+                </div>
+            </div>
+            <div class="sp-link-input-wrap hidden" id="linkInputWebsite">
+                <div class="sp-form-group">
+                    <label>Website URL</label>
+                    <input type="url" name="website_url" id="websiteUrlInput" placeholder="https://yourlink.com">
+                </div>
+            </div>
+
+            <div class="sp-form-group">
+                <label>Content Type</label>
+                <select name="content_type" id="contentTypeSelect" onchange="toggleCustomType(this)">
+                    <option value="vlog">Vlog</option>
+                    <option value="blog">Blog</option>
+                    <option value="photography">Photography</option>
+                    <option value="art">Art</option>
+                    <option value="music">Music</option>
+                    <option value="fitness">Fitness</option>
+                    <option value="tech">Tech</option>
+                    <option value="fashion">Fashion</option>
+                    <option value="other">Other</option>
+                    <option value="__custom__">Custom</option>
+                </select>
+                <input type="text" name="custom_type" id="customTypeInput" placeholder="Enter your own type" style="display:none;margin-top:6px;">
+            </div>
+            <div class="sp-form-group">
+                <label>Note</label>
+                <textarea name="note" id="note" maxlength="200" placeholder="What kind of content do you create?"></textarea>
+            </div>
+            <div id="spotlightFormMsg"></div>
+            <div class="sp-form-actions">
+                <button type="button" class="sp-btn-cancel" onclick="closeSpotlightForm()">Cancel</button>
+                <button type="submit" class="sp-btn-submit">Submit</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function switchLinkType(type) {
+    document.querySelectorAll('.sp-link-toggle button').forEach(function(b) { b.classList.toggle('active', b.dataset.link === type); });
+    document.getElementById('linkTypeInput').value = type;
+    document.getElementById('linkInputInstagram').classList.toggle('hidden', type !== 'instagram');
+    document.getElementById('linkInputWebsite').classList.toggle('hidden', type !== 'website');
+    document.getElementById('instagramHandleInput').required = type === 'instagram';
+    document.getElementById('websiteUrlInput').required = type === 'website';
+}
+
+function toggleCustomType(sel) {
+    var customInput = document.getElementById('customTypeInput');
+    customInput.style.display = sel.value === '__custom__' ? 'block' : 'none';
+}
+
+function openSpotlightForm() {
+    document.getElementById('spotlightFormTitle').textContent = 'Showcase your skill';
+    document.getElementById('spotlightFormSubtitle').textContent = 'Share your page with the campus';
+    document.getElementById('editSpotId').value = '';
+    document.getElementById('spotlightForm').action = "{% url 'submit_spotlight' %}";
+    document.getElementById('spotlightFormMsg').style.display = 'none';
+    document.getElementById('spotlightForm').reset();
+    document.getElementById('customTypeInput').style.display = 'none';
+    document.getElementById('contentTypeSelect').value = 'vlog';
+    switchLinkType('instagram');
+    document.getElementById('spotlightFormModal').classList.add('open');
+}
+
+function editSpotlight(id, handle, ctype, note, cover) {
+    document.getElementById('spotlightFormTitle').textContent = 'Edit your spotlight';
+    document.getElementById('spotlightFormSubtitle').textContent = 'Update your page details';
+    document.getElementById('editSpotId').value = id;
+    document.getElementById('spotlightForm').action = "{% url 'edit_spotlight' %}";
+    document.getElementById('spotlightFormMsg').style.display = 'none';
+    document.getElementById('spotlightForm').reset();
+    var isWeb = handle.substring(0,4) === 'http';
+    switchLinkType(isWeb ? 'website' : 'instagram');
+    if (isWeb) {
+        document.getElementById('websiteUrlInput').value = handle;
+    } else {
+        document.getElementById('instagramHandleInput').value = handle;
+    }
+    document.getElementById('note').value = note;
+    var found = false;
+    var sel = document.getElementById('contentTypeSelect');
+    for (var i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value === ctype) {
+            sel.value = ctype; found = true; break;
+        }
+    }
+    if (!found) {
+        sel.value = '__custom__';
+        document.getElementById('customTypeInput').value = ctype;
+        document.getElementById('customTypeInput').style.display = 'block';
+    }
+    document.getElementById('spotlightFormModal').classList.add('open');
+}
+
+function deleteSpotlight(id) {
+    if (!confirm('Delete your spotlight?')) return;
+    var fd = new FormData();
+    fd.append('id', id);
+    fetch("{% url 'delete_spotlight' %}", {
+        method:'POST', body:fd, headers:{'X-CSRFToken':document.querySelector('[name=csrfmiddlewaretoken]').value}
+    }).then(function(r){return r.json()}).then(function(d){
+        if (d.success) location.reload();
+        else alert(d.error);
+    });
+}
+
+function closeSpotlightForm() { document.getElementById('spotlightFormModal').classList.remove('open'); }
+document.getElementById('spotlightForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    var f = this, msg = document.getElementById('spotlightFormMsg');
+    var btn = f.querySelector('.sp-btn-submit');
+    var origText = btn.innerHTML;
+    msg.style.display = 'none';
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner" style="display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:sp-spin 0.6s linear infinite;vertical-align:middle;margin-right:6px;"></span> Saving...';
+    var fd = new FormData(f);
+    fetch(f.action, {method:'POST', body:fd, headers:{'X-CSRFToken':fd.get('csrfmiddlewaretoken')}})
+    .then(function(r){return r.json()}).then(function(d){
+        if (d.success) { btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;">check</span> Saved!'; setTimeout(function(){ location.reload(); }, 600); }
+        else { btn.disabled = false; btn.innerHTML = origText; msg.style.display='block'; msg.style.color='#dc2626'; msg.textContent=d.error; }
+    }).catch(function(){ btn.disabled = false; btn.innerHTML = origText; msg.style.display='block'; msg.style.color='#dc2626'; msg.textContent='Something went wrong'; });
+});
+</script>
+{% endblock %}

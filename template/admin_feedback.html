@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Feedback Management | KnotSpot{% endblock %}
+
+{% block head %}
+<style>
+html, body {
+    height: 100dvh; overflow: hidden; position: fixed; width: 100%;
+    background: #f7f9fb; padding: 0 !important; margin: 0 !important;
+}
+.container { max-width:100% !important; width:100% !important; padding:0 !important; margin:0 !important; height:100%; box-sizing:border-box; background:transparent !important; border:none !important; box-shadow:none !important; }
+.adm-wrapper { display:flex; flex-direction:column; position:fixed; top:0; left:0; right:0; bottom:0; width:100%; max-width:900px; margin:0 auto; background:linear-gradient(180deg,#fbfcff 0%,#f7f9fb 58%,#eff4fb 100%); z-index:10; }
+.adm-header { flex-shrink:0; padding:calc(10px + env(safe-area-inset-top)) 20px 16px; background:rgba(247,249,251,0.85); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border-bottom:1px solid rgba(0,74,198,0.08); display:flex; align-items:center; gap:12px; z-index:20; }
+.adm-header-main { display:flex; align-items:center; gap:12px; flex:1; }
+.adm-back-btn { width:44px; height:44px; border-radius:16px; background:#fff; display:flex; align-items:center; justify-content:center; text-decoration:none; color:#2563eb; border:1px solid rgba(0,74,198,0.08); box-shadow:0 10px 24px rgba(15,23,42,0.06); transition:0.2s; cursor:pointer; }
+.adm-back-btn:active { transform:scale(0.94); }
+.adm-header h2 { margin:0; font-size:22px; font-weight:800; color:#0f172a; letter-spacing:-0.5px; }
+.adm-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:20px 16px 110px; }
+.adm-tabs { display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap; }
+.adm-tab { padding:8px 16px; border-radius:12px; font-size:13px; font-weight:700; border:1px solid #e2e8f0; background:#fff; color:#475569; cursor:pointer; transition:0.2s; text-decoration:none; font-family:inherit; }
+.adm-tab.active { background:#2563eb; color:#fff; border-color:#2563eb; }
+.adm-tab:active { transform:scale(0.96); }
+.adm-badge { font-size:10px; font-weight:800; padding:3px 8px; border-radius:8px; text-transform:uppercase; letter-spacing:0.3px; display:inline-block; }
+.adm-status-pending { background:#fef3c7; color:#d97706; }
+.adm-status-reviewing { background:#dbeafe; color:#2563eb; }
+.adm-status-fixed { background:#d1fae5; color:#16a34a; }
+.adm-status-closed { background:#e2e8f0; color:#64748b; }
+.adm-status-open { background:#d1fae5; color:#16a34a; }
+.adm-status-in_progress { background:#dbeafe; color:#2563eb; }
+.adm-status-under_review { background:#dbeafe; color:#2563eb; }
+.adm-status-accepted { background:#d1fae5; color:#16a34a; }
+.adm-status-rejected { background:#fee2e2; color:#ef4444; }
+.adm-card { background:#fff; border:1px solid rgba(0,74,198,0.08); border-radius:20px; padding:16px; box-shadow:0 10px 30px rgba(15,23,42,0.04); margin-bottom:12px; }
+.adm-table { width:100%; border-collapse:collapse; font-size:13px; }
+.adm-table th { text-align:left; font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; padding:8px 10px; border-bottom:2px solid #f1f5f9; }
+.adm-table td { padding:8px 10px; border-bottom:1px solid #f1f5f9; color:#1e293b; font-weight:600; }
+.adm-table tr:hover td { background:#f8fafc; }
+.adm-table a { color:#2563eb; text-decoration:none; font-weight:700; }
+.adm-table a:hover { text-decoration:underline; }
+.adm-empty { text-align:center; padding:30px 20px; color:#94a3b8; font-size:13px; }
+.pagination { display:flex; justify-content:center; gap:6px; margin-top:16px; flex-wrap:wrap; }
+.pagination a, .pagination span { display:inline-flex; align-items:center; justify-content:center; min-width:36px; height:36px; padding:0 10px; border-radius:10px; font-size:13px; font-weight:700; border:1px solid #e2e8f0; background:#fff; color:#475569; text-decoration:none; transition:0.2s; }
+.pagination a:hover { border-color:#2563eb; color:#2563eb; }
+.pagination .current { background:#2563eb; color:#fff; border-color:#2563eb; }
+.adm-sort-select { padding:4px 8px; border-radius:8px; border:1px solid #e2e8f0; font-size:11px; font-weight:600; font-family:inherit; background:#fff; color:#1e293b; outline:none; }
+.adm-filter-row { display:flex; gap:6px; align-items:center; margin-bottom:12px; justify-content:flex-end; }
+.adm-filter-row label { font-size:11px; font-weight:700; color:#64748b; white-space:nowrap; }
+</style>
+{% endblock %}
+
+{% block body %}
+<section class="adm-wrapper">
+    <div class="adm-header">
+        <div class="adm-header-main">
+            <a href="{% url 'admin_dashboard' %}" class="adm-back-btn"><span class="material-symbols-outlined">arrow_back</span></a>
+            <h2>Feedback Management</h2>
+        </div>
+        <span style="font-size:11px;font-weight:700;color:#64748b;">{{ is_admin|yesno:"Admin,Staff" }}</span>
+    </div>
+
+    <div class="adm-body">
+        <div class="adm-tabs">
+            <a href="?tab=bugs" class="adm-tab {% if tab == 'bugs' %}active{% endif %}">Bug Reports</a>
+            <a href="?tab=suggestions" class="adm-tab {% if tab == 'suggestions' %}active{% endif %}">Suggestions</a>
+            <a href="?tab=tickets" class="adm-tab {% if tab == 'tickets' %}active{% endif %}">Support Tickets</a>
+        </div>
+
+        {% if tab == 'bugs' %}
+            {% for b in page_obj %}
+            <a href="{% url 'admin_bug_detail' b.id %}" style="text-decoration:none;display:block;">
+                <div class="adm-card" style="padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:0.2s;">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div style="width:44px;height:44px;border-radius:14px;background:#fee2e2;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <span class="material-symbols-outlined" style="font-size:22px;color:#ef4444;">bug_report</span>
+                        </div>
+                        <div style="flex:1;min-width:0;">
+                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
+                                <span style="font-size:14px;font-weight:700;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ b.title }}</span>
+                                <span class="adm-badge adm-status-{{ b.status }}">{{ b.get_status_display }}</span>
+                            </div>
+                            <div style="font-size:12px;color:#64748b;display:flex;gap:8px;flex-wrap:wrap;">
+                                <span>{{ b.user.username }}</span>
+                                <span>&middot;</span>
+                                <span>{{ b.get_category_display }}</span>
+                                <span>&middot;</span>
+                                <span>{{ b.created_at|date:"M d, H:i" }}</span>
+                            </div>
+                        </div>
+                        <span class="material-symbols-outlined" style="color:#94a3b8;font-size:20px;">chevron_right</span>
+                    </div>
+                </div>
+            </a>
+            {% empty %}
+            <div class="adm-empty" style="background:#fff;border-radius:20px;padding:30px;border:1px solid rgba(0,74,198,0.08);">No bug reports</div>
+            {% endfor %}
+        {% elif tab == 'suggestions' %}
+            <div class="adm-filter-row">
+                <select class="adm-sort-select" onchange="window.location.href='?tab=suggestions&sort='+this.value">
+                    <option value="-votes" {% if current_sort == '-votes' %}selected{% endif %}>Most Votes</option>
+                    <option value="-created_at" {% if current_sort == '-created_at' %}selected{% endif %}>Newest</option>
+                    <option value="priority" {% if current_sort == 'priority' %}selected{% endif %}>Priority (Low→High)</option>
+                    <option value="-priority" {% if current_sort == '-priority' %}selected{% endif %}>Priority (High→Low)</option>
+                </select>
+            </div>
+            {% for s in page_obj %}
+            <a href="{% url 'admin_suggestion_detail' s.id %}" style="text-decoration:none;display:block;">
+                <div class="adm-card" style="padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:0.2s;">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div style="width:44px;height:44px;border-radius:14px;background:#fef3c7;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <span class="material-symbols-outlined" style="font-size:22px;color:#d97706;">lightbulb</span>
+                        </div>
+                        <div style="flex:1;min-width:0;">
+                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
+                                <span style="font-size:14px;font-weight:700;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ s.title }}</span>
+                                <span class="adm-badge adm-status-{{ s.status }}">{{ s.get_status_display }}</span>
+                            </div>
+                            <div style="font-size:12px;color:#64748b;display:flex;gap:8px;flex-wrap:wrap;">
+                                <span>{{ s.user.username }}</span>
+                                <span>&middot;</span>
+                                <span>{{ s.get_category_display }}</span>
+                                <span>&middot;</span>
+                                <span>{{ s.get_priority_display }}</span>
+                                <span>&middot;</span>
+                                <span>{{ s.votes }} vote(s)</span>
+                            </div>
+                        </div>
+                        <span class="material-symbols-outlined" style="color:#94a3b8;font-size:20px;">chevron_right</span>
+                    </div>
+                </div>
+            </a>
+            {% empty %}
+            <div class="adm-empty" style="background:#fff;border-radius:20px;padding:30px;border:1px solid rgba(0,74,198,0.08);">No suggestions</div>
+            {% endfor %}
+        {% else %}
+            {% for t in page_obj %}
+            <a href="{% url 'admin_ticket_detail' t.id %}" style="text-decoration:none;display:block;">
+                <div class="adm-card" style="padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:0.2s;">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div style="width:44px;height:44px;border-radius:14px;background:{% if t.status == 'closed' %}#e2e8f0{% elif t.status == 'in_progress' %}#dbeafe{% else %}#d1fae5{% endif %};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <span class="material-symbols-outlined" style="font-size:22px;color:{% if t.status == 'closed' %}#64748b{% elif t.status == 'in_progress' %}#2563eb{% else %}#16a34a{% endif %};">support_agent</span>
+                        </div>
+                        <div style="flex:1;min-width:0;">
+                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
+                                <span style="font-size:14px;font-weight:700;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ t.subject }}</span>
+                                <span class="adm-badge adm-status-{{ t.status }}">{{ t.get_status_display }}</span>
+                            </div>
+                            <div style="font-size:12px;color:#64748b;display:flex;gap:8px;flex-wrap:wrap;">
+                                <span>{{ t.user.username }}</span>
+                                <span>&middot;</span>
+                                <span>{{ t.get_category_display }}</span>
+                                <span>&middot;</span>
+                                <span>{{ t.messages.count }} msg(s)</span>
+                                <span>&middot;</span>
+                                <span>{{ t.updated_at|timesince }} ago</span>
+                            </div>
+                        </div>
+                        <span class="material-symbols-outlined" style="color:#94a3b8;font-size:20px;">chevron_right</span>
+                    </div>
+                </div>
+            </a>
+            {% empty %}
+            <div class="adm-empty" style="background:#fff;border-radius:20px;padding:30px;border:1px solid rgba(0,74,198,0.08);">No support tickets</div>
+            {% endfor %}
+        {% endif %}
+
+        {% if page_obj.paginator.num_pages > 1 %}
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+            <a href="?tab={{ tab }}&page={{ page_obj.previous_page_number }}{% if current_sort %}&sort={{ current_sort }}{% endif %}">&laquo;</a>
+            {% endif %}
+            {% for p in page_obj.paginator.page_range %}
+                {% if p == page_obj.number %}
+                <span class="current">{{ p }}</span>
+                {% elif p > page_obj.number|add:'-3' and p < page_obj.number|add:'3' %}
+                <a href="?tab={{ tab }}&page={{ p }}{% if current_sort %}&sort={{ current_sort }}{% endif %}">{{ p }}</a>
+                {% endif %}
+            {% endfor %}
+            {% if page_obj.has_next %}
+            <a href="?tab={{ tab }}&page={{ page_obj.next_page_number }}{% if current_sort %}&sort={{ current_sort }}{% endif %}">&raquo;</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
