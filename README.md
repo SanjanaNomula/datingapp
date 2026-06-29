@@ -1,32 +1,53 @@
 # KnotSpot
 
-A modern social networking platform designed for university students to connect, communicate, and build communities through real-time interactions and campus-focused features.
+KnotSpot is a modern social networking platform designed for university students to connect, communicate, and build meaningful communities through real-time interactions and campus-focused features.
 
-## Features
+## 🌐 Live Demo
 
-* 🔐 Secure user authentication
-* 👤 User profiles and networking
-* 💬 Anonymous confessions
-* 🎙️ Real-time Voice Lounges (PeerJS)
-* 🌟 Spotlight creator pages
-* 🏠 Roommate Finder
-* 📅 Campus events and announcements
-* 📝 Feedback & support ticket system
-* 📊 Admin analytics dashboard
-* 📱 Progressive Web App (PWA) support
-* 🔔 Push notifications
+**Website:** https://www.knotspot.online/
 
-## Tech Stack
+## ✨ Features
 
-* **Backend:** Django, Python
-* **Frontend:** HTML, CSS, JavaScript
-* **Database:** SQLite (Development)
-* **Real-Time Communication:** PeerJS
-* **Image Storage:** Cloudinary
-* **Deployment:** Vercel
-* **Version Control:** Git & GitHub
+- 🔐 Secure user authentication
+- 👤 User profiles and networking
+- 💬 Anonymous confessions
+- 🎙️ Real-time Voice Lounges (PeerJS)
+- 🌟 Spotlight creator pages
+- 🏠 Roommate Finder
+- 📅 Campus events and announcements
+- 📝 Feedback & Support Ticket System
+- 📊 Admin Analytics Dashboard
+- 📱 Progressive Web App (PWA) support
+- 🔔 Push notifications
 
-## Installation
+## 🛠 Tech Stack
+
+**Backend**
+- Django
+- Python
+
+**Frontend**
+- HTML
+- CSS
+- JavaScript
+
+**Database**
+- SQLite
+
+**Real-Time Communication**
+- PeerJS
+
+**Cloud Services**
+- Firebase Cloud Messaging
+- Cloudinary
+
+**Deployment**
+- Vercel
+
+**Version Control**
+- Git & GitHub
+
+## 🚀 Installation
 
 ```bash
 git clone https://github.com/SanjanaNomula/datingapp.git
@@ -51,22 +72,24 @@ Open your browser:
 http://127.0.0.1:8000/
 ```
 
-## Project Highlights
+## 🚀 Project Highlights
 
-* Anonymous social interactions
-* Live voice communication
-* Community engagement
-* Event management
-* Responsive mobile-first interface
-* Optimized performance and caching
+- Anonymous social interactions
+- Real-time voice communication
+- Campus community networking
+- Event management system
+- Spotlight creator platform
+- Roommate Finder
+- Responsive mobile-first design
+- Performance optimization and caching
+- Progressive Web App support
 
-## Repository
+## 📌 Repository
 
-This repository contains the latest implementation of KnotSpot, including recent platform enhancements, UI improvements, analytics, and communication features.
+This repository contains the latest implementation of KnotSpot, including platform enhancements, real-time communication, analytics, and performance optimizations.
 
-## License
+**Live Website:** https://www.knotspot.online/
 
-This project is intended for educational and portfolio purposes.
+## 📄 License
 
-
-Updated project documentation.
+This project is intended for educational, learning, and portfolio purposes.
